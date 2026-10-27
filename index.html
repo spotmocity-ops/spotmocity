@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>SpotMoCity 澳聚光</title>
+    <!-- 引入 Tailwind CSS (免安裝) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #hero-polaroid-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; padding: 0.25rem 0.5rem 0.75rem; }
+        .hero-polaroid-link { display: block; min-width: 0; color: inherit; text-decoration: none; }
+        .hero-polaroid { position: relative; min-width: 0; padding: 0.4rem 0.4rem 0.75rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.2rem; box-shadow: 0 5px 14px rgb(15 23 42 / 16%); transform: rotate(var(--polaroid-tilt)); animation: polaroid-breeze 5.5s ease-in-out var(--breeze-delay) infinite; }
+        .hero-polaroid img { display: block; width: 100%; aspect-ratio: 3 / 1; object-fit: cover; background: #f3f4f6; }
+        .hero-polaroid .hero-polaroid-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+        .hero-polaroid figcaption { padding: 0.45rem 0.1rem 0; color: #374151; font-size: 0.75rem; line-height: 1.35; text-align: center; }
+        .hero-polaroid-link:nth-child(8n + 1) .hero-polaroid { --polaroid-tilt: -3deg; --breeze-delay: -1s; }
+        .hero-polaroid-link:nth-child(8n + 2) .hero-polaroid { --polaroid-tilt: 2deg; --breeze-delay: -3.2s; }
+        .hero-polaroid-link:nth-child(8n + 3) .hero-polaroid { --polaroid-tilt: -1.5deg; --breeze-delay: -2.1s; }
+        .hero-polaroid-link:nth-child(8n + 4) .hero-polaroid { --polaroid-tilt: 3deg; --breeze-delay: -4.4s; }
+        .hero-polaroid-link:nth-child(8n + 5) .hero-polaroid { --polaroid-tilt: 1.5deg; --breeze-delay: -2.8s; }
+        .hero-polaroid-link:nth-child(8n + 6) .hero-polaroid { --polaroid-tilt: -2.5deg; --breeze-delay: -0.5s; }
+        .hero-polaroid-link:nth-child(8n + 7) .hero-polaroid { --polaroid-tilt: 2.5deg; --breeze-delay: -3.8s; }
+        .hero-polaroid-link:nth-child(8n) .hero-polaroid { --polaroid-tilt: -1deg; --breeze-delay: -1.8s; }
+        @keyframes polaroid-breeze { 0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--polaroid-tilt)); } 50% { transform: translate3d(2px, -5px, 0) rotate(calc(var(--polaroid-tilt) + 1.2deg)); } }
+        @media (hover: hover) { .hero-polaroid-link:hover .hero-polaroid { animation-play-state: paused; box-shadow: 0 9px 22px rgb(15 23 42 / 23%); } }
+        @media (prefers-reduced-motion: reduce) { .hero-polaroid { animation: none; } }
+        @media (min-width: 640px) { #hero-polaroid-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; } }
+        @media (min-width: 1024px) { #hero-polaroid-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; } }
+        @media (max-width: 767px) { .hero-polaroid img { aspect-ratio: 2 / 1; } }
+        .service-accordion-panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 220ms ease; }
+        .service-accordion-panel.is-open { grid-template-rows: 1fr; }
+        .service-accordion-inner { overflow: hidden; }
+        @media (prefers-reduced-motion: reduce) { .service-accordion-panel { transition: none; } }
+        body.site-mode-mobile { width: min(100%, 430px); margin-inline: auto; }
+        body.site-mode-mobile #hero-polaroid-grid { grid-template-columns: minmax(0, 1fr); }
+        body.site-mode-desktop #hero-polaroid-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+        body.site-mode-mobile #middle-background > div { display: block; }
+        body.site-mode-mobile #middle-background main > .grid { display: block; }
+        body.site-mode-mobile #activity-list { grid-template-columns: minmax(0, 1fr); }
+        body.site-mode-mobile #middle-background aside[aria-label="網誌與廣告"] { margin-top: 2rem; }
+        body.site-mode-mobile #homepage-hero-layout { display: flex; flex-direction: column; }
+        body.site-mode-mobile #homepage-hero-center { order: 1; }
+        body.site-mode-mobile #homepage-info-panel { order: 2; margin-top: 1rem; }
+        body.site-mode-mobile #homepage-service-panel { order: 3; margin-top: 1rem; }
+        body.site-mode-desktop { min-width: 1024px; }
+        body.site-mode-desktop [role="group"][aria-label="版面模式"] { position: fixed; top: 0.5rem; right: 0.5rem; z-index: 60; }
+        body.site-mode-desktop #homepage-hero-layout { display: grid; grid-template-columns: 18rem minmax(0, 1fr) 18rem; }
+        body.site-mode-desktop #middle-background > div { display: grid; grid-template-columns: minmax(0, 1fr) 14rem; }
+        body.site-mode-desktop #middle-background main > .grid { display: grid; grid-template-columns: 8rem minmax(0, 1fr); }
+        body.site-mode-desktop #activity-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    </style>
+</head>
+<body id="page-background" class="bg-gray-50 font-sans text-gray-800 pb-20">
+
+    <!-- 頁首導覽列 -->
+    <header id="site-header" class="bg-white shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center gap-3">
+            <a href="index.html" class="text-lg md:text-xl font-bold text-blue-600 shrink-0 whitespace-nowrap">
+                <img src="head.logo.png" width="100" height="60" alt="SpotMoCity Logo">
+            </a>
+
+            <div class="flex flex-col items-end gap-2 min-w-0">
+                <div class="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5" role="group" aria-label="版面模式">
+                    <button type="button" data-layout-mode="mobile" aria-pressed="false" class="rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-white">手機版</button>
+                    <button type="button" data-layout-mode="desktop" aria-pressed="false" class="rounded-md px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-white">電腦版</button>
+                </div>
+                <div class="flex items-center gap-2 text-xs md:text-sm text-gray-700" aria-label="澳門天氣及時間">
+                    <span id="weather-icon" aria-hidden="true">☀</span>
+                    <span id="macau-weather">載入天氣...</span>
+                    <span class="text-gray-300" aria-hidden="true">|</span>
+                    <time id="macau-time" class="font-semibold tabular-nums">--:--:--</time>
+                    <span class="text-gray-500">澳門</span>
+                </div>
+                <nav class="flex flex-wrap justify-end gap-x-3 gap-y-1 text-xs md:text-sm font-medium">
+                    <a href="about.html" class="hover:text-blue-600 transition-colors">關於我們</a>
+                    <a href="Terms.html" class="hover:text-blue-600 transition-colors">服務條款聲明</a>
+                    <button id="open-feedback" type="button" class="text-blue-700 hover:text-blue-900">有話想說</button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <section id="mindfulness-banner" class="w-full max-w-none mx-auto px-4 pt-4" aria-label="正念語句">
+        <p id="mindfulness-quote" class="text-center text-sm md:text-base text-gray-600 italic">願每一次相遇，都為生活添一點光。</p>
+    </section>
+
+    <div id="homepage-hero-layout" class="w-full mt-4 px-4 grid gap-4 lg:grid-cols-[18rem_minmax(0,1.6fr)_18rem]">
+        <aside id="homepage-service-panel" class="min-w-0" aria-label="生活服務與資源對接區">
+            <div class="bg-white/90 border border-gray-200 rounded-xl shadow-sm p-4 md:p-5">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 id="life-services-title" class="text-xl font-bold text-gray-800">生活服務與資源對接區</h2>
+                        <p class="text-sm text-gray-500 mt-1">探索澳門生活服務與資源</p>
+                    </div>
+                </div>
+                <nav id="life-services-categories" class="grid grid-cols-1 gap-2 mb-3" aria-label="生活服務主分類"></nav>
+            </div>
+        </aside>
+        <div id="homepage-hero-center" class="min-w-0">
+            <section class="w-full mb-3">
+                <a href="submit.html" class="group block w-full bg-yellow-50 hover:bg-yellow-100 border-2 border-dashed border-yellow-400 rounded-xl p-3 md:p-4 transition-all duration-300 shadow-sm hover:shadow-md relative overflow-hidden">
+                    <div class="relative z-10 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-3">
+                            <div class="flex-shrink-0 w-9 h-9 md:w-10 md:h-10 bg-yellow-400 text-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-300">
+                                <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-base md:text-lg font-bold text-yellow-800 group-hover:text-yellow-900 transition-colors leading-tight">上傳活動資訊</h2>
+                                <p class="text-xs md:text-sm text-yellow-700 mt-0.5 font-medium leading-tight">社團 / 機構 / 個人皆可提交，點亮澳門社區！</p>
+                            </div>
+                        </div>
+                        <div class="hidden sm:flex flex-shrink-0 items-center justify-center w-7 h-7 rounded-full bg-yellow-200 text-yellow-700 group-hover:bg-yellow-400 group-hover:text-white transition-all duration-300 group-hover:translate-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </a>
+            </section>
+            <section id="hero-carousel-wrapper" class="w-full min-w-0 py-3 md:py-4 rounded-2xl bg-cover bg-center bg-no-repeat">
+                <div class="flex items-center justify-between gap-3 px-2 mb-2">
+                    <h2 class="text-lg font-bold text-gray-800">置頂內容</h2>
+                    <a href="hero-gallery.html" class="shrink-0 text-sm font-bold tracking-widest text-blue-700 hover:text-blue-900 hover:underline" aria-label="查看更多置頂內容">MORE <span aria-hidden="true">→</span></a>
+                </div>
+                <div id="hero-polaroid-grid" aria-live="polite"></div>
+            </section>
+        </div>
+        <aside id="homepage-info-panel" class="grid content-start gap-4 sm:grid-cols-2 lg:grid-cols-1" aria-label="SpotMo通告及溫馨資訊">
+            <section class="min-h-40 bg-white/95 rounded-xl border border-gray-200 shadow-sm p-4">
+                <h2 class="font-bold text-lg text-blue-800 mb-2">SpotMo通告欄</h2>
+                <div id="homepage-notice-content" class="text-sm text-gray-700 leading-6 whitespace-pre-line">暫無通告</div>
+            </section>
+            <section class="min-h-40 bg-amber-50/95 rounded-xl border border-amber-200 shadow-sm p-4">
+                <h2 class="font-bold text-lg text-amber-900 mb-2">SpotMo溫馨資訊</h2>
+                <div id="homepage-warm-info-content" class="text-sm text-gray-700 leading-6 whitespace-pre-line">暫無溫馨資訊</div>
+            </section>
+        </aside>
+    </div>
+
+    <section class="w-full max-w-none mx-auto px-4 mt-6" aria-label="搜尋活動">
+        <div class="relative max-w-2xl mx-auto">
+            <label for="activity-search" class="sr-only">搜尋活動名稱、主辦單位或地點</label>
+            <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" stroke-width="2"></circle>
+                <path d="m16 16 4 4" stroke-width="2" stroke-linecap="round"></path>
+            </svg>
+            <input id="activity-search" type="search" autocomplete="off" placeholder="搜尋活動、主辦單位、地點..." class="w-full bg-white border border-gray-300 rounded-xl py-3 pl-12 pr-12 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none">
+            <button id="clear-search" type="button" aria-label="清除搜尋" class="hidden absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 text-gray-500 hover:text-gray-800 rounded-full hover:bg-gray-100">&times;</button>
+        </div>
+        <p class="max-w-2xl mx-auto mt-2 text-xs text-gray-500">搜尋會跨所有分類、子分類及線上／線下活動。</p>
+    </section>
+
+    <div id="middle-background" class="w-full mt-8 bg-cover bg-center bg-no-repeat">
+        <div class="w-full max-w-none mx-auto px-4 py-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_14rem]">
+            <main class="min-w-0">
+                <section aria-label="活動主分類">
+                    <h2 class="font-bold text-lg mb-3">探索活動</h2>
+                    <nav id="category-filters" class="flex gap-2 overflow-x-auto pb-2" aria-label="主分類"></nav>
+                </section>
+                <section class="mt-4" aria-label="活動形式篩選">
+                    <h3 class="font-semibold text-sm text-gray-700 mb-2">活動形式</h3>
+                    <nav id="event-format-filters" class="flex gap-2 overflow-x-auto pb-1" aria-label="活動形式"></nav>
+                </section>
+
+                <div class="grid gap-4 mt-5 md:grid-cols-[8rem_minmax(0,1fr)]">
+                    <aside class="min-w-0">
+                        <h3 id="subcategory-heading" class="font-semibold text-sm text-gray-700 mb-2">子分類</h3>
+                        <nav id="subcategory-filters" class="flex gap-2 overflow-x-auto md:flex-col md:overflow-visible" aria-label="子分類"></nav>
+                    </aside>
+
+                    <div class="min-w-0">
+                        <div class="flex justify-end">
+                            <div class="inline-flex p-1 bg-gray-200 rounded-lg" role="group" aria-label="活動顯示方式">
+                                <button id="view-mode-list" type="button" aria-pressed="true" class="px-4 py-2 text-sm font-medium rounded-md bg-white text-gray-900 shadow-sm">活動列表</button>
+                                <button id="view-mode-calendar" type="button" aria-pressed="false" class="px-4 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900">日曆</button>
+                            </div>
+                        </div>
+
+                        <section id="event-calendar" class="hidden mt-4" aria-label="活動日曆">
+                            <div class="bg-white/95 rounded-xl border border-gray-200 shadow-sm p-2 md:p-3">
+                                <div class="flex items-center justify-between gap-2 mb-2">
+                                    <div>
+                                        <h2 class="text-base font-bold">活動日曆</h2>
+                                        <p id="calendar-selection" class="text-xs text-gray-500 mt-1" aria-live="polite">選擇日期查看當日活動</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button id="calendar-clear-date" type="button" class="hidden text-sm text-blue-700 hover:underline">顯示全部日期</button>
+                                        <button id="calendar-previous" type="button" aria-label="上一個月" class="w-8 h-8 border rounded-lg hover:bg-gray-100">‹</button>
+                                        <button id="calendar-next" type="button" aria-label="下一個月" class="w-8 h-8 border rounded-lg hover:bg-gray-100">›</button>
+                                    </div>
+                                </div>
+                                <h3 id="calendar-month" class="text-center text-sm font-semibold mb-2"></h3>
+                                <div class="overflow-x-auto">
+                                    <div class="min-w-[560px]">
+                                        <div class="grid grid-cols-7 text-center text-xs font-medium text-gray-500 mb-1" aria-hidden="true">
+                                            <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                                        </div>
+                                        <div id="calendar-days" class="grid grid-cols-7 gap-1" role="grid" aria-label="每月活動日期"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5" id="activity-list" aria-live="polite">
+                            <!-- 活動卡片由 JavaScript 動態生成 -->
+                        </section>
+                    </div>
+                </div>
+            </main>
+
+            <aside class="space-y-8 lg:pt-1" aria-label="網誌與廣告">
+                <section>
+                    <h2 class="text-lg font-bold mb-3">網誌</h2>
+                    <div id="homepage-blog-list" class="divide-y divide-gray-200 border-y border-gray-200">
+                        <p class="py-4 text-sm text-gray-500">暫無網誌內容</p>
+                    </div>
+                </section>
+                <section>
+                    <h2 class="text-lg font-bold mb-3">合作推薦</h2>
+                    <div id="homepage-ad-list" class="space-y-3">
+                        <p class="text-sm text-gray-500">暫無廣告內容</p>
+                    </div>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <div id="feedback-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[110] p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
+        <div class="bg-white rounded-xl max-w-xl w-full p-6 relative shadow-2xl my-8">
+            <button id="close-feedback" type="button" aria-label="關閉" class="absolute top-3 right-3 w-9 h-9 text-gray-500 hover:bg-gray-100 rounded-lg">&times;</button>
+            <h2 id="feedback-title" class="text-xl font-bold mb-1">有話想說</h2>
+            <p class="text-sm text-gray-500 mb-5">歡迎提供建議或回報活動資料問題。</p>
+            <form id="feedback-form" class="space-y-4">
+                <fieldset>
+                    <legend class="text-sm font-semibold mb-2">回饋類型</legend>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 text-sm"><input type="radio" name="feedbackType" value="suggestion" checked> 提供建議</label>
+                        <label class="flex items-center gap-2 text-sm"><input type="radio" name="feedbackType" value="content_correction"> 更正活動內容</label>
+                    </div>
+                </fieldset>
+                <div id="feedback-activity-field" class="hidden">
+                    <label for="feedback-activity" class="block text-sm font-semibold mb-1">選擇活動</label>
+                    <select id="feedback-activity" name="activityId" class="w-full border rounded-lg px-3 py-2">
+                        <option value="">請選擇活動</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="feedback-message" class="block text-sm font-semibold mb-1">內容</label>
+                    <textarea id="feedback-message" name="message" rows="5" maxlength="2000" required placeholder="請描述建議或需要更正的資料" class="w-full border rounded-lg px-3 py-2"></textarea>
+                </div>
+                <div>
+                    <label for="feedback-contact" class="block text-sm font-semibold mb-1">聯絡方式（選填）</label>
+                    <input id="feedback-contact" name="contact" type="text" maxlength="200" placeholder="Email 或電話，方便我們回覆" class="w-full border rounded-lg px-3 py-2">
+                </div>
+                <button id="send-feedback" type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-lg">送出回饋</button>
+            </form>
+            <p id="feedback-success" class="hidden text-sm text-green-700 mt-4" role="status">感謝回饋，我們已收到。</p>
+        </div>
+    </div>
+
+    <!-- 活動詳情彈出視窗 (Modal) -->
+    <div id="detail-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[100] p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[95vh] overflow-y-auto p-4 sm:p-8 relative shadow-2xl my-4">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+            <div id="modal-content">
+                <!-- JS 填入內容 -->
+            </div>
+        </div>
+    </div>
+
+    <div id="service-category-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[110] p-4" role="dialog" aria-modal="true" aria-labelledby="service-category-modal-title">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 relative shadow-2xl">
+            <button id="close-service-category-modal" type="button" aria-label="關閉子分類選單" class="absolute top-3 right-4 text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+            <h2 id="service-category-modal-title" class="text-xl font-bold text-gray-800 pr-8"></h2>
+            <p class="mt-1 mb-3 text-sm text-gray-500">選擇子分類以篩選服務</p>
+            <nav id="service-category-modal-options" class="flex flex-wrap gap-2" aria-label="生活服務子分類"></nav>
+            <div id="service-category-modal-results" class="mt-4 max-h-[55vh] space-y-2 overflow-y-auto" aria-live="polite"></div>
+        </div>
+    </div>
+
+    <div id="image-lightbox" class="fixed inset-0 bg-black/95 hidden items-center justify-center z-[120] p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="完整圖片">
+        <button id="close-image-lightbox" type="button" aria-label="關閉完整圖片" class="absolute top-3 right-4 z-10 text-white text-4xl leading-none hover:text-gray-300">&times;</button>
+        <img id="image-lightbox-full" alt="" class="max-w-full max-h-full object-contain">
+    </div>
+
+    <!-- 頁尾 -->
+    <footer class="bg-gray-800 text-gray-300 py-6 mt-12 text-sm">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row sm:justify-between items-center gap-3">
+            <p class="text-xs text-gray-400">已瀏覽人數：<span id="homepage-visitor-count" class="font-semibold text-gray-200">統計中</span></p>
+            <div class="text-center sm:text-right">
+                <p>&copy; 2026 SpotMoCity 澳聚光.</p>
+                <p class="mt-1">活動內容由主辦單位負責，如有查詢請直接聯絡主辦單位。</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="categories.js?v=20261027-life-services"></script>
+    <script>
+        const supabaseUrl = 'https://owvsfvunlqudrhdsuqvk.supabase.co';
+        const supabaseKey = 'sb_publishable_4kBnCjtv4c7j-sb8l3BrUw_j63egBDR';
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let activities = [];
+        let homepageServiceEntries = [];
+        let serviceCategoryModalEntries = [];
+        let expandedServiceCategoryEntry = -1;
+        let homepageServiceCategories = [
+            { id: 'space', name: '空間/場地租借', icon: '🏢', subcategories: [] },
+            { id: 'business', name: '法律/會計/商業', icon: '⚖️', subcategories: [] },
+            { id: 'health', name: '健康/身心/診所', icon: '🏥', subcategories: [] },
+            { id: 'support', name: '生活/營運支援', icon: '🛠️', subcategories: [] },
+            {
+                id: 'family_school',
+                name: '家庭與學校',
+                icon: '🏫',
+                subcategories: [
+                    { id: 'school_directory', name: '學校目錄（幼兒園／中小學／大學）' },
+                    { id: 'campus_open_days', name: '校園開放日與招生' },
+                    { id: 'education_talks', name: '升學與留學講座' },
+                    { id: 'mind_support', name: '親子與成長支援' }
+                ]
+            }
+        ];
+        let activeServiceCategory = 'space';
+        let activeServiceSubcategory = 'all';
+        let activeCategory = 'all';
+        let activeSubcategory = 'all';
+        let activeEventFormat = 'all';
+        let searchQuery = '';
+        let activityDisplayMode = 'list';
+        const layoutModeStorageKey = 'spotmocity_layout_mode';
+        const macauTodayParts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Macau', year: 'numeric', month: '2-digit', day: '2-digit'
+        }).formatToParts(new Date()).reduce((parts, part) => {
+            if (part.type !== 'literal') parts[part.type] = Number(part.value);
+            return parts;
+        }, {});
+        let calendarYear = macauTodayParts.year;
+        let calendarMonth = macauTodayParts.month - 1;
+        let selectedCalendarDate = '';
+        let specialCalendarDays = [];
+
+        const weatherLabels = {
+            0: ['☀', '晴朗'], 1: ['☀', '大致晴朗'], 2: ['☁', '局部多雲'], 3: ['☁', '陰天'],
+            45: ['〰', '有霧'], 48: ['〰', '有霧'], 51: ['☂', '微雨'], 53: ['☂', '小雨'],
+            55: ['☂', '中雨'], 61: ['☂', '小雨'], 63: ['☂', '中雨'], 65: ['☂', '大雨'],
+            71: ['❄', '小雪'], 73: ['❄', '降雪'], 75: ['❄', '大雪'], 80: ['☂', '陣雨'],
+            81: ['☂', '陣雨'], 82: ['☂', '大陣雨'], 95: ['⚡', '雷暴'], 96: ['⚡', '雷暴'], 99: ['⚡', '雷暴']
+        };
+
+        let categoryGroups = window.SpotMoCityCategories;
+        let categoryNames = {};
+        let subcategoryNames = {};
+
+        function setActivityCategoryGroups(serviceCategories) {
+            categoryGroups = [
+                ...window.SpotMoCityCategories,
+                window.createLifeServiceActivityCategory(serviceCategories)
+            ];
+            categoryNames = Object.fromEntries(categoryGroups.map(category => [category.value, category.label]));
+            subcategoryNames = Object.fromEntries(categoryGroups.flatMap(category =>
+                category.subcategories.map(subcategory => [subcategory.value, subcategory.label])
+            ));
+            renderCategoryNavigation();
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[character]);
+        }
+
+        function setLayoutMode(mode) {
+            const selectedMode = mode === 'desktop' ? 'desktop' : 'mobile';
+            document.body.classList.toggle('site-mode-mobile', selectedMode === 'mobile');
+            document.body.classList.toggle('site-mode-desktop', selectedMode === 'desktop');
+            document.querySelectorAll('[data-layout-mode]').forEach(button => {
+                const active = button.dataset.layoutMode === selectedMode;
+                button.setAttribute('aria-pressed', String(active));
+                button.classList.toggle('bg-white', active);
+                button.classList.toggle('text-blue-700', active);
+                button.classList.toggle('shadow-sm', active);
+                button.classList.toggle('text-gray-600', !active);
+            });
+            try {
+                localStorage.setItem(layoutModeStorageKey, selectedMode);
+            } catch {
+            }
+        }
+
+        function initializeLayoutMode() {
+            const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
+            let mode = isMobileViewport ? 'mobile' : 'desktop';
+            if (!isMobileViewport) {
+                try {
+                    const savedMode = localStorage.getItem(layoutModeStorageKey);
+                    if (savedMode === 'mobile' || savedMode === 'desktop') mode = savedMode;
+                } catch {
+                }
+            }
+            setLayoutMode(mode);
+        }
+
+        function renderCategoryNavigation() {
+            const mainFilters = document.getElementById('category-filters');
+            mainFilters.innerHTML = [
+                { value: 'all', label: '全部' },
+                ...categoryGroups
+                    .filter(category => category.value !== 'life_services')
+                    .map(({ value, label }) => ({ value, label }))
+            ].map(category => `<button type="button" data-main-category="${category.value}" aria-pressed="${activeCategory === category.value}" class="cat-btn shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition ${activeCategory === category.value ? 'bg-blue-700 text-white' : 'bg-white text-gray-700 border hover:bg-gray-100'}">${category.label}</button>`).join('');
+
+            const formatFilters = document.getElementById('event-format-filters');
+            formatFilters.innerHTML = [
+                { value: 'all', label: '全部' },
+                { value: 'online', label: '線上' },
+                { value: 'offline', label: '線下' }
+            ].map(format => `<button type="button" data-event-format="${format.value}" aria-pressed="${activeEventFormat === format.value}" class="shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition ${activeEventFormat === format.value ? 'bg-blue-700 text-white' : 'bg-white text-gray-700 border hover:bg-gray-100'}">${format.label}</button>`).join('');
+
+            const heading = document.getElementById('subcategory-heading');
+            const subfilters = document.getElementById('subcategory-filters');
+            const selectedCategories = activeCategory === 'all'
+                ? []
+                : categoryGroups.filter(category => category.value === activeCategory);
+            heading.textContent = activeCategory === 'all' ? '子分類' : selectedCategories[0]?.label || '子分類';
+            if (!selectedCategories.length) {
+                subfilters.innerHTML = '<p class="text-sm text-gray-500 py-2">選擇主分類查看子分類</p>';
+                return;
+            }
+            subfilters.innerHTML = [
+                `<button type="button" data-subcategory="all" aria-pressed="${activeSubcategory === 'all'}" class="shrink-0 md:w-full md:text-left px-3 py-2 rounded-lg text-sm transition ${activeSubcategory === 'all' ? 'bg-blue-50 text-blue-800 font-semibold' : 'text-gray-600 hover:bg-gray-100'}">全部子分類</button>`,
+                ...selectedCategories.map(category => `<div class="contents">
+                    <p class="shrink-0 md:w-full text-xs font-semibold text-gray-500 px-3 pt-2">${category.label}</p>
+                    ${category.subcategories.map(subcategory => `<button type="button" data-subcategory="${subcategory.value}" aria-pressed="${activeSubcategory === subcategory.value}" class="shrink-0 md:w-full md:text-left px-3 py-2 rounded-lg text-sm transition ${activeSubcategory === subcategory.value ? 'bg-blue-50 text-blue-800 font-semibold' : 'text-gray-600 hover:bg-gray-100'}">${subcategory.label}</button>`).join('')}
+                </div>`)
+            ].join('');
+        }
+
+        async function loadActivitiesFromDB() {
+            const { data, error } = await supabaseClient
+                .from('public_activities')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (!error && data) {
+                activities = data.map(item => ({
+                    id: item.id,
+                    cats: String(item.category || '').split(',').filter(Boolean),
+                    subcats: String(item.subcategory || '').split(',').filter(Boolean),
+                    title: item.title,
+                    org: item.org_name,
+                    type: item.identity_type === 'club' ? '社團' : item.identity_type === 'org' ? '機構' : '個人',
+                    eventFormat: item.event_format === 'online' ? 'online' : 'offline',
+                    time: item.event_time || '時間待公布',
+                    endTime: item.event_end_time || item.event_end_date || '',
+                    description: item.description || '',
+                    loc: item.location || '地點待公布',
+                    mapUrl: item.map_url || '',
+                    fee: item.fee || (Number(item.total_amount) > 0 ? `MOP ${item.total_amount}` : '免費'),
+                    age: item.age_range,
+                    isLifeService: item.is_life_service === true,
+                    lifeServiceCategory: item.life_service_category || '',
+                    lifeServiceSubcategory: item.life_service_subcategory || '',
+                    lifeServiceSummary: item.life_service_summary || '',
+                    lifeServiceDetails: item.life_service_details || '',
+                    lifeServiceThumbnailUrl: item.life_service_thumbnail_url || '',
+                    posterDisplayScale: Number.isFinite(Number(item.poster_display_scale))
+                        ? Math.min(200, Math.max(100, Math.round(Number(item.poster_display_scale) / 10) * 10))
+                        : 100,
+                    posterDisplayPosition: item.poster_display_position !== null && item.poster_display_position !== undefined && item.poster_display_position !== '' && Number.isFinite(Number(item.poster_display_position))
+                        ? Math.min(100, Math.max(0, Math.round(Number(item.poster_display_position) / 5) * 5))
+                        : 50,
+                    img: item.poster_url || 'https://via.placeholder.com/600x400?text=No+Image',
+                    promotionImages: Array.isArray(item.promotion_image_urls) ? item.promotion_image_urls : [],
+                    videoUrl: item.video_url || '',
+                    email: item.contact_email || '',
+                    wechat: item.wechat_id,
+                    phone: item.contact_phone,
+                    socialHandle: item.social_handle || '',
+                    url: item.registration_url
+                }));
+            }
+
+            homepageServiceEntries = activities.filter(activity => activity.isLifeService);
+            renderHomepageServiceCategories();
+            renderCalendar();
+            renderActivities();
+        }
+
+        function safeExternalUrl(value) {
+            try {
+                const url = new URL(value);
+                return url.protocol === 'https:' ? url.href : '';
+            } catch {
+                return '';
+            }
+        }
+
+        function getMapUrl(value, location) {
+            if (value) {
+                try {
+                    const url = new URL(value);
+                    const host = url.hostname.toLowerCase();
+                    const isAllowedHost = host === 'maps.apple.com' || host === 'maps.app.goo.gl' ||
+                        (host === 'goo.gl' && url.pathname.startsWith('/maps')) ||
+                        host === 'google.com' || host.endsWith('.google.com') ||
+                        host === 'openstreetmap.org' || host.endsWith('.openstreetmap.org');
+                    if (url.protocol === 'https:' && isAllowedHost) return url.href;
+                } catch {
+                    return '';
+                }
+            }
+            return location && location !== '地點待公布'
+                ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`
+                : '';
+        }
+
+        function getVideoEmbedUrl(value) {
+            try {
+                const url = new URL(value);
+                if (url.protocol !== 'https:') return '';
+                const host = url.hostname.toLowerCase();
+                if (location.protocol === 'file:' && (host === 'youtu.be' || host.endsWith('.youtu.be') || host === 'youtube.com' || host.endsWith('.youtube.com'))) return '';
+                if (host === 'youtu.be' || host.endsWith('.youtu.be')) {
+                    const id = url.pathname.split('/').filter(Boolean)[0];
+                    return id && /^[\w-]{11}$/.test(id) ? `https://www.youtube-nocookie.com/embed/${id}` : '';
+                }
+                if (host === 'youtube.com' || host.endsWith('.youtube.com')) {
+                    const id = url.searchParams.get('v') || url.pathname.match(/\/(?:embed|shorts)\/([\w-]{11})/)?.[1];
+                    return id && /^[\w-]{11}$/.test(id) ? `https://www.youtube-nocookie.com/embed/${id}` : '';
+                }
+                if (host === 'vimeo.com' || host.endsWith('.vimeo.com')) {
+                    const id = url.pathname.split('/').filter(Boolean).find(segment => /^\d+$/.test(segment));
+                    return id ? `https://player.vimeo.com/video/${id}` : '';
+                }
+            } catch {
+                return '';
+            }
+            return '';
+        }
+
+        function parseJsonArray(value) {
+            try {
+                const parsed = JSON.parse(value || '[]');
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function renderHomepageServiceCategories(categories) {
+            if (Array.isArray(categories)) {
+                homepageServiceCategories = homepageServiceCategories.map(defaultCategory => {
+                    const savedCategory = categories.find(category => category?.id === defaultCategory.id);
+                    const savedSubcategories = Array.isArray(savedCategory?.subcategories)
+                        ? savedCategory.subcategories
+                        : defaultCategory.subcategories;
+                    return {
+                        ...defaultCategory,
+                        name: typeof savedCategory?.name === 'string' && savedCategory.name.trim() ? savedCategory.name.trim() : defaultCategory.name,
+                        pinText: typeof savedCategory?.pinText === 'string' ? savedCategory.pinText.trim() : '',
+                        subcategories: savedSubcategories
+                            .filter(item => item && typeof item.id === 'string' && typeof item.name === 'string' && item.id.trim() && item.name.trim())
+                            .map(item => ({ id: item.id.trim(), name: item.name.trim() }))
+                    };
+                });
+            }
+            if (!homepageServiceCategories.length) return;
+            if (!homepageServiceCategories.some(category => category.id === activeServiceCategory)) {
+                activeServiceCategory = homepageServiceCategories[0].id;
+            }
+            document.getElementById('life-services-categories').innerHTML = homepageServiceCategories.map(category => {
+                const count = homepageServiceEntries.filter(service => service.lifeServiceCategory === category.id).length;
+                return `<button type="button" data-service-category="${escapeHtml(category.id)}" aria-pressed="${category.id === activeServiceCategory}" aria-haspopup="dialog" class="flex min-h-16 w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition ${category.id === activeServiceCategory ? 'border-blue-700 bg-blue-700 text-white' : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400 hover:bg-blue-50'}">
+                    <span class="flex min-w-0 flex-col items-start gap-1">
+                        <span class="flex items-center gap-2 text-sm font-semibold">
+                            <span>${escapeHtml(category.icon || '')} ${escapeHtml(category.name)}</span>
+                            <span aria-label="${count} 個已核准項目" class="inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold ${category.id === activeServiceCategory ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}">${count}</span>
+                        </span>
+                        ${category.pinText ? `<span class="max-w-full truncate text-xs font-normal ${category.id === activeServiceCategory ? 'text-blue-100' : 'text-gray-500'}" title="${escapeHtml(category.pinText)}">📌 ${escapeHtml(category.pinText)}</span>` : ''}
+                    </span>
+                    <span class="shrink-0 text-xs font-medium ${category.id === activeServiceCategory ? 'text-blue-100' : 'text-blue-700'}">查看詳情 →</span>
+                </button>`;
+            }).join('');
+        }
+
+        function getServiceSummary(service) {
+            return service.lifeServiceSummary || service.description || service.lifeServiceDetails || '暫未提供活動簡介。';
+        }
+
+        function renderServiceDetailsMarkup(service) {
+            const summary = getServiceSummary(service);
+            const details = service.lifeServiceDetails || (service.description !== summary ? service.description : '');
+            const detailRows = [
+                ['活動時間', service.time],
+                ['活動地址', service.loc],
+                ['費用', service.fee],
+                ['適用年齡', service.age],
+                ['Email', service.email],
+                ['聯絡電話', service.phone],
+                ['WeChat', service.wechat],
+                ['IG／FB', service.socialHandle]
+            ].filter(([, value]) => value && value !== '地點待公布');
+            const mapUrl = getMapUrl(service.mapUrl, service.loc);
+            const signupUrl = safeExternalUrl(service.url);
+            return `<div class="space-y-3">
+                ${details ? `<section><h4 class="text-sm font-semibold text-gray-800 mb-1">活動詳情</h4><p class="whitespace-pre-line text-sm leading-6 text-gray-700">${escapeHtml(details)}</p></section>` : ''}
+                ${detailRows.length ? `<dl class="grid gap-2 sm:grid-cols-2">${detailRows.map(([label, value]) => `<div class="rounded-lg bg-gray-50 p-3"><dt class="text-xs text-gray-500">${escapeHtml(label)}</dt><dd class="mt-1 text-sm text-gray-800">${escapeHtml(value)}</dd></div>`).join('')}</dl>` : ''}
+                <div class="flex flex-wrap gap-4 text-sm">
+                    ${mapUrl ? `<a class="text-blue-700 underline" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">查看地圖</a>` : ''}
+                    ${signupUrl ? `<a class="text-blue-700 underline" href="${escapeHtml(signupUrl)}" target="_blank" rel="noopener noreferrer">前往報名／聯絡</a>` : ''}
+                </div>
+            </div>`;
+        }
+
+        function renderServiceCategoryModal() {
+            const category = homepageServiceCategories.find(item => item.id === activeServiceCategory);
+            if (!category) return;
+            document.getElementById('service-category-modal-title').textContent = category.name;
+            const options = [
+                { id: 'all', name: '全部服務' },
+                ...(category.subcategories || [])
+            ];
+            document.getElementById('service-category-modal-options').innerHTML = options.map(option => `
+                <button type="button" data-service-subcategory="${escapeHtml(option.id)}" aria-pressed="${option.id === activeServiceSubcategory}" class="w-fit max-w-full rounded-lg border px-4 py-2.5 text-left text-sm font-medium leading-5 transition ${option.id === activeServiceSubcategory ? 'border-amber-500 bg-amber-50 text-amber-900' : 'border-gray-200 text-gray-700 hover:border-amber-400 hover:bg-amber-50'}">
+                    ${escapeHtml(option.name)}
+                </button>`).join('');
+
+            serviceCategoryModalEntries = homepageServiceEntries.filter(service =>
+                service.lifeServiceCategory === category.id &&
+                (activeServiceSubcategory === 'all' || service.lifeServiceSubcategory === activeServiceSubcategory)
+            );
+            document.getElementById('service-category-modal-results').innerHTML = serviceCategoryModalEntries.length
+                ? serviceCategoryModalEntries.map((service, index) => `
+                    <article class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                        <div class="flex items-start justify-between gap-3 p-4">
+                            <div class="min-w-0 flex-1">
+                                <h3 class="font-semibold text-gray-800">${escapeHtml(service.org || service.title || '生活服務')}</h3>
+                                ${service.title && service.title !== service.org ? `<p class="mt-1 text-sm text-gray-700">${escapeHtml(service.title)}</p>` : ''}
+                            </div>
+                            ${safeExternalUrl(service.lifeServiceThumbnailUrl) || safeExternalUrl(service.img) ? `<img src="${escapeHtml(safeExternalUrl(service.lifeServiceThumbnailUrl) || safeExternalUrl(service.img))}" alt="${escapeHtml(service.title || service.org || '活動縮圖')}" loading="lazy" class="h-20 w-20 shrink-0 rounded-lg object-cover sm:h-24 sm:w-24">` : ''}
+                        </div>
+                        <p class="px-4 pb-3 whitespace-pre-line text-sm leading-6 text-gray-700">${escapeHtml(getServiceSummary(service))}</p>
+                        <div class="px-4 pb-4">
+                            <button type="button" data-expand-service-details="${index}" aria-expanded="${expandedServiceCategoryEntry === index}" class="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-800 hover:bg-blue-100">${expandedServiceCategoryEntry === index ? '收回詳情' : '展開詳情'}</button>
+                            <div data-service-details-panel class="${expandedServiceCategoryEntry === index ? '' : 'hidden'} mt-3 border-t border-gray-100 pt-3">${renderServiceDetailsMarkup(service)}</div>
+                        </div>
+                    </article>`).join('')
+                : '<p class="rounded-lg bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">此子分類暫無已核准的服務項目。</p>';
+        }
+
+        function openServiceCategoryModal(categoryId) {
+            const category = homepageServiceCategories.find(item => item.id === categoryId);
+            if (!category) return;
+            activeServiceCategory = category.id;
+            activeServiceSubcategory = 'all';
+            expandedServiceCategoryEntry = -1;
+            renderHomepageServiceCategories();
+            renderServiceCategoryModal();
+            const modal = document.getElementById('service-category-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('close-service-category-modal').focus();
+        }
+
+        function closeServiceCategoryModal() {
+            const modal = document.getElementById('service-category-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function renderHomepageContent(settings) {
+            if (settings.home_hero_items !== undefined) renderHomepageHero(settings.home_hero_items);
+            specialCalendarDays = parseJsonArray(settings.calendar_special_days)
+                .filter(item => item && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && typeof item.icon === 'string' && typeof item.title === 'string');
+            renderCalendar();
+            const quote = settings.home_mindfulness_quote?.trim();
+            const quoteElement = document.getElementById('mindfulness-quote');
+            quoteElement.textContent = quote || '願每一次相遇，都為生活添一點光。';
+            document.getElementById('homepage-notice-content').textContent = settings.home_notice_content?.trim() || '暫無通告';
+            document.getElementById('homepage-warm-info-content').textContent = settings.home_warm_info_content?.trim() || '暫無溫馨資訊';
+            renderHomepageServiceCategories(parseJsonArray(settings.home_service_categories));
+            setActivityCategoryGroups(homepageServiceCategories);
+            quoteElement.style.color = /^#[0-9a-fA-F]{6}$/.test(settings.home_mindfulness_quote_color || '')
+                ? settings.home_mindfulness_quote_color
+                : '#4b5563';
+            quoteElement.style.fontWeight = ['300', '400', '500', '600', '700'].includes(settings.home_mindfulness_quote_weight)
+                ? settings.home_mindfulness_quote_weight
+                : '400';
+            const fontStacks = {
+                sans: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+                serif: 'Georgia, "Noto Serif TC", serif',
+                kai: 'KaiTi, DFKai-SB, serif',
+                mono: 'ui-monospace, SFMono-Regular, monospace'
+            };
+            quoteElement.style.fontFamily = fontStacks[settings.home_mindfulness_quote_font] || fontStacks.sans;
+
+            const blogs = parseJsonArray(settings.home_blog_items);
+            const blogList = document.getElementById('homepage-blog-list');
+            blogList.innerHTML = blogs.length ? blogs.map(blog => {
+                const href = safeExternalUrl(blog.url);
+                const image = safeExternalUrl(blog.imageUrl);
+                const title = escapeHtml(blog.title || '未命名網誌');
+                const content = `${image ? `<img src="${escapeHtml(image)}" alt="${title}" loading="lazy" class="w-full aspect-video object-cover rounded-lg mb-3">` : ''}<span class="block font-semibold text-gray-800">${title}</span>${blog.excerpt ? `<span class="block text-sm text-gray-500 mt-1">${escapeHtml(blog.excerpt)}</span>` : ''}`;
+                return `<div class="py-4">${href ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="block hover:text-blue-700">${content}</a>` : content}</div>`;
+            }).join('') : '<p class="py-4 text-sm text-gray-500">暫無網誌內容</p>';
+
+            const ads = parseJsonArray(settings.home_ad_items)
+                .map((ad, index) => ({ ...ad, order: Number(ad.order) || index + 1 }))
+                .sort((first, second) => first.order - second.order);
+            const adList = document.getElementById('homepage-ad-list');
+            adList.innerHTML = ads.length ? ads.map(ad => {
+                const href = safeExternalUrl(ad.url);
+                const image = safeExternalUrl(ad.imageUrl);
+                const imageScale = Math.min(200, Math.max(100, Number(ad.imageScale) || 100));
+                const imagePosition = Math.min(100, Math.max(0, Number(ad.imagePosition ?? 50)));
+                const body = `${image ? `<div class="w-[225px] max-w-full aspect-[45/14] overflow-hidden rounded-lg mb-3 bg-gray-100"><img src="${escapeHtml(image)}" alt="${escapeHtml(ad.title || '合作推薦')}" loading="lazy" class="w-full h-full object-cover" style="transform:scale(${imageScale / 100});transform-origin:center;object-position:center ${imagePosition}%"></div>` : ''}${ad.title ? `<span class="block font-semibold text-gray-800">${escapeHtml(ad.title)}</span>` : ''}${ad.description ? `<span class="block text-sm text-gray-500 mt-1">${escapeHtml(ad.description)}</span>` : ''}`;
+                return `<div class="${image ? '' : 'border-t py-3'}">${href ? `<a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" class="block hover:opacity-80">${body}</a>` : body}</div>`;
+            }).join('') : '<p class="text-sm text-gray-500">暫無廣告內容</p>';
+        }
+
+        function renderHomepageHero(value) {
+            const section = document.getElementById('hero-carousel-wrapper');
+            const gallery = document.getElementById('hero-polaroid-grid');
+            const items = parseJsonArray(value)
+                .map(item => ({ ...item, order: Number(item.order), image: safeExternalUrl(item.imageUrl) }))
+                .filter(item => Number.isInteger(item.order) && item.order > 0 && item.image)
+                .sort((first, second) => first.order - second.order)
+                .slice(0, 9);
+            gallery.innerHTML = items.length ? items.map((item, index) => {
+                const title = item.title ? escapeHtml(item.title) : `置頂內容 ${index + 1}`;
+                const mobileImage = safeExternalUrl(item.mobileImageUrl) || item.image;
+                const pageId = String(item.pageId || `hero-${item.order}`);
+                const desktopFrame = safeExternalUrl(item.frameUrl);
+                const mobileFrame = safeExternalUrl(item.mobileFrameUrl) || desktopFrame;
+                return `<a class="hero-polaroid-link" href="hero-detail.html?id=${encodeURIComponent(pageId)}"><figure class="hero-polaroid">
+                    <picture><source media="(max-width: 767px)" srcset="${escapeHtml(mobileImage)}"><img src="${escapeHtml(item.image)}" alt="${title}" loading="lazy"></picture>
+                    ${desktopFrame ? `<picture><source media="(max-width: 767px)" srcset="${escapeHtml(mobileFrame)}"><img class="hero-polaroid-frame" src="${escapeHtml(desktopFrame)}" alt="" aria-hidden="true" loading="lazy"></picture>` : ''}
+                    <figcaption><strong>${title}</strong>${item.description ? `<span class="block mt-1">${escapeHtml(item.description)}</span>` : ''}</figcaption>
+                </figure></a>`;
+            }).join('') : '<p class="col-span-full text-center text-gray-500 py-6">暫無置頂內容。</p>';
+            section.classList.remove('hidden');
+        }
+
+        async function loadHomepageContent() {
+            const keys = ['home_mindfulness_quote', 'home_mindfulness_quote_color', 'home_mindfulness_quote_weight', 'home_mindfulness_quote_font', 'home_blog_items', 'home_ad_items', 'home_hero_items', 'home_notice_content', 'home_warm_info_content', 'home_service_categories', 'calendar_special_days'];
+            const { data, error } = await supabaseClient.from('site_settings').select('key, value').in('key', keys);
+            if (error || !data) {
+                document.getElementById('homepage-notice-content').textContent = '通告載入失敗，請稍後再試。';
+                document.getElementById('homepage-warm-info-content').textContent = '資訊載入失敗，請稍後再試。';
+                console.warn('Homepage content settings unavailable:', error?.message || 'No data returned');
+                return;
+            }
+            renderHomepageContent(Object.fromEntries(data.map(item => [item.key, item.value])));
+        }
+
+        async function loadHomepageVisitorCount() {
+            const display = document.getElementById('homepage-visitor-count');
+            const sessionKey = 'spotmocity_homepage_visit_counted';
+            let alreadyCounted = false;
+            try {
+                alreadyCounted = sessionStorage.getItem(sessionKey) === 'true';
+            } catch {
+                alreadyCounted = false;
+            }
+
+            try {
+                const functionName = alreadyCounted ? 'get_homepage_visit_count' : 'register_homepage_visit';
+                const { data, error } = await supabaseClient.rpc(functionName);
+                if (error) throw error;
+                if (!alreadyCounted) {
+                    try {
+                        sessionStorage.setItem(sessionKey, 'true');
+                    } catch {
+                        // Keep the counter available when browser storage is disabled.
+                    }
+                }
+                display.textContent = new Intl.NumberFormat('zh-Hant-MO').format(Number(data || 0));
+            } catch (error) {
+                display.textContent = '暫不可用';
+                console.warn('Homepage visitor count unavailable:', error?.message || error);
+            }
+        }
+
+        function updateFeedbackType() {
+            const correctionSelected = document.querySelector('input[name="feedbackType"]:checked').value === 'content_correction';
+            const activitySelect = document.getElementById('feedback-activity');
+            document.getElementById('feedback-activity-field').classList.toggle('hidden', !correctionSelected);
+            activitySelect.required = correctionSelected;
+        }
+
+        function openFeedbackForm() {
+            const form = document.getElementById('feedback-form');
+            form.reset();
+            form.classList.remove('hidden');
+            document.getElementById('feedback-success').classList.add('hidden');
+            const activitySelect = document.getElementById('feedback-activity');
+            activitySelect.innerHTML = '<option value="">請選擇活動</option>' + activities.map(activity =>
+                `<option value="${escapeHtml(activity.id)}">${escapeHtml(activity.title)} · ${escapeHtml(activity.org)}</option>`
+            ).join('');
+            updateFeedbackType();
+            document.getElementById('feedback-modal').classList.remove('hidden');
+            document.getElementById('feedback-modal').classList.add('flex');
+        }
+
+        function closeFeedbackForm() {
+            const modal = document.getElementById('feedback-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function submitFeedback(event) {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+            const feedbackType = String(formData.get('feedbackType') || 'suggestion');
+            const activityId = String(formData.get('activityId') || '');
+            if (feedbackType === 'content_correction' && !activityId) {
+                alert('請先選擇要更正的活動。');
+                return;
+            }
+
+            const { error } = await supabaseClient.from('activity_feedback').insert([{
+                feedback_type: feedbackType,
+                activity_id: activityId || null,
+                message: String(formData.get('message') || '').trim(),
+                contact: String(formData.get('contact') || '').trim() || null,
+                status: 'pending'
+            }]);
+            if (error) {
+                alert('回饋送出失敗：' + error.message + '。請確認已執行最新的資料庫 SQL。');
+                return;
+            }
+
+            formData.get('feedbackType');
+            document.getElementById('feedback-form').classList.add('hidden');
+            document.getElementById('feedback-success').classList.remove('hidden');
+        }
+
+        function updateFeedbackType() {
+            const correctionSelected = document.querySelector('input[name="feedbackType"]:checked').value === 'content_correction';
+            const activitySelect = document.getElementById('feedback-activity');
+            document.getElementById('feedback-activity-field').classList.toggle('hidden', !correctionSelected);
+            activitySelect.required = correctionSelected;
+        }
+
+        function openFeedbackForm() {
+            const form = document.getElementById('feedback-form');
+            form.reset();
+            form.classList.remove('hidden');
+            document.getElementById('feedback-success').classList.add('hidden');
+            const activitySelect = document.getElementById('feedback-activity');
+            activitySelect.innerHTML = '<option value="">請選擇活動</option>' + activities.map(activity =>
+                `<option value="${escapeHtml(activity.id)}">${escapeHtml(activity.title)} · ${escapeHtml(activity.org)}</option>`
+            ).join('');
+            updateFeedbackType();
+            document.getElementById('feedback-modal').classList.remove('hidden');
+            document.getElementById('feedback-modal').classList.add('flex');
+        }
+
+        function closeFeedbackForm() {
+            const modal = document.getElementById('feedback-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        async function submitFeedback(event) {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+            const feedbackType = String(formData.get('feedbackType') || 'suggestion');
+            const activityValue = String(formData.get('activityId') || '');
+            const activityId = activityValue ? Number(activityValue) : null;
+            if (feedbackType === 'content_correction' && !Number.isSafeInteger(activityId)) {
+                alert('請先選擇要更正的活動。');
+                return;
+            }
+
+            const { error } = await supabaseClient.from('activity_feedback').insert([{
+                feedback_type: feedbackType,
+                activity_id: activityId,
+                message: String(formData.get('message') || '').trim(),
+                contact: String(formData.get('contact') || '').trim() || null,
+                status: 'pending'
+            }]);
+            if (error) {
+                alert('回饋送出失敗：' + error.message + '。請確認已執行最新的資料庫 SQL。');
+                return;
+            }
+
+            document.getElementById('feedback-form').classList.add('hidden');
+            document.getElementById('feedback-success').classList.remove('hidden');
+        }
+
+        function updateMacauClock() {
+            document.getElementById('macau-time').textContent = new Intl.DateTimeFormat('zh-Hant-MO', {
+                timeZone: 'Asia/Macau', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+            }).format(new Date());
+        }
+
+        async function loadMacauWeather() {
+            const weatherText = document.getElementById('macau-weather');
+            try {
+                const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=22.1987&longitude=113.5439&current=temperature_2m,weather_code&timezone=Asia%2FMacau');
+                if (!response.ok) throw new Error('Weather request failed');
+                const data = await response.json();
+                const current = data.current;
+                const [icon, label] = weatherLabels[current.weather_code] || ['☁', '天氣'];
+                document.getElementById('weather-icon').textContent = icon;
+                weatherText.textContent = `${label} ${Math.round(current.temperature_2m)}°C`;
+            } catch {
+                weatherText.textContent = '天氣暫不可用';
+            }
+        }
+
+        function dateKey(year, month, day) {
+            return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+
+        function parseActivityDate(value) {
+            const text = String(value || '').trim();
+            const match = text.match(/(\d{4})\s*(?:年|[-/.])\s*(\d{1,2})\s*(?:月|[-/.])\s*(\d{1,2})\s*日?/);
+            if (match) return dateKey(Number(match[1]), Number(match[2]), Number(match[3]));
+
+            const parsed = new Date(text);
+            if (Number.isNaN(parsed.getTime())) return '';
+            return dateKey(parsed.getFullYear(), parsed.getMonth() + 1, parsed.getDate());
+        }
+
+        function renderCalendar() {
+            const year = calendarYear;
+            const month = calendarMonth;
+            const monthDate = new Date(Date.UTC(year, month, 1, 12));
+            document.getElementById('calendar-month').textContent = new Intl.DateTimeFormat('zh-Hant-MO', {
+                timeZone: 'Asia/Macau', year: 'numeric', month: 'long'
+            }).format(monthDate);
+
+            const firstWeekday = new Date(Date.UTC(year, month, 1)).getUTCDay();
+            const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+            const activityByDate = new Map();
+            const monthStart = dateKey(year, month + 1, 1);
+            const monthEnd = dateKey(year, month + 1, daysInMonth);
+            for (const activity of activities.filter(item => matchesActivityFilters(item, false))) {
+                const startDate = parseActivityDate(activity.time);
+                const endDate = parseActivityDate(activity.endTime) || startDate;
+                if (!startDate || !endDate || endDate < monthStart || startDate > monthEnd) continue;
+                let date = new Date(`${startDate < monthStart ? monthStart : startDate}T12:00:00Z`);
+                const lastDate = new Date(`${endDate > monthEnd ? monthEnd : endDate}T12:00:00Z`);
+                while (date <= lastDate) {
+                    const key = dateKey(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
+                    const dayActivities = activityByDate.get(key) || [];
+                    if (!dayActivities.some(item => item.id === activity.id)) {
+                        dayActivities.push({ id: activity.id, title: activity.title || '未命名活動' });
+                        activityByDate.set(key, dayActivities);
+                    }
+                    date.setUTCDate(date.getUTCDate() + 1);
+                }
+            }
+            const specialDaysByDate = new Map(specialCalendarDays.map(item => [item.date, item]));
+
+            const days = document.getElementById('calendar-days');
+            days.innerHTML = '';
+            for (let cell = 0; cell < 42; cell++) {
+                const day = cell - firstWeekday + 1;
+                if (day < 1 || day > daysInMonth) {
+                    days.insertAdjacentHTML('beforeend', '<span class="min-h-[4.5rem] sm:min-h-20" aria-hidden="true"></span>');
+                    continue;
+                }
+
+                const key = dateKey(year, month + 1, day);
+                const dayActivities = activityByDate.get(key) || [];
+                const count = dayActivities.length;
+                const specialDay = specialDaysByDate.get(key);
+                const isSelected = key === selectedCalendarDate;
+                const isToday = key === dateKey(macauTodayParts.year, macauTodayParts.month, macauTodayParts.day);
+                const style = isSelected ? 'bg-blue-600 text-white' : isToday ? 'border-blue-500 text-blue-700' : 'border-transparent hover:bg-blue-50';
+                const activityTitles = dayActivities.map(item =>
+                    `<span class="mb-1 block truncate rounded bg-blue-50/80 px-1 py-0.5 text-left text-[10px] leading-3 font-semibold text-gray-700" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>`
+                ).join('');
+                const tooltip = [
+                    ...dayActivities.map(item => item.title),
+                    specialDay ? `${specialDay.icon} ${specialDay.title}` : ''
+                ].filter(Boolean).join(' · ') || '沒有已公布活動';
+                days.insertAdjacentHTML('beforeend', `<button type="button" role="gridcell" data-calendar-date="${key}" aria-pressed="${isSelected}" title="${escapeHtml(tooltip)}" class="relative h-32 overflow-y-auto overflow-x-hidden border rounded-lg p-1 text-sm text-left ${style}">
+                    <span class="block text-center text-xs font-semibold">${day}</span>
+                    <span class="mt-0.5 block pb-3">${activityTitles}</span>
+                    ${specialDay ? `<span aria-label="${escapeHtml(specialDay.title)}" class="absolute bottom-0.5 right-1 text-sm leading-none">${escapeHtml(specialDay.icon)}</span>` : count ? '<span class="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>' : ''}
+                </button>`);
+            }
+
+            const clearButton = document.getElementById('calendar-clear-date');
+            clearButton.classList.toggle('hidden', !selectedCalendarDate);
+            if (selectedCalendarDate) {
+                const [selectedYear, selectedMonth, selectedDay] = selectedCalendarDate.split('-').map(Number);
+                const count = activityByDate.get(selectedCalendarDate)?.length || 0;
+                document.getElementById('calendar-selection').textContent = `${selectedYear}年${selectedMonth}月${selectedDay}日：${count} 項活動`;
+            } else {
+                document.getElementById('calendar-selection').textContent = '選擇日期查看當日活動';
+            }
+        }
+
+        async function loadSiteBackgrounds() {
+            const { data, error } = await supabaseClient
+                .from('site_settings')
+                .select('key, value')
+                .in('key', [
+                    'background_top_url', 'background_middle_url', 'background_hero_outer_url', 'background_page_url',
+                    'background_top_strength', 'background_middle_strength', 'background_hero_outer_strength', 'background_page_strength'
+                ]);
+            if (error || !data) return;
+
+            const settings = Object.fromEntries(data.map(item => [item.key, item.value]));
+            applyBackgroundImage('site-header', settings.background_top_url, getBackgroundOverlayOpacity(settings.background_top_strength, 31));
+            applyBackgroundImage('middle-background', settings.background_middle_url, getBackgroundOverlayOpacity(settings.background_middle_strength, 36));
+            applyBackgroundImage('hero-carousel-wrapper', settings.background_hero_outer_url, getBackgroundOverlayOpacity(settings.background_hero_outer_strength, 61));
+            applyBackgroundImage('page-background', settings.background_page_url, getBackgroundOverlayOpacity(settings.background_page_strength, 2), true);
+        }
+
+        function getBackgroundOverlayOpacity(strengthValue, fallbackStrength) {
+            const strength = Number(strengthValue);
+            const percentage = Number.isFinite(strength) ? Math.max(0, Math.min(100, strength)) : fallbackStrength;
+            return 0.9 * (1 - percentage / 100);
+        }
+
+        function applyBackgroundImage(elementId, value, overlayOpacity, fixed = false) {
+            const element = document.getElementById(elementId);
+            let imageUrl;
+            try {
+                imageUrl = new URL(value);
+            } catch {
+                element.style.removeProperty('background-image');
+                return;
+            }
+            if (!['http:', 'https:'].includes(imageUrl.protocol)) return;
+
+            const imageLayer = `url(${JSON.stringify(imageUrl.href)})`;
+            const overlay = `linear-gradient(rgba(255, 255, 255, ${overlayOpacity}), rgba(255, 255, 255, ${overlayOpacity}))`;
+            element.style.backgroundImage = `${overlay}, ${imageLayer}`;
+            element.style.backgroundPosition = 'center';
+            element.style.backgroundSize = 'cover';
+            element.style.backgroundAttachment = fixed ? 'fixed' : 'scroll';
+        }
+
+        function matchesActivityFilters(activity, includeDate = true) {
+            const searchableText = [
+                activity.title,
+                activity.org,
+                activity.cats.map(value => categoryNames[value] || value).join(' '),
+                activity.subcats.map(value => subcategoryNames[value] || value).join(' '),
+                activity.age,
+                activity.time,
+                activity.loc,
+                activity.description,
+                activity.fee
+            ].join(' ').toLocaleLowerCase();
+            if (searchQuery) return searchableText.includes(searchQuery);
+
+            const matchesCategory = activeCategory === 'all' || activity.cats.includes(activeCategory);
+            const matchesSubcategory = activeSubcategory === 'all' || activity.subcats.includes(activeSubcategory);
+            const matchesEventFormat = activeEventFormat === 'all' || activity.eventFormat === activeEventFormat;
+            const activityStartDate = parseActivityDate(activity.time);
+            const activityEndDate = parseActivityDate(activity.endTime) || activityStartDate;
+            const matchesDate = !includeDate || !selectedCalendarDate ||
+                (activityStartDate && activityEndDate && activityStartDate <= selectedCalendarDate && selectedCalendarDate <= activityEndDate);
+            return matchesCategory && matchesSubcategory && matchesEventFormat && matchesDate;
+        }
+
+        function renderActivities() {
+            const list = document.getElementById('activity-list');
+            if (!list) return;
+            list.classList.toggle('hidden', activityDisplayMode === 'calendar' && !selectedCalendarDate && !searchQuery);
+
+            const filtered = activities.filter(activity => matchesActivityFilters(activity));
+
+            list.innerHTML = '';
+            if (filtered.length === 0) {
+                list.innerHTML = '<p class="col-span-full text-center text-gray-500 py-10">找不到符合條件的活動。</p>';
+                return;
+            }
+
+            filtered.forEach(act => {
+                list.innerHTML += `
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition" onclick="openModal(${act.id})">
+                        <img src="${escapeHtml(act.img)}" alt="${escapeHtml(act.title)}" class="w-full h-48 object-cover" style="object-position:center ${act.posterDisplayPosition}%;transform:scale(${act.posterDisplayScale / 100});">
+                        <div class="p-4">
+                            <div class="flex items-center justify-between gap-2">
+                                <h4 class="font-bold text-lg truncate">${escapeHtml(act.title)}</h4>
+                                <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${act.eventFormat === 'online' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'}">${act.eventFormat === 'online' ? '線上' : '線下'}</span>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-1">${escapeHtml(act.org)}</p>
+                            <p class="text-sm text-gray-500 mt-1">${escapeHtml(act.time.split(' ')[0])}${act.endTime ? ` 至 ${escapeHtml(act.endTime.replace('T', ' '))}` : ''}</p>
+                            <p class="text-xs text-gray-500 mt-1">${escapeHtml(act.cats.map(value => categoryNames[value] || value).join('、'))}${act.subcats.length ? ` · ${escapeHtml(act.subcats.map(value => subcategoryNames[value] || value).join('、'))}` : ''}</p>
+                            <p class="text-sm text-gray-600 mt-2 line-clamp-2">${escapeHtml(act.description || '活動免費參加')}</p>
+                            <div class="flex flex-wrap gap-2 mt-3">
+                                <span class="inline-block text-xs ${act.fee === '免費' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'} px-2 py-1 rounded font-medium">${escapeHtml(act.fee)}</span>
+                                <span class="inline-block text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded font-medium">年齡︰${act.age}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function filterCategory(cat) {
+            activeCategory = cat;
+            activeSubcategory = 'all';
+            renderCategoryNavigation();
+            renderCalendar();
+            renderActivities();
+        }
+
+        function filterSubcategory(subcategory) {
+            activeSubcategory = subcategory;
+            renderCategoryNavigation();
+            renderCalendar();
+            renderActivities();
+        }
+
+        function filterEventFormat(format) {
+            activeEventFormat = format;
+            renderCategoryNavigation();
+            renderCalendar();
+            renderActivities();
+        }
+
+        document.getElementById('category-filters').addEventListener('click', event => {
+            const button = event.target.closest('[data-main-category]');
+            if (button) filterCategory(button.dataset.mainCategory);
+        });
+
+        document.getElementById('event-format-filters').addEventListener('click', event => {
+            const button = event.target.closest('[data-event-format]');
+            if (button) filterEventFormat(button.dataset.eventFormat);
+        });
+
+        document.querySelectorAll('[data-layout-mode]').forEach(button => {
+            button.addEventListener('click', () => setLayoutMode(button.dataset.layoutMode));
+        });
+
+        document.getElementById('subcategory-filters').addEventListener('click', event => {
+            const button = event.target.closest('[data-subcategory]');
+            if (button) filterSubcategory(button.dataset.subcategory);
+        });
+
+        document.getElementById('activity-search').addEventListener('input', event => {
+            searchQuery = event.currentTarget.value.trim().toLocaleLowerCase();
+            document.getElementById('clear-search').classList.toggle('hidden', !searchQuery);
+            renderCalendar();
+            renderActivities();
+        });
+
+        document.getElementById('clear-search').addEventListener('click', () => {
+            const input = document.getElementById('activity-search');
+            input.value = '';
+            searchQuery = '';
+            document.getElementById('clear-search').classList.add('hidden');
+            renderCalendar();
+            renderActivities();
+            input.focus();
+        });
+
+        document.getElementById('life-services-categories').addEventListener('click', event => {
+            const button = event.target.closest('[data-service-category]');
+            if (!button) return;
+            openServiceCategoryModal(button.dataset.serviceCategory);
+        });
+        document.getElementById('service-category-modal-options').addEventListener('click', event => {
+            const button = event.target.closest('[data-service-subcategory]');
+            if (!button) return;
+            activeServiceSubcategory = button.dataset.serviceSubcategory;
+            expandedServiceCategoryEntry = -1;
+            renderServiceCategoryModal();
+        });
+        document.getElementById('service-category-modal-results').addEventListener('click', event => {
+            const button = event.target.closest('[data-expand-service-details]');
+            if (!button) return;
+            const index = Number(button.dataset.expandServiceDetails);
+            expandedServiceCategoryEntry = expandedServiceCategoryEntry === index ? -1 : index;
+            renderServiceCategoryModal();
+        });
+        document.getElementById('close-service-category-modal').addEventListener('click', closeServiceCategoryModal);
+        document.getElementById('service-category-modal').addEventListener('click', event => {
+            if (event.target.id === 'service-category-modal') closeServiceCategoryModal();
+        });
+        document.addEventListener('keydown', event => {
+            const modal = document.getElementById('service-category-modal');
+            if (event.key === 'Escape' && !modal.classList.contains('hidden')) closeServiceCategoryModal();
+        });
+        document.getElementById('modal-content').addEventListener('click', event => {
+            const button = event.target.closest('[data-service-accordion-toggle]');
+            if (!button) return;
+            const panel = button.nextElementSibling;
+            const isExpanded = button.getAttribute('aria-expanded') === 'true';
+            button.setAttribute('aria-expanded', String(!isExpanded));
+            button.textContent = isExpanded ? '展開詳情' : '收回詳情';
+            panel.classList.toggle('is-open', !isExpanded);
+            panel.setAttribute('aria-hidden', String(isExpanded));
+            panel.inert = isExpanded;
+        });
+        document.getElementById('hero-polaroid-grid').addEventListener('click', event => {
+            const card = event.target.closest('[data-open-activity]');
+            if (!card) return;
+            const activity = activities.find(item => String(item.id) === card.dataset.openActivity);
+            if (activity) openModal(activity.id);
+        });
+        document.getElementById('open-feedback').addEventListener('click', openFeedbackForm);
+        document.getElementById('close-feedback').addEventListener('click', closeFeedbackForm);
+        document.querySelectorAll('input[name="feedbackType"]').forEach(input => input.addEventListener('change', updateFeedbackType));
+        document.getElementById('feedback-form').addEventListener('submit', submitFeedback);
+        document.getElementById('feedback-modal').addEventListener('click', event => {
+            if (event.target.id === 'feedback-modal') closeFeedbackForm();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') closeFeedbackForm();
+        });
+
+        document.getElementById('open-feedback').addEventListener('click', openFeedbackForm);
+        document.getElementById('close-feedback').addEventListener('click', closeFeedbackForm);
+        document.querySelectorAll('input[name="feedbackType"]').forEach(input => input.addEventListener('change', updateFeedbackType));
+        document.getElementById('feedback-form').addEventListener('submit', submitFeedback);
+        document.getElementById('feedback-modal').addEventListener('click', event => {
+            if (event.target.id === 'feedback-modal') closeFeedbackForm();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') closeFeedbackForm();
+        });
+
+        document.getElementById('calendar-days').addEventListener('click', event => {
+            const button = event.target.closest('[data-calendar-date]');
+            if (!button) return;
+            selectedCalendarDate = button.dataset.calendarDate;
+            renderCalendar();
+            renderActivities();
+        });
+
+        function setActivityDisplayMode(mode) {
+            activityDisplayMode = mode;
+            if (mode === 'list') selectedCalendarDate = '';
+
+            const isCalendar = mode === 'calendar';
+            document.getElementById('event-calendar').classList.toggle('hidden', !isCalendar);
+            document.getElementById('view-mode-list').classList.toggle('bg-white', !isCalendar);
+            document.getElementById('view-mode-list').classList.toggle('text-gray-900', !isCalendar);
+            document.getElementById('view-mode-list').classList.toggle('shadow-sm', !isCalendar);
+            document.getElementById('view-mode-list').classList.toggle('text-gray-600', isCalendar);
+            document.getElementById('view-mode-list').setAttribute('aria-pressed', String(!isCalendar));
+            document.getElementById('view-mode-calendar').classList.toggle('bg-white', isCalendar);
+            document.getElementById('view-mode-calendar').classList.toggle('text-gray-900', isCalendar);
+            document.getElementById('view-mode-calendar').classList.toggle('shadow-sm', isCalendar);
+            document.getElementById('view-mode-calendar').classList.toggle('text-gray-600', !isCalendar);
+            document.getElementById('view-mode-calendar').setAttribute('aria-pressed', String(isCalendar));
+            renderCalendar();
+            renderActivities();
+        }
+
+        document.getElementById('view-mode-list').addEventListener('click', () => setActivityDisplayMode('list'));
+        document.getElementById('view-mode-calendar').addEventListener('click', () => setActivityDisplayMode('calendar'));
+
+        document.getElementById('calendar-clear-date').addEventListener('click', () => {
+            selectedCalendarDate = '';
+            renderCalendar();
+            renderActivities();
+        });
+
+        document.getElementById('calendar-previous').addEventListener('click', () => {
+            calendarMonth--;
+            if (calendarMonth < 0) {
+                calendarMonth = 11;
+                calendarYear--;
+            }
+            renderCalendar();
+        });
+
+        document.getElementById('calendar-next').addEventListener('click', () => {
+            calendarMonth++;
+            if (calendarMonth > 11) {
+                calendarMonth = 0;
+                calendarYear++;
+            }
+            renderCalendar();
+        });
+
+        function openModal(id) {
+            const act = activities.find(a => a.id === id);
+            if (!act) return;
+
+            const modal = document.getElementById('detail-modal');
+            const content = document.getElementById('modal-content');
+            const posterUrl = safeExternalUrl(act.img);
+            const promotionImages = act.promotionImages.map(safeExternalUrl).filter(Boolean);
+            const videoEmbedUrl = getVideoEmbedUrl(act.videoUrl);
+            const videoLink = safeExternalUrl(act.videoUrl);
+            const mapLink = act.eventFormat === 'online' ? '' : getMapUrl(act.mapUrl, act.loc);
+
+            content.innerHTML = `
+                ${posterUrl ? `<button type="button" data-full-image="${escapeHtml(posterUrl)}" data-full-image-alt="${escapeHtml(act.title)} 活動海報" aria-label="放大查看活動海報" class="block w-full mb-4 cursor-zoom-in"><img src="${escapeHtml(posterUrl)}" alt="${escapeHtml(act.title)} 活動海報（點擊查看完整圖片）" class="w-full max-h-[420px] object-contain bg-gray-50 rounded-xl"></button>` : ''}
+                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                    <h2 class="text-2xl font-bold">${escapeHtml(act.title)}</h2>
+                    <span class="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full">${escapeHtml(act.type)}</span>
+                    <span class="text-xs ${act.eventFormat === 'online' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'} px-2 py-1 rounded-full font-semibold">${act.eventFormat === 'online' ? '線上' : '線下'}</span>
+                </div>
+                <p class="text-sm text-gray-600 mb-2">主辦單位：${escapeHtml(act.org)}</p>
+                <p class="text-sm text-gray-600 mb-4">分類：${escapeHtml(act.cats.map(value => categoryNames[value] || value).join('、'))}${act.subcats.length ? ` · ${escapeHtml(act.subcats.map(value => subcategoryNames[value] || value).join('、'))}` : ''}</p>
+                ${act.description ? `<p class="text-gray-700 leading-7 whitespace-pre-line mb-5">${escapeHtml(act.description)}</p>` : ''}
+
+                <div class="space-y-3 mb-6 text-sm bg-gray-50 p-5 rounded-xl border border-gray-100">
+                    <p class="flex items-start gap-2"><span class="font-bold text-gray-700 w-20 shrink-0">⏰ 活動期：</span><span class="text-gray-600">${escapeHtml(act.time)}${act.endTime ? ` 至 ${escapeHtml(act.endTime.replace('T', ' '))}` : ''}</span></p>
+                    <p class="flex items-start gap-2"><span class="font-bold text-gray-700 w-20 shrink-0">${act.eventFormat === 'online' ? '💻 線上：' : '📍 地點：'}</span><span class="text-gray-600">${escapeHtml(act.loc)}</span></p>
+                    <p class="flex items-start gap-2"><span class="font-bold text-gray-700 w-20 shrink-0">🎂 適合年齡：</span><span class="text-gray-600">${escapeHtml(act.age)}</span></p>
+                    <p class="flex items-start gap-2"><span class="font-bold text-gray-700 w-20 shrink-0">費用：</span><span class="${act.fee === '免費' ? 'text-emerald-700' : 'text-blue-700'} font-semibold">${escapeHtml(act.fee)}</span></p>
+                </div>
+
+                ${mapLink ? `<section class="mb-6"><h3 class="font-semibold mb-2">活動地圖</h3><iframe src="https://www.google.com/maps?q=${encodeURIComponent(act.loc)}&output=embed" title="${escapeHtml(act.title)} 活動地圖" class="w-full h-56 sm:h-64 rounded-xl border border-gray-200" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></section>` : ''}
+
+                <div class="flex flex-wrap gap-2 mb-6">
+                    ${act.email ? `<a href="mailto:${escapeHtml(act.email)}" class="bg-blue-50 text-blue-800 px-3 py-2 rounded-lg text-sm">Email 主辦方</a>` : ''}
+                    ${act.phone ? `<a href="tel:${escapeHtml(act.phone)}" class="bg-blue-50 text-blue-800 px-3 py-2 rounded-lg text-sm">致電主辦方</a>` : ''}
+                    ${mapLink ? `<a href="${escapeHtml(mapLink)}" target="_blank" rel="noopener noreferrer" class="bg-amber-50 text-amber-800 px-3 py-2 rounded-lg text-sm">查看地圖</a>` : ''}
+                    ${act.wechat ? `<button type="button" data-copy-value="${escapeHtml(act.wechat)}" class="bg-green-50 text-green-800 px-3 py-2 rounded-lg text-sm">複製 WeChat：${escapeHtml(act.wechat)}</button>` : ''}
+                    ${act.socialHandle ? `<button type="button" data-copy-value="${escapeHtml(act.socialHandle)}" class="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg text-sm">複製 IG／FB：${escapeHtml(act.socialHandle)}</button>` : ''}
+                    ${act.url && safeExternalUrl(act.url) ? `<a href="${escapeHtml(safeExternalUrl(act.url))}" target="_blank" rel="noopener noreferrer" class="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg text-sm">報名連結</a>` : ''}
+                </div>
+
+                ${promotionImages.length ? `<section class="mb-6"><h3 class="font-semibold mb-3">活動宣傳圖片</h3><div class="grid grid-cols-2 gap-3">${promotionImages.map((url, index) => `<button type="button" data-full-image="${escapeHtml(url)}" data-full-image-alt="宣傳圖片 ${index + 1}" aria-label="放大查看宣傳圖片 ${index + 1}" class="block w-full cursor-zoom-in"><img src="${escapeHtml(url)}" alt="宣傳圖片 ${index + 1}（點擊查看完整圖片）" loading="lazy" class="w-full h-40 object-cover rounded-lg border"></button>`).join('')}</div></section>` : ''}
+                ${videoEmbedUrl ? `<section class="mb-6"><h3 class="font-semibold mb-3">活動影片</h3><div class="aspect-video overflow-hidden rounded-xl bg-black"><iframe src="${escapeHtml(videoEmbedUrl)}" title="${escapeHtml(act.title)} 活動影片" class="w-full h-full" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>${videoLink ? `<p class="mt-2 text-sm"><a href="${escapeHtml(videoLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline">影片無法播放？在 YouTube／Vimeo 開啟</a></p>` : ''}</section>` : videoLink ? `<p class="mb-6"><a href="${escapeHtml(videoLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline">開啟活動影片</a></p>` : ''}
+            `;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('detail-modal');
+            if (!modal) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function openImageLightbox(url, alt) {
+            const lightbox = document.getElementById('image-lightbox');
+            const image = document.getElementById('image-lightbox-full');
+            image.src = url;
+            image.alt = alt;
+            lightbox.classList.remove('hidden');
+            lightbox.classList.add('flex');
+            document.getElementById('close-image-lightbox').focus();
+        }
+
+        function closeImageLightbox() {
+            const lightbox = document.getElementById('image-lightbox');
+            lightbox.classList.add('hidden');
+            lightbox.classList.remove('flex');
+            const image = document.getElementById('image-lightbox-full');
+            image.removeAttribute('src');
+            image.alt = '';
+        }
+
+        document.getElementById('modal-content').addEventListener('click', event => {
+            const imageButton = event.target.closest('[data-full-image]');
+            if (imageButton) openImageLightbox(imageButton.dataset.fullImage, imageButton.dataset.fullImageAlt || '');
+        });
+
+        document.getElementById('close-image-lightbox').addEventListener('click', closeImageLightbox);
+        document.getElementById('image-lightbox').addEventListener('click', event => {
+            if (event.target.id === 'image-lightbox') closeImageLightbox();
+        });
+        document.addEventListener('keydown', event => {
+            const lightbox = document.getElementById('image-lightbox');
+            if (event.key === 'Escape' && !lightbox.classList.contains('hidden')) closeImageLightbox();
+        });
+
+        document.getElementById('detail-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        document.getElementById('modal-content').addEventListener('click', event => {
+            const button = event.target.closest('[data-copy-value]');
+            if (!button) return;
+            navigator.clipboard.writeText(button.dataset.copyValue).then(() => {
+                button.textContent = '已複製';
+            }).catch(() => {
+                alert('複製失敗，請手動選取文字複製。');
+            });
+        });
+
+        updateMacauClock();
+        initializeLayoutMode();
+        setInterval(updateMacauClock, 1000);
+        loadMacauWeather();
+        setInterval(loadMacauWeather, 15 * 60 * 1000);
+        renderCategoryNavigation();
+        renderCalendar();
+        loadActivitiesFromDB();
+        loadSiteBackgrounds();
+        loadHomepageContent();
+        loadHomepageVisitorCount();
+    </script>
+    <script src="site-backgrounds.js"></script>
+</body>
+</html>

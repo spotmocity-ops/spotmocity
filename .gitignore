@@ -1,0 +1,6 @@
+.env
+**/.env
+webpage/
+*.rar
+index.html.inline*.js
+supabase/.temp/

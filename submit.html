@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提交活動 - SpotMoCity</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 min-h-screen py-10 px-4">
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-6 md:p-8">
+        <a href="index.html" class="text-blue-600 text-sm mb-4 inline-block">&larr; 返回首頁</a>
+        <h1 class="text-2xl font-bold mb-6 border-b pb-4">🏛️ 主辦方提交活動</h1>
+
+        <form id="submitForm" onsubmit="handleSubmit(event)">
+            <div class="mb-6">
+                <label class="block font-bold mb-2">1. 主辦方身份 <span class="text-red-500">*</span></label>
+                <div class="grid grid-cols-3 gap-3">
+                    <button type="button" onclick="switchIdentity('club')" id="btn-club" class="id-btn bg-blue-600 text-white py-2 rounded-lg font-medium">社團</button>
+                    <button type="button" onclick="switchIdentity('org')" id="btn-org" class="id-btn bg-gray-100 hover:bg-gray-200 py-2 rounded-lg font-medium">機構</button>
+                    <button type="button" onclick="switchIdentity('personal')" id="btn-personal" class="id-btn bg-gray-100 hover:bg-gray-200 py-2 rounded-lg font-medium">個人</button>
+                </div>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label id="lbl-name" class="block text-sm font-semibold mb-1">社團法定全稱 <span class="text-red-500">*</span></label>
+                    <input type="text" name="orgName" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div id="div-reg" class="hidden">
+                    <label id="lbl-reg" class="block text-sm font-semibold mb-1">機構登記編號</label>
+                    <input type="text" id="input-reg" name="regNumber" disabled class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <p id="privacy-note" class="text-xs text-gray-500 mt-1 hidden">🔒 證件號碼僅供管理員核實身份，不會公開顯示。</p>
+                    <label for="identity-proof" class="block text-sm font-semibold mt-3 mb-1">核實文件（選填）</label>
+                    <input type="file" id="identity-proof" name="identityProof" accept="application/pdf,image/jpeg,image/png,image/webp" class="w-full border rounded-lg p-2 text-sm">
+                    <p class="text-xs text-gray-500 mt-1">請提供登記編號或文件副本其中一項。文件僅供管理員核實，核實後會從線上資料庫及儲存空間刪除。PDF、JPG、PNG 或 WebP，最多 10 MB。</p>
+                </div>
+                <div id="verification-phone-field" class="hidden">
+                    <label for="verification-phone" class="block text-sm font-semibold mb-1">澳門手機號碼（身份核實）<span class="text-red-500">*</span></label>
+                    <input id="verification-phone" type="tel" name="verificationPhone" autocomplete="tel" placeholder="+853 6xxxxxxx" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <p class="text-xs text-amber-700 mt-1">簡訊 OTP 服務尚未接通；個人提交暫不開放，完成 OTP 驗證後才可提交。此號碼僅供身份核實，不會公開顯示。</p>
+                </div>
+                <div id="div-contact">
+                    <label class="block text-sm font-semibold mb-1">負責人姓名 <span class="text-red-500">*</span></label>
+                    <input type="text" name="contactPerson" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div class="mb-6 pt-4 border-t">
+                <h3 class="font-bold mb-3">2. 活動詳情與分類</h3>
+                <input type="text" name="title" placeholder="活動名稱" required class="w-full border rounded-lg px-4 py-2 mb-3 outline-none">
+
+                <div class="mb-3">
+                    <label for="event-time" class="block text-sm font-semibold mb-1 text-gray-700">活動日期及時間 <span class="text-red-500">*</span></label>
+                    <input id="event-time" type="datetime-local" name="eventTime" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+
+                <div class="mb-3">
+                    <label for="event-end-date" class="block text-sm font-semibold mb-1 text-gray-700">活動結束日期及時間 <span class="text-red-500">*</span></label>
+                    <input id="event-end-date" type="datetime-local" name="eventEndDate" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+
+                <fieldset class="mb-4">
+                    <legend class="block text-sm font-semibold mb-2 text-gray-700">活動形式 <span class="text-red-500">*</span></legend>
+                    <div class="flex gap-3">
+                        <label class="flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer">
+                            <input type="radio" name="eventFormat" value="offline" checked required class="h-4 w-4 accent-blue-600">
+                            <span>線下</span>
+                        </label>
+                        <label class="flex items-center gap-2 rounded-lg border px-4 py-2 cursor-pointer">
+                            <input type="radio" name="eventFormat" value="online" class="h-4 w-4 accent-blue-600">
+                            <span>線上</span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <fieldset class="mb-4">
+                    <legend class="block text-sm font-semibold mb-2 text-gray-700">活動費用</legend>
+                    <div class="inline-flex p-1 bg-gray-100 rounded-lg">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="feeMode" value="free" checked class="sr-only peer">
+                            <span class="inline-block px-4 py-2 rounded-md text-sm text-gray-600 peer-checked:bg-white peer-checked:text-gray-900 peer-checked:shadow-sm">免費</span>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="feeMode" value="paid" class="sr-only peer">
+                            <span class="inline-block px-4 py-2 rounded-md text-sm text-gray-600 peer-checked:bg-white peer-checked:text-gray-900 peer-checked:shadow-sm">收費</span>
+                        </label>
+                    </div>
+                    <div id="fee-amount-field" class="hidden mt-3 max-w-xs">
+                        <label for="fee-amount" class="block text-sm font-semibold mb-1">費用（MOP）</label>
+                        <input id="fee-amount" name="feeAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="例如 100" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </fieldset>
+
+                <div class="mb-3">
+                    <label class="block text-sm font-semibold mb-1 text-gray-700">適用年齡 <span class="text-red-500">*</span></label>
+                    <input type="text" name="ageRange" required placeholder="例如：18-45 或 不限" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <p class="text-xs text-gray-500 mt-1">請填寫數字區間（如 12-60），若無限制請填「不限」。</p>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <fieldset>
+                        <legend class="block text-sm font-semibold mb-2 text-gray-700">主分類 <span class="text-red-500">*</span></legend>
+                        <div id="category-options" class="grid gap-2 max-h-56 overflow-y-auto rounded-lg border p-3"></div>
+                    </fieldset>
+                    <fieldset>
+                        <legend class="block text-sm font-semibold mb-2 text-gray-700">子分類 <span class="text-red-500">*</span></legend>
+                        <div id="subcategory-options" class="grid gap-2 max-h-56 overflow-y-auto rounded-lg border p-3 bg-gray-50">
+                            <p class="text-sm text-gray-500">請先選擇主分類。</p>
+                        </div>
+                    </fieldset>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">可勾選多個主分類及不同主分類下的子分類。</p>
+
+                <div class="mt-3">
+                    <label for="activity-description" class="block text-sm font-semibold mb-1 text-gray-700">活動簡介 <span class="text-red-500">*</span></label>
+                    <textarea id="activity-description" name="description" rows="5" maxlength="1600" required placeholder="介紹活動內容、對象及參加方式" class="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                </div>
+
+                <div class="mt-3">
+                    <label id="activity-location-label" for="activity-location" class="block text-sm font-semibold mb-1 text-gray-700">活動地址 <span class="text-red-500">*</span></label>
+                    <input id="activity-location" name="location" type="text" maxlength="240" required placeholder="輸入場地名稱或完整地址" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div id="activity-map-field" class="mt-3">
+                    <label for="activity-map-url" class="block text-sm font-semibold mb-1 text-gray-700">地圖連結（選填）</label>
+                    <input id="activity-map-url" name="mapUrl" type="url" placeholder="Google Maps 或 Apple 地圖分享連結" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <p class="text-xs text-gray-500 mt-1">未提供連結時，詳情頁會以活動地址建立 Google Maps 搜尋連結。</p>
+                </div>
+                <div class="mt-3">
+                    <label for="registration-url" class="block text-sm font-semibold mb-1 text-gray-700">活動報名連結（選填）</label>
+                    <input id="registration-url" name="registrationUrl" type="url" placeholder="https://example.com/register" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <p class="text-xs text-gray-500 mt-1">填寫後，活動詳情會顯示報名按鈕。</p>
+                </div>
+            </div>
+
+            <div class="mb-6 pt-4 border-t">
+                <h3 class="font-bold mb-3">3. 主辦方聯絡方式</h3>
+                <p class="text-sm text-gray-500 mb-3">以下聯絡方式會顯示在活動詳情，方便瀏覽者聯絡主辦方。</p>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div>
+                        <label for="contact-email" class="block text-sm font-semibold mb-1">Email <span class="text-red-500">*</span></label>
+                        <input id="contact-email" type="email" name="contactEmail" required autocomplete="email" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label for="contact-phone" class="block text-sm font-semibold mb-1">聯絡電話 <span class="text-red-500">*</span></label>
+                        <input id="contact-phone" type="tel" name="contactPhone" required autocomplete="tel" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label for="wechat-id" class="block text-sm font-semibold mb-1">WeChat 帳號</label>
+                        <input id="wechat-id" type="text" name="wechatId" autocomplete="off" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label for="social-handle" class="block text-sm font-semibold mb-1">IG／FB 名稱或帳號</label>
+                        <input id="social-handle" type="text" name="socialHandle" autocomplete="off" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-6 pt-4 border-t">
+                <h3 class="font-bold mb-3">4. 活動宣傳素材</h3>
+                <p class="text-sm text-gray-500 mb-3">圖片限 JPG、PNG 或 WebP，每張不超過 10 MB。</p>
+                <div class="mb-4">
+                    <label for="poster-file" class="block text-sm font-semibold mb-1">活動主海報 <span class="text-red-500">*</span></label>
+                    <input id="poster-file" name="posterFile" type="file" accept="image/jpeg,image/png,image/webp" required class="w-full border rounded-lg p-2 text-sm">
+                    <img id="poster-preview" alt="活動海報預覽" class="hidden mt-3 w-full max-h-72 object-contain bg-gray-50 rounded-lg border">
+                </div>
+                <div class="mb-4">
+                    <label for="promotion-files" class="block text-sm font-semibold mb-1">宣傳圖片（最多 2 張，選填）</label>
+                    <input id="promotion-files" name="promotionFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple class="w-full border rounded-lg p-2 text-sm">
+                    <div id="promotion-previews" class="grid grid-cols-2 gap-3 mt-3"></div>
+                </div>
+                <div class="mb-4">
+                    <label for="video-url" class="block text-sm font-semibold mb-1">活動影片連結（選填）</label>
+                    <input id="video-url" name="videoUrl" type="url" placeholder="YouTube 或 Vimeo 影片網址" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <p class="text-xs text-gray-500 mt-1">支援 YouTube 或 Vimeo，影片會嵌入活動詳情頁播放。</p>
+                </div>
+
+                <div class="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border mb-4">
+                    <input type="checkbox" id="agreeTerms" required class="mt-1 w-5 h-5 cursor-pointer">
+                    <label for="agreeTerms" class="text-sm cursor-pointer">
+                         我已閱讀並同意 <a href="Terms.html" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline font-bold">「SpotMoCity 服務條款聲明」</a>，並知悉活動審核需時約 1–2 天；如平台對提交資料有疑問，會聯絡主辦方跟進。<span class="text-red-500 font-bold">（必須勾選）</span>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-md transition">✅ 確認提交審核</button>
+        </form>
+
+        <div id="successMsg" class="hidden text-center py-10">
+            <div class="text-5xl mb-4">🎉</div>
+            <h2 class="text-2xl font-bold mb-2">提交成功！</h2>
+            <p class="text-gray-600 mb-2">您的申請已鎖定，無法自行修改，等待管理員審核中。</p>
+            <p id="maskedIdNote" class="text-sm text-gray-500 hidden">身份證明末段已打碼保護：<span id="maskedId" class="font-mono font-bold"></span></p>
+            <a href="index.html" class="inline-block mt-6 text-blue-600 underline">返回首頁</a>
+        </div>
+    </div>
+
+    <script src="categories.js?v=20261027-life-services"></script>
+    <script>
+        const supabaseUrl = 'https://owvsfvunlqudrhdsuqvk.supabase.co';
+        const supabaseKey = 'sb_publishable_4kBnCjtv4c7j-sb8l3BrUw_j63egBDR';
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let currentIdentity = 'club';
+
+        function updateSubcategoryOptions() {
+            const selectedCategories = new Set(Array.from(
+                document.querySelectorAll('#category-options input[name="category"]:checked'),
+                input => input.value
+            ));
+            const selectedSubcategories = new Set(Array.from(
+                document.querySelectorAll('#subcategory-options input[name="subcategory"]:checked'),
+                input => input.value
+            ));
+            const container = document.getElementById('subcategory-options');
+            const categories = window.SpotMoCityCategories.filter(category => selectedCategories.has(category.value));
+            if (!categories.length) {
+                container.innerHTML = '<p class="text-sm text-gray-500">請先選擇主分類。</p>';
+                return;
+            }
+
+            container.innerHTML = categories.map(category => `<fieldset class="space-y-2">
+                <legend class="text-sm font-semibold text-gray-700">${category.label}</legend>
+                ${category.subcategories.map(subcategory => `<label class="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-white">
+                    <input type="checkbox" name="subcategory" value="${subcategory.value}" ${selectedSubcategories.has(subcategory.value) ? 'checked' : ''} class="mt-0.5 h-4 w-4 shrink-0 accent-blue-600">
+                    <span class="text-sm text-gray-700">${subcategory.label}</span>
+                </label>`).join('')}
+            </fieldset>`).join('');
+        }
+
+        const categoryOptions = document.getElementById('category-options');
+        categoryOptions.innerHTML = window.SpotMoCityCategories.map(category => `<label class="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-gray-50">
+            <input type="checkbox" name="category" value="${category.value}" class="mt-0.5 h-4 w-4 shrink-0 accent-blue-600">
+            <span class="text-sm text-gray-700">${category.label}</span>
+        </label>`).join('');
+        categoryOptions.addEventListener('change', updateSubcategoryOptions);
+
+        function switchIdentity(type) {
+            currentIdentity = type;
+            document.querySelectorAll('.id-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('bg-gray-100', 'hover:bg-gray-200');
+            });
+
+            const activeBtn = document.getElementById(`btn-${type}`);
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-gray-100', 'hover:bg-gray-200');
+                activeBtn.classList.add('bg-blue-600', 'text-white');
+            }
+
+            const lblName = document.getElementById('lbl-name');
+            const lblReg = document.getElementById('lbl-reg');
+            const inputReg = document.getElementById('input-reg');
+            const divReg = document.getElementById('div-reg');
+            const identityProof = document.getElementById('identity-proof');
+            const verificationPhoneField = document.getElementById('verification-phone-field');
+            const verificationPhone = document.getElementById('verification-phone');
+            const divContact = document.getElementById('div-contact');
+            const contactPerson = document.querySelector('[name="contactPerson"]');
+            const privacyNote = document.getElementById('privacy-note');
+
+            if (type === 'club') {
+                lblName.innerText = '社團法定全稱 *';
+                lblReg.innerText = '社團登記／核實資料編號';
+                divReg.classList.remove('hidden');
+                inputReg.required = false;
+                inputReg.disabled = false;
+                identityProof.required = false;
+                contactPerson.required = true;
+                divContact.classList.remove('hidden');
+                privacyNote.classList.add('hidden');
+            } else if (type === 'org') {
+                lblName.innerText = '機構全稱 *';
+                lblReg.innerText = '商業登記證明編號';
+                divReg.classList.remove('hidden');
+                inputReg.required = false;
+                inputReg.disabled = false;
+                identityProof.required = false;
+                contactPerson.required = true;
+                divContact.classList.remove('hidden');
+                privacyNote.classList.add('hidden');
+            } else {
+                lblName.innerText = '中/英全名 *';
+                lblReg.innerText = '身份證明文件號碼 *';
+                divReg.classList.remove('hidden');
+                inputReg.required = false;
+                inputReg.disabled = false;
+                identityProof.required = false;
+                verificationPhoneField.classList.remove('hidden');
+                verificationPhone.required = true;
+                contactPerson.required = false;
+                divContact.classList.add('hidden');
+                privacyNote.classList.remove('hidden');
+            }
+            if (type !== 'personal') {
+                verificationPhoneField.classList.add('hidden');
+                verificationPhone.required = false;
+                verificationPhone.value = '';
+            }
+        }
+
+        switchIdentity('club');
+
+        const allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp']);
+        const allowedIdentityProofTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
+        const maximumImageSize = 10 * 1024 * 1024;
+        const maximumIdentityProofSize = 10 * 1024 * 1024;
+        let previewObjectUrls = [];
+
+        function isValidImage(file) {
+            return allowedImageTypes.has(file.type) && file.size > 0 && file.size <= maximumImageSize;
+        }
+
+        function isSupportedVideoUrl(value) {
+            if (!value) return true;
+            try {
+                const url = new URL(value);
+                return url.protocol === 'https:' && /(^|\.)youtube\.com$|(^|\.)youtu\.be$|(^|\.)vimeo\.com$/.test(url.hostname);
+            } catch {
+                return false;
+            }
+        }
+
+        function isHttpsUrl(value) {
+            try {
+                return new URL(value).protocol === 'https:';
+            } catch {
+                return false;
+            }
+        }
+
+        function isSupportedMapUrl(value) {
+            if (!value) return true;
+            try {
+                const url = new URL(value);
+                const host = url.hostname.toLowerCase();
+                return url.protocol === 'https:' && (
+                    host === 'maps.apple.com' ||
+                    host === 'maps.app.goo.gl' ||
+                    host === 'goo.gl' && url.pathname.startsWith('/maps') ||
+                    host === 'google.com' || host.endsWith('.google.com') ||
+                    host === 'openstreetmap.org' || host.endsWith('.openstreetmap.org')
+                );
+            } catch {
+                return false;
+            }
+        }
+
+        function createUploadId() {
+            if (crypto.randomUUID) return crypto.randomUUID();
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, character => {
+                const random = crypto.getRandomValues(new Uint8Array(1))[0] % 16;
+                return (character === 'x' ? random : (random & 0x3) | 0x8).toString(16);
+            });
+        }
+
+        function updateImagePreviews() {
+            previewObjectUrls.forEach(URL.revokeObjectURL);
+            previewObjectUrls = [];
+
+            const poster = document.getElementById('poster-file').files[0];
+            const posterPreview = document.getElementById('poster-preview');
+            if (poster && isValidImage(poster)) {
+                const objectUrl = URL.createObjectURL(poster);
+                previewObjectUrls.push(objectUrl);
+                posterPreview.src = objectUrl;
+                posterPreview.classList.remove('hidden');
+            } else {
+                posterPreview.removeAttribute('src');
+                posterPreview.classList.add('hidden');
+            }
+
+            const files = Array.from(document.getElementById('promotion-files').files);
+            document.getElementById('promotion-previews').innerHTML = files.filter(isValidImage).map(file => {
+                const objectUrl = URL.createObjectURL(file);
+                previewObjectUrls.push(objectUrl);
+                return `<img src="${objectUrl}" alt="宣傳圖片預覽" class="w-full h-32 object-cover rounded-lg border">`;
+            }).join('');
+        }
+
+        document.getElementById('poster-file').addEventListener('change', updateImagePreviews);
+        document.getElementById('promotion-files').addEventListener('change', updateImagePreviews);
+
+        function updateFeeMode() {
+            const paid = document.querySelector('input[name="feeMode"]:checked').value === 'paid';
+            const amountField = document.getElementById('fee-amount');
+            document.getElementById('fee-amount-field').classList.toggle('hidden', !paid);
+            amountField.required = paid;
+            if (!paid) amountField.value = '';
+        }
+
+        document.querySelectorAll('input[name="feeMode"]').forEach(input => {
+            input.addEventListener('change', updateFeeMode);
+        });
+
+        function updateEventFormat() {
+            const isOnline = document.querySelector('input[name="eventFormat"]:checked').value === 'online';
+            const locationLabel = document.getElementById('activity-location-label');
+            const locationInput = document.getElementById('activity-location');
+            const mapField = document.getElementById('activity-map-field');
+            locationLabel.innerHTML = isOnline
+                ? '線上平台／參加方式 <span class="text-red-500">*</span>'
+                : '活動地址 <span class="text-red-500">*</span>';
+            locationInput.placeholder = isOnline ? '例如 Zoom、Teams 或線上報名後提供連結' : '輸入場地名稱或完整地址';
+            mapField.classList.toggle('hidden', isOnline);
+            if (isOnline) document.getElementById('activity-map-url').value = '';
+        }
+
+        document.querySelectorAll('input[name="eventFormat"]').forEach(input => {
+            input.addEventListener('change', updateEventFormat);
+        });
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+
+            if (currentIdentity === 'personal') {
+                alert('個人提交暫未開放：手機 OTP 服務尚未接通。請待 OTP 驗證功能啟用後再提交。');
+                return;
+            }
+
+            const formData = new FormData(e.target);
+            const selectedCategories = formData.getAll('category').filter(Boolean);
+            const selectedSubcategories = formData.getAll('subcategory').filter(Boolean);
+            if (!selectedCategories.length) {
+                alert('請至少勾選一項主分類。');
+                return;
+            }
+            if (!selectedSubcategories.length) {
+                alert('請至少勾選一項子分類。');
+                return;
+            }
+            const ageRange = formData.get('ageRange') || '不限';
+            const eventTime = (formData.get('eventTime') || '').toString();
+            const eventEndTime = (formData.get('eventEndDate') || '').toString();
+            const isPaid = formData.get('feeMode') === 'paid';
+            const feeAmount = isPaid ? Number(formData.get('feeAmount')) : 0;
+            const mapUrl = (formData.get('mapUrl') || '').toString().trim();
+            const registrationUrl = (formData.get('registrationUrl') || '').toString().trim();
+            if (eventEndTime < eventTime) {
+                alert('活動結束日期及時間不可早於活動開始日期及時間。');
+                return;
+            }
+            if (isPaid && (!Number.isFinite(feeAmount) || feeAmount <= 0)) {
+                alert('請輸入大於 0 的活動費用。');
+                return;
+            }
+            const posterFile = formData.get('posterFile');
+            const promotionFiles = formData.getAll('promotionFiles').filter(file => file.size > 0);
+            const identityProof = formData.get('identityProof');
+            const registrationReference = (formData.get('regNumber') || '').toString().trim();
+            const videoUrl = (formData.get('videoUrl') || '').toString().trim();
+            if (!registrationReference && !(identityProof instanceof File && identityProof.size > 0)) {
+                alert('請提供登記／身份證明編號或核實文件副本其中一項。');
+                return;
+            }
+            if (identityProof instanceof File && identityProof.size > 0 &&
+                (!allowedIdentityProofTypes.has(identityProof.type) || identityProof.size > maximumIdentityProofSize)) {
+                alert('核實文件請使用 PDF、JPG、PNG 或 WebP，且不可超過 10 MB。');
+                return;
+            }
+            if (!(posterFile instanceof File) || !isValidImage(posterFile)) {
+                alert('請選擇 JPG、PNG 或 WebP 海報，檔案不可超過 10 MB。');
+                return;
+            }
+            if (promotionFiles.length > 2 || promotionFiles.some(file => !isValidImage(file))) {
+                alert('宣傳圖片最多 2 張，請使用 JPG、PNG 或 WebP，且每張不可超過 10 MB。');
+                return;
+            }
+            if (!isSupportedVideoUrl(videoUrl)) {
+                alert('影片請使用有效的 YouTube 或 Vimeo 網址。');
+                return;
+            }
+            if (!isSupportedMapUrl(mapUrl)) {
+                alert('地圖連結請使用 HTTPS 的 Google Maps、Apple 地圖或 OpenStreetMap 網址。');
+                return;
+            }
+            if (registrationUrl && !isHttpsUrl(registrationUrl)) {
+                alert('報名連結請使用有效的 HTTPS 網址。');
+                return;
+            }
+
+            const uploadId = createUploadId();
+            const bucket = supabaseClient.storage.from('event-media');
+            const identityBucket = supabaseClient.storage.from('identity-documents');
+            const uploadedPaths = [];
+            let identityDocumentPath = null;
+            async function uploadImage(file, name) {
+                const extension = file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp';
+                const path = `${uploadId}/${name}.${extension}`;
+                const { error } = await bucket.upload(path, file, {
+                    cacheControl: '3600',
+                    contentType: file.type,
+                    upsert: false
+                });
+                if (error) throw error;
+                uploadedPaths.push(path);
+                return bucket.getPublicUrl(path).data.publicUrl;
+            }
+
+            let posterUrl;
+            let promotionImageUrls;
+            try {
+                posterUrl = await uploadImage(posterFile, 'poster');
+                promotionImageUrls = await Promise.all(promotionFiles.map((file, index) => uploadImage(file, `promo-${index + 1}`)));
+                if (identityProof instanceof File && identityProof.size > 0) {
+                    const extension = identityProof.type === 'application/pdf' ? 'pdf' :
+                        identityProof.type === 'image/jpeg' ? 'jpg' :
+                        identityProof.type === 'image/png' ? 'png' : 'webp';
+                    identityDocumentPath = `${uploadId}/${currentIdentity === 'personal' ? 'identity' : 'business'}-proof.${extension}`;
+                    const { error } = await identityBucket.upload(identityDocumentPath, identityProof, {
+                        cacheControl: '0',
+                        contentType: identityProof.type,
+                        upsert: false
+                    });
+                    if (error) throw error;
+                }
+            } catch (error) {
+                const cleanupErrors = [];
+                if (uploadedPaths.length) {
+                    const { error: cleanupError } = await bucket.remove(uploadedPaths);
+                    if (cleanupError) cleanupErrors.push(cleanupError.message);
+                }
+                if (identityDocumentPath) {
+                    const { error: cleanupError } = await identityBucket.remove([identityDocumentPath]);
+                    if (cleanupError) cleanupErrors.push(cleanupError.message);
+                }
+                alert('圖片上傳失敗：' + (error?.message || '請確認已建立 event-media bucket 並重新執行 SQL。'));
+                if (cleanupErrors.length) alert('臨時檔案清理失敗，請聯絡管理員處理：' + cleanupErrors.join('；'));
+                return;
+            }
+
+            const payload = {
+                identity_type: currentIdentity,
+                org_name: formData.get('orgName') || '',
+                reg_number: registrationReference,
+                identity_document_path: identityDocumentPath,
+                identity_verified: false,
+                verification_phone: (formData.get('verificationPhone') || '').toString().trim() || null,
+                terms_version: '2026-10-27',
+                contact_person: formData.get('contactPerson') || '',
+                title: formData.get('title') || '',
+                description: (formData.get('description') || '').toString().trim(),
+                location: (formData.get('location') || '').toString().trim(),
+                event_format: formData.get('eventFormat') || 'offline',
+                map_url: mapUrl || null,
+                registration_url: registrationUrl || null,
+                event_time: eventTime.replace('T', ' '),
+                event_end_date: eventEndTime.slice(0, 10),
+                event_end_time: eventEndTime.replace('T', ' '),
+                category: selectedCategories.join(','),
+                subcategory: formData.getAll('subcategory').join(','),
+                age_range: ageRange,
+                contact_email: (formData.get('contactEmail') || '').toString().trim(),
+                contact_phone: (formData.get('contactPhone') || '').toString().trim(),
+                wechat_id: (formData.get('wechatId') || '').toString().trim(),
+                social_handle: (formData.get('socialHandle') || '').toString().trim(),
+                poster_url: posterUrl,
+                promotion_image_urls: promotionImageUrls,
+                video_url: videoUrl || null,
+                fee: isPaid ? `MOP ${feeAmount.toLocaleString('en-MO', { maximumFractionDigits: 2 })}` : '免費',
+                pricing_plan: 0,
+                addon_pinned: false,
+                addon_design: false,
+                total_amount: feeAmount,
+                agreed_terms: true,
+                status: 'pending'
+            };
+
+            const { error } = await supabaseClient.from('submissions').insert([payload]);
+            if (error) {
+                if (uploadedPaths.length) await bucket.remove(uploadedPaths);
+                if (identityDocumentPath) {
+                    const { error: cleanupError } = await identityBucket.remove([identityDocumentPath]);
+                    if (cleanupError) alert('提交失敗，且身份文件清理失敗，請立即聯絡管理員：' + cleanupError.message);
+                }
+                alert('提交失敗：' + error.message);
+                return;
+            }
+
+            const rawReg = (formData.get('regNumber') || '').toString();
+            if (rawReg) {
+                const masked = rawReg.length > 2 ? rawReg.slice(0, 2) + '******' : '******';
+                document.getElementById('maskedId').textContent = masked;
+                document.getElementById('maskedIdNote').classList.remove('hidden');
+            }
+
+            document.getElementById('submitForm').classList.add('hidden');
+            document.getElementById('successMsg').classList.remove('hidden');
+        }
+
+    </script>
+    <script src="site-backgrounds.js"></script>
+</body>
+</html>

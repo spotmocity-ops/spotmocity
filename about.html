@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>關於我們 - SpotMoCity 澳聚光</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        .gradient-text {
+            background: linear-gradient(to right, #2563eb, #d97706);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen pb-20">
+
+    <!-- 返回按鈕 -->
+    <div class="max-w-4xl mx-auto pt-8 px-4">
+        <a href="index.html" class="text-gray-500 hover:text-blue-600 text-sm font-medium inline-flex items-center gap-1 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            返回首頁
+        </a>
+    </div>
+
+    <!-- 主視覺與標語區 -->
+    <header class="max-w-4xl mx-auto px-4 mt-8 mb-12 text-center">
+        <h1 class="text-3xl md:text-5xl font-bold text-gray-900 leading-tight mb-4">
+            聚光澳門，讓角落裡的微光，<br class="hidden md:block">都能溫柔發亮。
+        </h1>
+        <p class="text-lg md:text-xl text-gray-500 font-light italic tracking-wide">
+            Gathering Macau’s stories, illuminating every moment with warmth.
+        </p>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 space-y-16">
+
+        <!-- 1. 我們的初衷與使命 -->
+        <section>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-1.5 h-8 bg-blue-600 rounded-full inline-block"></span>
+                我們的初衷與使命
+            </h2>
+            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 space-y-4 text-gray-700 leading-relaxed text-sm md:text-base">
+                <p>在澳門這座城市的各個角落，總有許多故事與美好悄然發生——從小巷深處的職人堅持，到社區鄰里間的日常問候；從青年探索未來的勇敢嘗試，到不同世代在這座城市裡的交會與共鳴。</p>
+                <p>這些藏在街巷裡的微光，構成了澳門最真實、最溫暖的模樣。</p>
+                <p>然而，許多寶貴的資訊與資源，卻往往在繁雜的日常中被悄悄忽略。</p>
+                <div class="font-medium text-gray-900 bg-blue-50/50 p-5 rounded-xl border-l-4 border-blue-500 mt-6">
+                    <p class="mb-2">「SpotMoCity 澳聚光」 應運而生。我們是一個專註於整合澳門在地活動、生活體驗、創業交流、教育升學與技能學習的綜合資訊探索平台。</p>
+                    <p>我們的使命，是打破資訊壁壘，打造一個包容、平等、全齡層且充滿活力的城市生活目錄，讓每位市民與團體都能在這裡找到屬於自己的生活靈感與連結。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 我們為您提供什麼？ (8 大核心模組) -->
+        <section>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <span class="w-1.5 h-8 bg-yellow-500 rounded-full inline-block"></span>
+                我們為您提供什麼？
+            </h2>
+            <p class="text-gray-500 mb-6 ml-3.5 text-sm md:text-base">根據您的多元需求，我們規劃了 8 大核心模組，為您精準探索全澳生活：</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- 模組 1 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-yellow-200 transition-all group">
+                    <h3 class="font-bold text-gray-900 mb-2 flex items-center gap-2 group-hover:text-yellow-600 transition-colors">🏷️ 限時優惠</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">精選餐飲微醺、體驗折扣、品牌快閃與獨家福利，輕鬆探索城市好好康。</p>
+                </div>
+                <!-- 模組 2 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-pink-200 transition-all group">
+                    <h3 class="font-bold text-gray-900 mb-2 flex items-center gap-2 group-hover:text-pink-600 transition-colors">🎨 精彩休閒</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">匯聚展覽、市集、節慶、戶外活動與藝術交流，豐富您的週末與課餘時光。</p>
+                </div>
+                <!-- 模組 3 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-purple-200 transition-all group">
+                    <h3 class="font-bold text-gray-900 mb-2 flex items-center gap-2 group-hover:text-purple-600 transition-colors">🔗 凝聚連結</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">專為青年與成年人打造，涵蓋桌遊娛樂、Deep Talk 深度對話、品酒、頌缽療癒、手作/化妝、寵物交流與閱讀會，尋找同頻共振的第三空間。</p>
+                </div>
+                <!-- 模組 4 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-green-200 transition-all group">
+                    <h3 class="font-bold text-gray-900 mb-2 flex items-center gap-2 group-hover:text-green-600 transition-colors">👵 樂齡與社區</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">專注社區關懷，提供養生健體、興趣班、社區公益及親子活動，打造無障礙的溫暖社區。</p>
+                </div>
+                <!-- 模組 5 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition-all group">
+                    <h3 class="font-bold text-gray-900 mb-2 flex items-center gap-2 group-hover:text-orange-600 transition-colors">💡 創業與交流</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">為小社團、創業者、主題沙龍與跨界合作提供發表舞台與連結資源。</p>
+                </div>
+                <!-- 模組 6 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-red-200 transition-all group">
+                    <h3 class="font-bold text-gray-900 mb-2 flex items-center gap-2 group-hover:text-red-600 transition-colors">🏆 賽事與徵件</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">匯集藝文設計、創業商業、表演音樂、體育電競與學術 STEM 賽事，讓才華被更多人看見。</p>
+                </div>
+                <!-- 模組 7 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-cyan-200 transition-all group">
+                    <h3 class="font-bold text-gray-900 mb-2 flex items-center gap-2 group-hover:text-cyan-600 transition-colors">🏫 家庭與學校</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">整理學校目錄（幼兒園至大學）、開放日簡章、升學講座，並關注減壓、親子與職涯的心靈發展支援。</p>
+                </div>
+                <!-- 模組 8 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-indigo-200 transition-all group">
+                    <h3 class="font-bold text-gray-900 mb-2 flex items-center gap-2 group-hover:text-indigo-600 transition-colors">📚 學習與證書</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">涵蓋職業認證、語言檢定、視覺設計、身心職人（頌缽/咖啡）、補習強化、實用技能及 🤖 人工智能（AI） 實用課程，陪您全方位自我加值。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 我們的營運理念與永續承諾 -->
+        <section>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span class="w-1.5 h-8 bg-emerald-500 rounded-full inline-block"></span>
+                我們的營運理念與永續承諾 <span class="text-base font-normal text-gray-400"></span>
+            </h2>
+            <div class="bg-gradient-to-br from-gray-900 to-gray-800 text-white p-6 md:p-10 rounded-2xl shadow-lg relative overflow-hidden">
+                <!-- 裝飾性背景光暈 -->
+                <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+                <div class="absolute bottom-0 left-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none"></div>
+                
+                <h3 class="text-xl font-bold mb-8 text-center tracking-widest text-yellow-400 relative z-10">「源於社區，永續服務」</h3>
+                
+                <div class="space-y-6 relative z-10 text-sm md:text-base leading-relaxed text-gray-200">
+                    <div class="flex gap-4">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold border border-blue-500/30">1</div>
+                        <div>
+                            <strong class="text-white block mb-1">對市民與瀏覽者：</strong>
+                            探索活動、尋找學校資訊、參與賽事或領取店家優惠，將永遠 <span class="text-yellow-400 font-bold">100% 免費</span>。
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-bold border border-green-500/30">2</div>
+                        <div>
+                            <strong class="text-white block mb-1">對在地社團、學校與非營利機構：</strong>
+                            我們承諾長期提供<span class="text-green-400 font-bold">免費基礎資訊刊登</span>，支持在地優質內容與公益活動的宣傳。
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold border border-purple-500/30">3</div>
+                        <div>
+                            <strong class="text-white block mb-1">平台的永續營運：</strong>
+                            為了維護網站系統運作、優化瀏覽體驗並帶來更多獨家福利，我們同時提供客製化的「品牌贊助與重點推廣方案」。合理的商業合作將協助「澳聚光」這盞燈持續亮起，更好地服務全澳市民。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 加入我們 / 行動呼籲 -->
+        <section class="text-center py-12 px-4 bg-white rounded-2xl shadow-sm border border-gray-100">
+            <h2 class="text-2xl font-bold text-gray-900 mb-3">您也是活動主辦方、在地店家、學校或社團幹部嗎？</h2>
+            <p class="text-gray-600 mb-8 max-w-2xl mx-auto">
+                不論您是舉辦一場的手作小聚、一場賽事，還是一場大型展覽，我們都熱烈歡迎您提交資訊！
+            </p>
+            
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+                <a href="submit.html" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+                    📲 免費提交您的活動 / 優惠
+                </a>
+            </div>
+
+            <div class="pt-8 border-t border-gray-100">
+                <p class="text-sm text-gray-500 flex flex-col sm:flex-row items-center justify-center gap-2">
+                    📩 商業合作與聯絡我們：
+                    <a href="mailto:spotymocity@gmail.com" class="text-blue-600 hover:underline font-medium break-all">spotymocity@gmail.com</a>
+                </p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 頁尾 -->
+    <footer class="bg-gray-800 text-gray-400 text-center py-8 mt-12 text-sm">
+        <p>&copy; 2026 SpotMoCity 澳聚光. All rights reserved.</p>
+        <div class="mt-2 flex justify-center gap-4">
+            <a href="about.html" class="hover:text-white transition-colors">關於我們</a>
+            <a href="terms.html" class="hover:text-white transition-colors">服務條款聲明</a>
+        </div>
+    </footer>
+
+    <script src="site-backgrounds.js"></script>
+</body>
+</html>

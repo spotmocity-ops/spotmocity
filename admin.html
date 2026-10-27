@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理員主控台 - SpotMoCity</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+    <style>
+        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: bold; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
+            <div class="text-center mb-6">
+                <div class="text-4xl mb-2">👑</div>
+                <h1 class="text-2xl font-bold text-gray-800">管理員登入</h1>
+                <p class="text-sm text-gray-500 mt-1">SpotMoCity 後台</p>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">電子郵件</label>
+                    <input id="admin-email" type="email" autocomplete="username" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">密碼</label>
+                    <input id="admin-password" type="password" autocomplete="current-password" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">登入管理後台</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="admin-app" class="hidden">
+        <header class="bg-gray-900 text-white shadow-md sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+                <h1 class="text-xl font-bold flex items-center gap-2">👑 SpotMoCity 超級管理後台</h1>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs bg-gray-700 px-2 py-1 rounded">已登入</span>
+                    <button id="logout-btn" class="text-sm bg-red-600 hover:bg-red-500 px-3 py-1 rounded transition">登出</button>
+                </div>
+            </div>
+            <div class="max-w-7xl mx-auto px-4 flex flex-wrap gap-x-6 gap-y-2 mt-2 text-sm">
+                <button id="tab-approvals" class="pb-2 tab-active">待審批與對帳</button>
+                <button id="tab-calendar" class="pb-2 text-gray-400 hover:text-white">日曆編輯</button>
+                <button id="tab-feedback" class="pb-2 text-gray-400 hover:text-white">回饋管理</button>
+                <button id="tab-home-content" class="pb-2 text-gray-400 hover:text-white">首頁內容管理</button>
+                <button id="tab-life-services" class="pb-2 text-gray-400 hover:text-white">生活服務與資源對接</button>
+                <button id="tab-activity-curation" class="pb-2 text-gray-400 hover:text-white">每日活動搜集</button>
+                <button id="tab-settings" class="pb-2 text-gray-400 hover:text-white">條款內容管理</button>
+                <button id="tab-backgrounds" class="pb-2 text-gray-400 hover:text-white">背景圖片管理</button>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 py-6">
+            <div id="view-approvals">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold text-gray-800">活動審批列表</h2>
+                    <button id="refresh-btn" class="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">🔄 重新整理</button>
+                </div>
+                <nav id="submission-status-filters" class="flex flex-wrap gap-2 mb-4" aria-label="活動審批狀態篩選">
+                    <button type="button" data-submission-filter="approved" aria-pressed="false" class="rounded-lg border px-4 py-2 text-sm">已審批</button>
+                    <button type="button" data-submission-filter="pending" aria-pressed="true" class="rounded-lg border px-4 py-2 text-sm">未審批</button>
+                    <button type="button" data-submission-filter="special" aria-pressed="false" class="rounded-lg border px-4 py-2 text-sm">拒審／特殊情況</button>
+                    <button type="button" data-submission-filter="past" aria-pressed="false" class="rounded-lg border px-4 py-2 text-sm">已過去</button>
+                </nav>
+
+                <div id="submissions-list" class="space-y-4">
+                    <p class="text-center text-gray-500 py-10">載入中...</p>
+                </div>
+            </div>
+
+            <div id="view-calendar" class="hidden">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-800">活動日曆編輯</h2>
+                        <p id="calendar-edit-caption" class="text-sm text-gray-500 mt-1">選擇日期或編輯活動時間；已上架活動會在結束時間後自動下架，也可手動下架。</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="calendar-edit-clear" type="button" class="hidden text-sm text-blue-700 hover:underline">顯示全部</button>
+                        <button id="calendar-edit-prev" type="button" aria-label="上一個月" class="w-9 h-9 border rounded-lg hover:bg-gray-100">‹</button>
+                        <button id="calendar-edit-next" type="button" aria-label="下一個月" class="w-9 h-9 border rounded-lg hover:bg-gray-100">›</button>
+                    </div>
+                </div>
+                <section class="bg-white rounded-xl border shadow-sm p-4 md:p-6 mb-6" aria-label="後台活動日曆">
+                    <h3 id="calendar-edit-month" class="text-center font-semibold mb-3"></h3>
+                    <div class="grid grid-cols-7 text-center text-xs font-medium text-gray-500 mb-1" aria-hidden="true">
+                        <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+                    </div>
+                    <div id="calendar-edit-days" class="grid grid-cols-7 gap-1" role="grid" aria-label="管理活動日期"></div>
+                </section>
+                <section class="mb-6 rounded-xl border bg-white p-4 shadow-sm" aria-label="特別日子設定">
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="font-semibold text-gray-800">特別日子圖案與標題</h3>
+                            <p class="mt-1 text-xs text-gray-500">設定指定日期的小圖案及標題；前台日曆會在日期格右下角顯示圖案。</p>
+                        </div>
+                        <button id="add-calendar-special-day" type="button" class="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">＋ 新增特別日子</button>
+                    </div>
+                    <div id="calendar-special-days-editor" class="space-y-2"></div>
+                    <button id="save-calendar-special-days" type="button" class="mt-3 rounded-lg bg-green-600 px-5 py-2 font-semibold text-white hover:bg-green-700">儲存特別日子</button>
+                </section>
+                <section class="mb-6 rounded-xl border bg-white p-4 shadow-sm" aria-label="特別日子設定">
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="font-semibold text-gray-800">特別日子圖案與標題</h3>
+                            <p class="mt-1 text-xs text-gray-500">設定指定日期的小圖案及標題；前台日曆會在日期格右下角顯示圖案。</p>
+                        </div>
+                        <button id="add-calendar-special-day" type="button" class="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50">＋ 新增特別日子</button>
+                    </div>
+                    <div id="calendar-special-days-editor" class="space-y-2"></div>
+                    <button id="save-calendar-special-days" type="button" class="mt-3 rounded-lg bg-green-600 px-5 py-2 font-semibold text-white hover:bg-green-700">儲存特別日子</button>
+                </section>
+                <div id="calendar-edit-list" class="space-y-3">
+                    <p class="text-center text-gray-500 py-8">載入活動中...</p>
+                </div>
+            </div>
+
+            <div id="view-feedback" class="hidden">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-800">瀏覽者回饋</h2>
+                        <p class="text-sm text-gray-500 mt-1">建議與活動資料更正</p>
+                    </div>
+                    <button id="refresh-feedback-btn" class="text-sm bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700">重新整理</button>
+                </div>
+                <div id="feedback-list" class="space-y-3">
+                    <p class="text-center text-gray-500 py-8">載入回饋中...</p>
+                </div>
+            </div>
+
+            <div id="view-home-content" class="hidden space-y-8">
+                <section>
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">首頁置頂通告及溫馨資訊</h2>
+                    <div class="grid gap-4 lg:grid-cols-2">
+                        <div class="bg-white border rounded-lg p-5">
+                            <label for="home-notice-content" class="block text-sm font-semibold mb-2">SpotMo通告欄</label>
+                            <textarea id="home-notice-content" rows="5" maxlength="2000" placeholder="輸入要顯示在首頁置頂圖片右側的通告" class="w-full border rounded-lg p-3"></textarea>
+                            <button id="save-home-notice-btn" type="button" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg">儲存通告</button>
+                        </div>
+                        <div class="bg-white border rounded-lg p-5">
+                            <label for="home-warm-info-content" class="block text-sm font-semibold mb-2">SpotMo溫馨資訊</label>
+                            <textarea id="home-warm-info-content" rows="5" maxlength="2000" placeholder="輸入要顯示在首頁置頂圖片右側的溫馨資訊" class="w-full border rounded-lg p-3"></textarea>
+                            <button id="save-home-warm-info-btn" type="button" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg">儲存溫馨資訊</button>
+                        </div>
+                    </div>
+                </section>
+                <section>
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">首頁正念語句</h2>
+                    <div class="bg-white border rounded-lg p-5">
+                        <textarea id="home-mindfulness-quote" rows="3" maxlength="240" placeholder="輸入首頁頁首語句" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                        <button id="save-home-quote-btn" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg">儲存語句</button>
+                        <div class="mt-5 grid gap-4 sm:grid-cols-3">
+                            <label class="flex items-center gap-3 text-sm font-medium text-gray-700">
+                                <input id="home-quote-color" type="color" value="#4b5563" class="w-12 h-10 border rounded cursor-pointer">
+                                文字顏色
+                            </label>
+                            <label class="text-sm font-medium text-gray-700">字體粗幼
+                                <select id="home-quote-weight" class="mt-1 w-full border rounded-lg px-3 py-2">
+                                    <option value="300">幼</option>
+                                    <option value="400" selected>正常</option>
+                                    <option value="500">中等</option>
+                                    <option value="600">半粗</option>
+                                    <option value="700">粗</option>
+                                </select>
+                            </label>
+                            <label class="text-sm font-medium text-gray-700">字體
+                                <select id="home-quote-font" class="mt-1 w-full border rounded-lg px-3 py-2">
+                                    <option value="sans">黑體</option>
+                                    <option value="serif">明體／襯線</option>
+                                    <option value="kai">楷書</option>
+                                    <option value="mono">等寬字體</option>
+                                </select>
+                            </label>
+                        </div>
+                        <p id="home-quote-style-preview" class="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-center">正念語句樣式預覽</p>
+                        <button id="save-home-quote-style-btn" class="mt-3 border border-gray-300 bg-white hover:bg-gray-50 font-semibold py-2 px-5 rounded-lg">儲存語句樣式</button>
+                    </div>
+                </section>
+
+                <section>
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">全站頁尾顏色</h2>
+                    <div class="bg-white border rounded-lg p-5 grid gap-4 sm:grid-cols-2">
+                        <label class="flex items-center gap-3 text-sm font-medium text-gray-700">
+                            <input id="footer-background-color" type="color" value="#1f2937" class="w-12 h-10 border rounded cursor-pointer">
+                            頁尾背景色
+                        </label>
+                        <label class="flex items-center gap-3 text-sm font-medium text-gray-700">
+                            <input id="footer-text-color" type="color" value="#d1d5db" class="w-12 h-10 border rounded cursor-pointer">
+                            頁尾文字色
+                        </label>
+                        <button id="save-footer-colors-btn" class="sm:col-span-2 justify-self-start bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg">儲存頁尾顏色</button>
+                    </div>
+                </section>
+
+                <section>
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h2 class="text-lg font-bold text-gray-800">網誌連結</h2>
+                        <button id="add-home-blog-btn" type="button" class="border bg-white hover:bg-gray-50 px-3 py-2 rounded-lg text-sm">＋ 新增網誌</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">封面建議尺寸：1200 × 675 px（16:9），JPG／PNG／WebP。</p>
+                    <div id="home-blog-editor" class="space-y-3"></div>
+                    <button id="save-home-blogs-btn" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg">儲存網誌</button>
+                </section>
+
+                <section>
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h2 class="text-lg font-bold text-gray-800">外部網頁廣告</h2>
+                        <button id="add-home-ad-btn" type="button" class="border bg-white hover:bg-gray-50 px-3 py-2 rounded-lg text-sm">＋ 新增廣告</button>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">標題可留空。可用上下按鈕調整次序，或設定顯示位置（1 為最高）；位置不可重複。圖片顯示尺寸固定為 225 × 70 px，並可調整縮放及上下位置。支援 JPG／PNG／WebP。</p>
+                    <div id="home-ad-editor" class="space-y-3"></div>
+                    <button id="save-home-ads-btn" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg">儲存廣告</button>
+                </section>
+
+                <section>
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h2 class="text-lg font-bold text-gray-800">首頁置頂內容（拍立得）</h2>
+                        <div class="flex flex-wrap gap-2">
+                            <button id="add-home-hero-btn" data-template="basic" type="button" class="border bg-white hover:bg-gray-50 px-3 py-2 rounded-lg text-sm">＋ 新增基本版</button>
+                            <button id="add-home-hero-custom-btn" data-template="custom" type="button" class="border border-violet-300 bg-violet-50 hover:bg-violet-100 px-3 py-2 rounded-lg text-sm text-violet-800">＋ 新增自訂版</button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mb-3">最多 9 個獨立置頂內容，可分別儲存基本版或自訂版。拍立得圖片建議 1200 × 400 px；邊框建議 1200 × 500 px 透明 PNG（手機版建議 960 × 580 px），透明區域預留給照片。可設定詳情頁背景圖片與縮放／位置、大圖、YouTube 或 MP4（最多 50 MB）、倒數、行動按鈕、亮點、A/B/C 圖文編輯器、最多 5 張現場／產品相片及團隊頭像。圖文工具支援粗體、斜體、標題、清單、字體、字重、字體大小、HTTPS 連結及 HTTPS 圖片網址；選取文字後再套用字體、字重或大小。AI 助手需先設定伺服器端 OPENAI_API_KEY；不會將金鑰放在網頁中。圖片限 JPG／PNG／WebP，每張不超過 10 MB。</p>
+                    <div id="home-hero-editor" class="space-y-3"></div>
+                    <button id="save-home-hero-btn" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg">儲存置頂內容</button>
+                </section>
+            </div>
+
+            <div id="view-life-services" class="hidden space-y-6">
+                <section>
+                    <h2 class="text-lg font-bold text-gray-800 mb-2">生活服務主分類與子分類</h2>
+                    <p class="text-xs text-gray-500 mb-3">五個主分類固定但名稱可修改；可為每個主分類新增、修改或刪除子分類。核准活動並勾選加入生活服務區時，前台會依這裡的分類提供篩選。</p>
+                    <div id="home-service-category-editor" class="grid gap-4 xl:grid-cols-2"></div>
+                    <button id="save-home-service-categories-btn" type="button" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg">儲存分類設定</button>
+                </section>
+            </div>
+
+            <div id="view-settings" class="hidden">
+                <h2 class="text-lg font-bold text-gray-800 mb-4">網站條款文字編輯</h2>
+                <div class="bg-white p-6 rounded-xl shadow-sm space-y-6">
+                    <div>
+                        <label class="block font-bold mb-2">關於我們內容</label>
+                        <textarea id="edit-purpose" rows="6" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"></textarea>
+                        <button id="save-purpose-btn" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg transition">儲存關於我們</button>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold mb-2">服務條款聲明</label>
+                        <textarea id="edit-terms" rows="12" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm"></textarea>
+                        <button id="save-terms-btn" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg transition">儲存服務條款</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="view-activity-curation" class="hidden">
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-800">每日澳門活動搜集</h2>
+                        <p class="text-sm text-gray-500 mt-1">每日澳門時間 17:40 搜集文化局、旅遊局及售票網站活動；每次最多新增 5 項未處理活動。已過期、日期無法確認或曾經搜集的活動會排除，已到期草稿不會上架。結果先建立草稿，可刪除不需要的活動。</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="run-curated-search-btn" type="button" class="text-sm bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700">立即手動搜尋</button>
+                        <button id="refresh-curated-drafts-btn" type="button" class="text-sm bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700">重新整理草稿</button>
+                    </div>
+                </div>
+                <div id="curation-run-status" class="text-sm text-gray-600 mb-4" aria-live="polite"></div>
+                <nav id="curated-draft-status-filters" class="flex flex-wrap gap-2 mb-4" aria-label="每日活動搜集狀態篩選">
+                    <button type="button" data-curated-filter="published" aria-pressed="false" class="rounded-lg border px-4 py-2 text-sm">已上架</button>
+                    <button type="button" data-curated-filter="unpublished" aria-pressed="true" class="rounded-lg border px-4 py-2 text-sm">未上架</button>
+                    <button type="button" data-curated-filter="past" aria-pressed="false" class="rounded-lg border px-4 py-2 text-sm">已過去</button>
+                </nav>
+                <div id="curated-drafts-list" class="space-y-4">
+                    <p class="text-center text-gray-500 py-8">載入活動草稿中...</p>
+                </div>
+            </div>
+
+            <div id="view-backgrounds" class="hidden">
+                <h2 class="text-lg font-bold text-gray-800 mb-4">背景圖片管理</h2>
+                <div class="bg-white p-6 rounded-xl shadow-sm grid gap-6 md:grid-cols-2">
+                    <div class="space-y-3">
+                        <label for="background-top-url" class="block font-bold">頂部背景圖片</label>
+                        <p class="text-xs text-gray-500">建議尺寸：1920 × 250 px；橫向圖片，重要內容放中央以避免手機裁切。</p>
+                        <input id="background-top-file" type="file" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm text-gray-600 file:mr-3 file:rounded file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:font-semibold file:text-blue-700 hover:file:bg-blue-100">
+                        <input id="background-top-url" type="url" placeholder="https://example.com/top.jpg" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <img id="background-top-preview" alt="頂部背景預覽" class="hidden w-full h-36 object-cover rounded-lg border">
+                        <label for="background-top-strength" class="block text-sm font-medium">背景深淺 <output id="background-top-strength-value">31%</output></label>
+                        <input id="background-top-strength" type="range" min="0" max="100" value="31" class="w-full accent-blue-700">
+                        <p class="text-xs text-gray-500">越向右，背景圖片越清晰。</p>
+                        <button id="save-background-top-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg transition">儲存頂部背景</button>
+                    </div>
+                    <div class="space-y-3">
+                        <label for="background-middle-url" class="block font-bold">中部背景圖片</label>
+                        <p class="text-xs text-gray-500">建議尺寸：1920 × 1080 px；背景會依內容高度延展並以 cover 裁切。</p>
+                        <input id="background-middle-file" type="file" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm text-gray-600 file:mr-3 file:rounded file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:font-semibold file:text-blue-700 hover:file:bg-blue-100">
+                        <input id="background-middle-url" type="url" placeholder="https://example.com/middle.jpg" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <img id="background-middle-preview" alt="中部背景預覽" class="hidden w-full h-36 object-cover rounded-lg border">
+                        <label for="background-middle-strength" class="block text-sm font-medium">背景深淺 <output id="background-middle-strength-value">36%</output></label>
+                        <input id="background-middle-strength" type="range" min="0" max="100" value="36" class="w-full accent-blue-700">
+                        <p class="text-xs text-gray-500">越向右，背景圖片越清晰。</p>
+                        <button id="save-background-middle-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg transition">儲存中部背景</button>
+                    </div>
+                    <div class="space-y-3">
+                        <label for="background-hero-outer-url" class="block font-bold">置頂圖片框外背景</label>
+                        <p class="text-xs text-gray-500">建議尺寸：1920 × 700 px；中央主體較不易被桌面或手機裁切。</p>
+                        <input id="background-hero-outer-file" type="file" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm text-gray-600 file:mr-3 file:rounded file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:font-semibold file:text-blue-700 hover:file:bg-blue-100">
+                        <input id="background-hero-outer-url" type="url" placeholder="https://example.com/hero-background.jpg" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <img id="background-hero-outer-preview" alt="置頂圖片框外背景預覽" class="hidden w-full h-36 object-cover rounded-lg border">
+                        <label for="background-hero-outer-strength" class="block text-sm font-medium">背景深淺 <output id="background-hero-outer-strength-value">61%</output></label>
+                        <input id="background-hero-outer-strength" type="range" min="0" max="100" value="61" class="w-full accent-blue-700">
+                        <p class="text-xs text-gray-500">越向右，背景圖片越清晰。</p>
+                        <button id="save-background-hero-outer-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg transition">儲存置頂圖片框外背景</button>
+                    </div>
+                    <div class="space-y-3">
+                        <label for="background-page-url" class="block font-bold">整個主頁大背景</label>
+                        <p class="text-xs text-gray-500">建議尺寸：1920 × 1080 px；建議使用低對比圖片，避免影響文字閱讀。</p>
+                        <input id="background-page-file" type="file" accept="image/jpeg,image/png,image/webp" class="block w-full text-sm text-gray-600 file:mr-3 file:rounded file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:font-semibold file:text-blue-700 hover:file:bg-blue-100">
+                        <input id="background-page-url" type="url" placeholder="https://example.com/page-background.jpg" class="w-full border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <img id="background-page-preview" alt="主頁大背景預覽" class="hidden w-full h-36 object-cover rounded-lg border">
+                        <label for="background-page-strength" class="block text-sm font-medium">背景深淺 <output id="background-page-strength-value">2%</output></label>
+                        <input id="background-page-strength" type="range" min="0" max="100" value="2" class="w-full accent-blue-700">
+                        <p class="text-xs text-gray-500">越向右，背景圖片越清晰。</p>
+                        <button id="save-background-page-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg transition">儲存主頁大背景</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div id="edit-modal" class="fixed inset-0 bg-black/60 hidden items-start sm:items-center justify-center z-[100] p-2 sm:p-4 overflow-y-auto">
+            <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 relative shadow-2xl my-0 sm:my-4">
+                <button id="close-modal-btn" aria-label="關閉編輯視窗" class="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-800 text-2xl">&times;</button>
+                <h2 class="text-xl font-bold mb-4 pr-8">二次編輯美化</h2>
+                <div class="space-y-4">
+                    <input type="hidden" id="edit-id">
+                    <div>
+                        <label class="block text-sm font-bold mb-1">活動名稱</label>
+                        <input type="text" id="edit-title" class="w-full border rounded p-2">
+                    </div>
+                    <div>
+                        <label for="edit-description" class="block text-sm font-bold mb-1">活動簡介</label>
+                        <textarea id="edit-description" rows="4" class="w-full border rounded p-2"></textarea>
+                    </div>
+                    <section class="rounded-lg border border-blue-200 bg-blue-50/50 p-4 space-y-3">
+                        <label class="flex items-start gap-2 text-sm font-semibold text-gray-800">
+                            <input id="edit-is-life-service" type="checkbox" class="mt-1 h-4 w-4 accent-blue-700">
+                            <span>核准後同時加入「生活服務與資源對接區」</span>
+                        </label>
+                        <p class="text-xs text-gray-600">活動仍會按上方選擇的活動主分類／子分類顯示於主內容區；勾選後會額外加入生活服務區。</p>
+                        <div id="edit-life-service-fields" class="hidden space-y-3">
+                            <div class="grid gap-3 sm:grid-cols-2">
+                                <label class="text-sm font-medium">生活服務主分類
+                                    <select id="edit-life-service-category" class="mt-1 w-full border rounded p-2"></select>
+                                </label>
+                                <label class="text-sm font-medium">生活服務子分類
+                                    <select id="edit-life-service-subcategory" class="mt-1 w-full border rounded p-2"></select>
+                                </label>
+                            </div>
+                            <label class="block text-sm font-medium">簡短簡介（選填）
+                                <textarea id="edit-life-service-summary" rows="2" maxlength="500" class="mt-1 w-full border rounded p-2"></textarea>
+                            </label>
+                            <label class="block text-sm font-medium">詳細服務內容（選填）
+                                <textarea id="edit-life-service-details" rows="4" maxlength="4000" class="mt-1 w-full border rounded p-2"></textarea>
+                            </label>
+                            <div>
+                                <label for="edit-life-service-thumbnail-url" class="block text-sm font-medium">生活服務縮圖網址（選填；留空則使用活動海報）</label>
+                                <input type="url" id="edit-life-service-thumbnail-url" class="mt-1 w-full border rounded p-2 text-sm" placeholder="https://example.com/thumbnail.jpg">
+                                <p class="mt-1 text-xs text-gray-500">建議尺寸：600 × 600 px（正方形），縮圖會以方形裁切顯示。</p>
+                                <label for="edit-life-service-thumbnail-file" class="mt-2 block text-xs font-medium text-gray-600">或額外上傳縮圖（JPG／PNG／WebP，最多 10 MB）</label>
+                                <input type="file" id="edit-life-service-thumbnail-file" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full text-sm">
+                                <div id="edit-life-service-thumbnail-preview" class="mt-2 hidden w-28 aspect-square overflow-hidden rounded-lg border bg-gray-100"></div>
+                            </div>
+                        </div>
+                    </section>
+                    <div>
+                        <label for="edit-event-time" class="block text-sm font-bold mb-1">活動日期及時間</label>
+                        <input type="datetime-local" id="edit-event-time" class="w-full border rounded p-2">
+                    </div>
+                    <div>
+                        <label for="edit-event-end-date" class="block text-sm font-bold mb-1">活動結束日期及時間</label>
+                        <input type="datetime-local" id="edit-event-end-date" class="w-full border rounded p-2">
+                    </div>
+                    <fieldset>
+                        <legend class="block text-sm font-bold mb-2">活動形式</legend>
+                        <div class="flex gap-3">
+                            <label class="flex items-center gap-2 rounded border px-3 py-2">
+                                <input type="radio" name="edit-event-format" value="offline" class="h-4 w-4 accent-blue-600">
+                                <span>線下</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border px-3 py-2">
+                                <input type="radio" name="edit-event-format" value="online" class="h-4 w-4 accent-blue-600">
+                                <span>線上</span>
+                            </label>
+                        </div>
+                    </fieldset>
+                    <div>
+                        <label id="edit-location-label" for="edit-location" class="block text-sm font-bold mb-1">活動地址</label>
+                        <input type="text" id="edit-location" maxlength="240" class="w-full border rounded p-2">
+                    </div>
+                    <div id="edit-map-field">
+                        <label for="edit-map-url" class="block text-sm font-bold mb-1">地圖連結（選填）</label>
+                        <input type="url" id="edit-map-url" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div>
+                        <label for="edit-registration-url" class="block text-sm font-bold mb-1">活動報名連結（選填）</label>
+                        <input type="url" id="edit-registration-url" class="w-full border rounded p-2 text-sm" placeholder="https://example.com/register">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-1">分類</label>
+                            <div id="edit-category" class="grid gap-2 max-h-48 overflow-y-auto rounded border p-3"></div>
+                            <label for="edit-subcategory" class="block text-sm font-bold mt-3 mb-1">子分類</label>
+                            <div id="edit-subcategory" class="grid gap-2 max-h-56 overflow-y-auto rounded border p-3 bg-gray-50"></div>
+                            <p class="text-xs text-gray-500 mt-1">勾選主分類和子分類，可跨主分類選取。</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1">年齡</label>
+                            <input type="text" id="edit-age" class="w-full border rounded p-2">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">主海報圖片網址</label>
+                        <input type="url" id="edit-poster" class="w-full border rounded p-2 text-sm">
+                        <label for="edit-poster-file" class="block text-xs font-medium text-gray-600 mt-2">或上傳新主海報（JPG／PNG／WebP，最多 10 MB）</label>
+                        <input type="file" id="edit-poster-file" accept="image/jpeg,image/png,image/webp" class="block w-full mt-1 text-sm">
+                        <div id="edit-poster-preview" class="hidden mt-3 w-full aspect-[4/3] bg-gray-100 rounded-lg border overflow-hidden"></div>
+                        <label for="edit-poster-display-scale" class="block text-xs font-medium text-gray-600 mt-3">縮圖大小：<output id="edit-poster-display-scale-value">100%</output></label>
+                        <input id="edit-poster-display-scale" type="range" min="100" max="200" step="10" value="100" class="w-full accent-blue-700">
+                        <label for="edit-poster-display-position" class="block text-xs font-medium text-gray-600 mt-2">圖片上下位置：<output id="edit-poster-display-position-value">50%</output></label>
+                        <input id="edit-poster-display-position" type="range" min="0" max="100" step="5" value="50" class="w-full accent-blue-700">
+                    </div>
+                    <div>
+                        <label for="edit-promotion-files" class="block text-sm font-bold mb-1">宣傳圖片</label>
+                        <input type="file" id="edit-promotion-files" accept="image/jpeg,image/png,image/webp" multiple class="block w-full border rounded p-2 text-sm">
+                        <p class="text-xs text-gray-500 mt-1">選取新圖片會取代現有宣傳圖片；最多 2 張，每張不超過 10 MB。</p>
+                        <label class="flex items-center gap-2 mt-2 text-sm text-gray-700">
+                            <input id="edit-clear-promotion-images" type="checkbox" class="h-4 w-4 accent-blue-600">
+                            移除現有宣傳圖片
+                        </label>
+                        <div id="edit-promotion-preview" class="grid grid-cols-2 gap-3 mt-3"></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">影片連結</label>
+                        <input type="url" id="edit-video-url" class="w-full border rounded p-2 text-sm">
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="text-sm font-bold">Email<input type="email" id="edit-contact-email" class="mt-1 w-full border rounded p-2 font-normal"></label>
+                        <label class="text-sm font-bold">聯絡電話<input type="tel" id="edit-contact-phone" class="mt-1 w-full border rounded p-2 font-normal"></label>
+                        <label class="text-sm font-bold">WeChat<input type="text" id="edit-wechat" class="mt-1 w-full border rounded p-2 font-normal"></label>
+                        <label class="text-sm font-bold">IG／FB<input type="text" id="edit-social-handle" class="mt-1 w-full border rounded p-2 font-normal"></label>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
+                        <button id="save-edit-btn" class="bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">儲存修改</button>
+                        <button id="approve-btn" class="bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">✅ 核准上架</button>
+                        <button id="reject-btn" class="bg-red-600 text-white py-2 rounded font-bold hover:bg-red-700">❌ 駁回申請</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="hero-crop-modal" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-[110] p-4">
+        <section class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl p-5">
+            <h2 class="text-lg font-bold mb-1">裁剪置頂輪播圖片</h2>
+            <p class="text-sm text-gray-500 mb-4">拖曳圖片調整位置，使用滑鼠滾輪或觸控縮放；裁剪比例為 3:1。</p>
+            <div class="max-h-[60vh] overflow-hidden bg-gray-100">
+                <img id="hero-crop-image" alt="置頂圖片裁剪預覽" class="block max-w-full">
+            </div>
+            <div class="flex justify-end gap-3 mt-5">
+                <button id="cancel-hero-crop-btn" type="button" class="border border-gray-300 hover:bg-gray-50 px-4 py-2 rounded-lg">取消</button>
+                <button id="apply-hero-crop-btn" type="button" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg">套用裁剪</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="categories.js?v=20261027-life-services"></script>
+    <script src="admin.js?v=20261028-featured-pages"></script>
+    <script src="site-backgrounds.js"></script>
+</body>
+</html>

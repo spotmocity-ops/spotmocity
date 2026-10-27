@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服務條款聲明 - SpotMoCity 澳聚光</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 針對法律條款的自定義排版 */
+        .legal-content h2 { margin-top: 2.5rem; margin-bottom: 1.25rem; font-size: 1.25rem; font-weight: 700; color: #1e3a8a; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; }
+        .legal-content p { margin-bottom: 1rem; line-height: 1.8; color: #374151; text-align: justify; }
+        .legal-content ol { list-style-type: none; padding-left: 0; margin-bottom: 1.5rem; counter-reset: item; }
+        .legal-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
+        .legal-content li { margin-bottom: 0.75rem; line-height: 1.8; color: #374151; position: relative; }
+        
+        /* 自定義無序清單的點 */
+        .legal-content ul li::marker { color: #9ca3af; }
+        
+        /* 強調文字 */
+        .legal-content strong { color: #111827; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen py-10 px-4">
+    
+    <!-- 返回按鈕 -->
+    <div class="max-w-3xl mx-auto mb-6">
+        <a href="index.html" class="text-blue-600 hover:text-blue-800 text-sm font-medium inline-flex items-center gap-1 transition-colors bg-white px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+            返回首頁
+        </a>
+    </div>
+
+    <!-- 條款主體容器 -->
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm p-6 md:p-10 border border-gray-100">
+        
+        <!-- 標題區 -->
+        <header class="border-b border-gray-200 pb-6 mb-8 text-center md:text-left">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 leading-snug">
+                SpotMoCity 澳聚光——服務條款聲明
+            </h1>
+        </header>
+
+        <!-- 前言 -->
+        <div class="legal-content text-sm md:text-base">
+            <p class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500 text-blue-900 font-medium">
+                歡迎使用「SpotMoCity 澳聚光」（以下簡稱「本網站」或「本平台」）。提交者使用刊登服務前，請仔細閱讀本條款。
+            </p>
+
+            <h2>一、服務內容與模式</h2>
+            <ol>
+                <li>1. 本網站僅提供活動、課程及優惠資訊之網絡展示與宣傳導流服務，不提供線上報名、門票代售、現場簽到或第三方資金託管服務。活動內容、報名及交易由原主辦單位負責。</li>
+                <li>2. <strong>刊登模式：</strong>
+                    <ul>
+                        <li><strong>基礎刊登：</strong>本平台目前為在地社團、文創團體及商戶提供免費基礎資訊刊登服務，具體範圍與規則以網站最新公告為準。</li>
+                        <li><strong>增值推廣服務：</strong>本平台保留推出焦點置頂、首頁 Banner 推薦、社群特別推廣等付費服務之權利。項目、收費及付款方式將於相關服務頁面或專案合約另行公告。</li>
+                    </ul>
+                </li>
+                <li>3. <strong>展示期限：</strong>內容自管理員審核上架日起展示至活動或優惠結束日，單次原則上最長不超過 30 日，特別合作專案除外。</li>
+            </ol>
+
+            <h2>二、資訊提交與審核機制（含實名核實）</h2>
+            <ol>
+                <li>1. 本網站採人工審核。管理員將以 24 至 48 小時為目標完成覆核；如需補充資料或遇特殊情況，處理時間可能延長。</li>
+                <li>2. <strong>實名及商戶核實：</strong>提交者須配合核實程序：
+                    <ul>
+                        <li><strong>個人／獨立創作者：</strong>提供真實姓名、經澳門手機簡訊驗證碼（OTP）核實之電話，以及身份證明文件影像或編號供管理員查驗。</li>
+                        <li><strong>社團／機構／店家：</strong>提供澳門財政局 M/1 格式開業／變更申報表副本，或商業登記證明編號供本平台核對。</li>
+                    </ul>
+                </li>
+                <li>3. <strong>退款政策（適用於付費增值服務）：</strong>
+                    <ul>
+                        <li>增值推廣服務經收費並審核執行後，除法律另有規定或本平台另有書面承諾外，不接受退款申請。</li>
+                        <li>活動因主辦單位自身原因或不可抗力取消、延期或變更，已收取之推廣費用原則上不退還，亦不可轉移至其他活動；強制性法律規定除外。</li>
+                    </ul>
+                </li>
+                <li>4. <strong>內容變更：</strong>資訊上架後，活動名稱、主辦單位、日期等核心內容如需修正，提交者須聯絡管理員協助。提交者應確保資料正確，並就其提供資料錯誤造成之影響負責。</li>
+            </ol>
+
+            <h2>三、用戶行為規範與智慧財產權</h2>
+            <ol>
+                <li>1. 提交者須確保其具備代表相關社團、機構、店家或創作者提交資訊之資格，並對所提供內容之真實性及合法性負責。</li>
+                <li>2. <strong>智慧財產權：</strong>提交者保證所提供之文字、圖片、海報、字體及影片等素材擁有合法權利或已取得授權，並免費授權本平台於網站及官方社群平台（包括 IG、FB）為刊登及宣傳之目的使用、重製及轉載。如因提交者違反本項保證而令本平台承受直接損失，提交者須在適用法律允許範圍內依法承擔責任。如權利人提出合理異議，本平台可暫停使用或下架相關素材。</li>
+                <li>3. <strong>審查與下架：</strong>本平台可審核、拒絕刊登或下架違法、侵權、詐欺、未經證實之集資／高風險投資／非法借貸／博彩宣傳、模糊或缺少必要資訊，以及涉及色情、暴力、歧視、誹謗或侵犯個人資料之內容。接獲檢舉時，本平台可先行暫停展示並要求補充資料。</li>
+            </ol>
+
+            <h2>四、平台免責聲明</h2>
+            <ol>
+                <li>1. 本網站為資訊展示與導流平台。使用者與主辦單位／店家因報名、消費、退款、現場安全或服務質素所生之爭議，應由相關當事人依法處理；本平台不因此成為交易或活動之主辦方。法律不得排除之責任不受本條限制。</li>
+                <li>2. 資訊由提交者或主辦方提供。人工審核不代表本平台保證資訊絕對真實、即時或完整；使用者應向主辦方核實。</li>
+                <li>3. 因維護、網路故障、第三方平台異動或不可抗力而中斷服務，本平台將在合理範圍內盡力修復；法律不得排除之責任不受本條限制。</li>
+            </ol>
+
+            <h2>五、個人資料保護聲明</h2>
+            <ol>
+                <li>1. 本平台為審核活動申請、業務聯繫及安全核實，可收集提交者提供之姓名、電話、電郵、社交帳號及商業／身份核實資料。提交者選擇作公開活動聯絡方式的電話、電郵及社交帳號會顯示於活動詳情；身份核實電話、證件及商業證明不會公開展示。其他資料僅於上述目的及法律允許範圍內使用；未經同意或法律依據，不會向無關第三方披露。</li>
+                <li>2. <strong>身份證明資料處理：</strong>管理員完成核實後，將盡快從活動資料庫及線上儲存空間刪除身份證明文件影像及證件編號，並只保留「已核實」標記及核實時間。服務供應商備份中的資料會依其保存週期刪除或覆寫，故不承諾備份即時且不可復原地清除。</li>
+                <li>3. 依澳門第 8/2005 號法律《個人資料保護法》，資料當事人可依法行使查閱、更正或刪除資料等權利。請透過本平台官方聯絡方式提出申請；本平台將按適用法律處理。</li>
+            </ol>
+
+            <h2>六、條款修改權</h2>
+            <p>本平台可更新本條款，並於網站公布修訂內容及生效日期。用戶於生效後繼續使用服務，即表示知悉修訂內容；如法律要求另行取得同意，本平台將依規定辦理。</p>
+        </div>
+
+        <!-- 底部更新日期 (可根據實際上線時間修改) -->
+        <footer class="mt-12 pt-6 border-t border-gray-200 flex justify-end">
+            <p class="text-sm text-gray-500 font-medium">最後更新日期：2026年10月27日</p>
+        </footer>
+
+    </div>
+    <script src="site-backgrounds.js"></script>
+</body>
+</html>

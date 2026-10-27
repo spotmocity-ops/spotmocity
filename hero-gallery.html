@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>置頂內容｜SpotMoCity 澳聚光</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { min-height: 100vh; margin: 0; color: #1f2937; background-color: #f8fafc; background-position: center; background-size: cover; background-attachment: fixed; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+        .site-header { background: rgb(255 255 255 / 95%); box-shadow: 0 1px 4px #0f172a1a; }
+        .site-header-inner { max-width: 72rem; margin: 0 auto; padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+        .site-logo { display: block; width: 100px; height: 60px; object-fit: contain; flex: 0 0 auto; }
+        .site-nav { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; }
+        .site-nav a { color: #374151; text-decoration: none; }
+        .site-nav a:hover { color: #2563eb; }
+        main { max-width: 1100px; min-height: calc(100vh - 76px); margin: 0 auto; padding: 2rem 1rem 4rem; }
+        h1 { margin: 0; font-size: clamp(1.5rem, 4vw, 2rem); }
+        .intro { color: #64748b; margin: 0.5rem 0 2rem; }
+        #gallery { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+        .polaroid-link { display: block; min-width: 0; color: inherit; text-decoration: none; }
+        .polaroid { position: relative; min-width: 0; margin: 0; padding: 0.55rem 0.55rem 1.15rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.2rem; box-shadow: 0 5px 14px rgb(15 23 42 / 16%); transform: rotate(var(--polaroid-tilt)); animation: polaroid-breeze 5.5s ease-in-out var(--breeze-delay) infinite; }
+        .polaroid img { display: block; width: 100%; aspect-ratio: 3 / 1; object-fit: cover; background: #f1f5f9; }
+        .polaroid .polaroid-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+        .polaroid figcaption { padding: 0.65rem 0.15rem 0; text-align: center; line-height: 1.35; font-size: 0.875rem; }
+        .polaroid-link:nth-child(8n + 1) .polaroid { --polaroid-tilt: -3deg; --breeze-delay: -1s; }
+        .polaroid-link:nth-child(8n + 2) .polaroid { --polaroid-tilt: 2deg; --breeze-delay: -3.2s; }
+        .polaroid-link:nth-child(8n + 3) .polaroid { --polaroid-tilt: -1.5deg; --breeze-delay: -2.1s; }
+        .polaroid-link:nth-child(8n + 4) .polaroid { --polaroid-tilt: 3deg; --breeze-delay: -4.4s; }
+        .polaroid-link:nth-child(8n + 5) .polaroid { --polaroid-tilt: 1.5deg; --breeze-delay: -2.8s; }
+        .polaroid-link:nth-child(8n + 6) .polaroid { --polaroid-tilt: -2.5deg; --breeze-delay: -0.5s; }
+        .polaroid-link:nth-child(8n + 7) .polaroid { --polaroid-tilt: 2.5deg; --breeze-delay: -3.8s; }
+        .polaroid-link:nth-child(8n) .polaroid { --polaroid-tilt: -1deg; --breeze-delay: -1.8s; }
+        @keyframes polaroid-breeze { 0%, 100% { transform: translate3d(0, 0, 0) rotate(var(--polaroid-tilt)); } 50% { transform: translate3d(2px, -5px, 0) rotate(calc(var(--polaroid-tilt) + 1.2deg)); } }
+        @media (hover: hover) { .polaroid:hover { animation-play-state: paused; box-shadow: 0 9px 22px rgb(15 23 42 / 23%); } }
+        @media (prefers-reduced-motion: reduce) { .polaroid { animation: none; } }
+        figcaption p { margin: 0.35rem 0 0; color: #64748b; font-size: 0.9rem; white-space: pre-line; }
+        #gallery-status { color: #64748b; padding: 2rem 0; }
+        #gallery-status.hidden { display: none; }
+        @media (min-width: 640px) { #gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; } }
+        @media (max-width: 767px) { .polaroid img { aspect-ratio: 2 / 1; } }
+        @media (max-width: 480px) {
+            .site-header-inner { align-items: flex-start; }
+            .site-logo { width: 80px; height: 48px; }
+            .site-nav { gap: 0.35rem 0.65rem; font-size: 0.75rem; }
+            main { padding-top: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a href="index.html" aria-label="SpotMoCity 澳聚光首頁">
+                <img class="site-logo" src="head.logo.png" width="100" height="60" alt="SpotMoCity 澳聚光">
+            </a>
+            <nav class="site-nav" aria-label="主要導覽">
+                <a href="index.html">首頁</a>
+                <a href="about.html">關於我們</a>
+                <a href="Terms.html">服務條款聲明</a>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <h1>置頂內容</h1>
+        <p class="intro">看看澳門社區正在發生的精彩活動。</p>
+        <p id="gallery-status" role="status" aria-live="polite">正在載入圖片⋯</p>
+        <div id="gallery"></div>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseClient = window.supabase.createClient(
+            'https://owvsfvunlqudrhdsuqvk.supabase.co',
+            'sb_publishable_4kBnCjtv4c7j-sb8l3BrUw_j63egBDR'
+        );
+
+        function safeImageUrl(value) {
+            try {
+                const url = new URL(value);
+                return url.protocol === 'https:' ? url.href : '';
+            } catch {
+                return '';
+            }
+        }
+
+        function applyGalleryBackground(imageValue, strengthValue) {
+            const imageUrl = safeImageUrl(imageValue);
+            const strength = Number(strengthValue);
+            const percentage = Number.isFinite(strength) ? Math.max(0, Math.min(100, strength)) : 2;
+            const overlayOpacity = 0.9 * (1 - percentage / 100);
+
+            if (!imageUrl) {
+                document.body.style.removeProperty('background-image');
+                return;
+            }
+
+            document.body.style.backgroundImage = `linear-gradient(rgba(255, 255, 255, ${overlayOpacity}), rgba(255, 255, 255, ${overlayOpacity})), url("${imageUrl}")`;
+        }
+
+        function showGallery(items) {
+            const gallery = document.getElementById('gallery');
+            const status = document.getElementById('gallery-status');
+            const validItems = items
+                .map(item => ({ ...item, order: Number(item.order), image: safeImageUrl(item.imageUrl) }))
+                .filter(item => Number.isInteger(item.order) && item.order > 0 && item.image)
+                .sort((first, second) => first.order - second.order)
+                .slice(0, 9);
+
+            if (!validItems.length) {
+                status.textContent = '目前尚未新增置頂內容。';
+                return;
+            }
+
+            for (const [index, item] of validItems.entries()) {
+                const figure = document.createElement('figure');
+                figure.className = 'polaroid';
+                const link = document.createElement('a');
+                link.className = 'polaroid-link';
+                link.href = `hero-detail.html?id=${encodeURIComponent(item.pageId || `hero-${item.order}`)}`;
+                const picture = document.createElement('picture');
+                const mobileSource = document.createElement('source');
+                mobileSource.media = '(max-width: 767px)';
+                mobileSource.srcset = safeImageUrl(item.mobileImageUrl) || item.image;
+                const image = document.createElement('img');
+                image.src = item.image;
+                image.alt = item.title || `置頂內容 ${index + 1}`;
+                image.loading = 'lazy';
+                picture.append(mobileSource, image);
+                figure.append(picture);
+
+                const frameUrl = safeImageUrl(item.frameUrl);
+                if (frameUrl) {
+                    const framePicture = document.createElement('picture');
+                    const mobileFrameUrl = safeImageUrl(item.mobileFrameUrl) || frameUrl;
+                    const mobileFrame = document.createElement('source');
+                    mobileFrame.media = '(max-width: 767px)';
+                    mobileFrame.srcset = mobileFrameUrl;
+                    const frame = document.createElement('img');
+                    frame.className = 'polaroid-frame';
+                    frame.src = frameUrl;
+                    frame.alt = '';
+                    frame.setAttribute('aria-hidden', 'true');
+                    frame.loading = 'lazy';
+                    framePicture.append(mobileFrame, frame);
+                    figure.append(framePicture);
+                }
+
+                const caption = document.createElement('figcaption');
+                const title = document.createElement('strong');
+                title.textContent = item.title || `置頂內容 ${index + 1}`;
+                caption.append(title);
+                if (item.description) {
+                    const description = document.createElement('p');
+                    description.textContent = item.description;
+                    caption.append(description);
+                }
+                figure.append(caption);
+                link.append(figure);
+                gallery.append(link);
+            }
+            status.classList.add('hidden');
+        }
+
+        async function loadGallery() {
+            const { data, error } = await supabaseClient
+                .from('site_settings')
+                .select('value')
+                .eq('key', 'home_hero_items')
+                .maybeSingle();
+            if (error) {
+                document.getElementById('gallery-status').textContent = '圖片載入失敗，請稍後再試。';
+                console.error('Hero gallery load failed:', error.message);
+                return;
+            }
+            try {
+                const items = JSON.parse(data?.value || '[]');
+                showGallery(Array.isArray(items) ? items : []);
+            } catch (error) {
+                document.getElementById('gallery-status').textContent = '圖片資料格式錯誤，請聯絡管理員。';
+                console.error('Hero gallery settings are invalid:', error);
+            }
+        }
+
+        async function loadGalleryBackground() {
+            const { data, error } = await supabaseClient
+                .from('site_settings')
+                .select('key, value')
+                .in('key', ['background_page_url', 'background_page_strength']);
+
+            if (error) {
+                console.error('Hero gallery background load failed:', error.message);
+                return;
+            }
+
+            const settings = Object.fromEntries((data || []).map(item => [item.key, item.value]));
+            applyGalleryBackground(settings.background_page_url, settings.background_page_strength);
+        }
+
+        loadGalleryBackground();
+        loadGallery();
+    </script>
+</body>
+</html>

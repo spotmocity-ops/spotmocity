@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>置頂內容｜SpotMoCity 澳聚光</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; color: #1f2937; background: #f8fafc; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+        .site-header { background: rgb(255 255 255 / 95%); box-shadow: 0 1px 4px #0f172a1a; }
+        .site-header-inner { max-width: 72rem; margin: 0 auto; padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+        .site-logo { width: 100px; height: 60px; object-fit: contain; }
+        .site-nav { display: flex; gap: 0.75rem; font-size: 0.875rem; }
+        main { max-width: 1100px; margin: 0 auto; padding: 1rem 1rem 3rem; }
+        .hero-media { overflow: hidden; min-height: 8rem; max-height: 22rem; background: #e2e8f0; border-radius: 1.25rem; }
+        .hero-media img, .hero-media video, .hero-media iframe { width: 100%; height: clamp(8rem, 30vw, 22rem); display: block; object-fit: cover; border: 0; }
+        .hero-media iframe { height: clamp(8rem, 30vw, 22rem); }
+        .countdown span { display: inline-flex; min-width: 4.25rem; flex-direction: column; border-radius: 0.75rem; background: #fff; padding: 0.75rem; text-align: center; box-shadow: 0 1px 5px #0f172a18; }
+        .tab-button[aria-selected="true"] { border-color: #2563eb; background: #eff6ff; color: #1d4ed8; }
+        .rich-content h2 { margin: 1rem 0 0.5rem; font-size: 1.35rem; font-weight: 700; }
+        .rich-content h3 { margin: 0.85rem 0 0.4rem; font-size: 1.1rem; font-weight: 700; }
+        .rich-content ul, .rich-content ol { margin: 0.75rem 0; padding-left: 1.5rem; }
+        .rich-content ul { list-style: disc; }
+        .rich-content ol { list-style: decimal; }
+        .rich-content a { color: #1d4ed8; text-decoration: underline; }
+        .rich-content blockquote { margin: 0.75rem 0; border-left: 3px solid #93c5fd; padding-left: 0.75rem; color: #475569; }
+        .rich-content img { display: block; margin: 0.75rem 0; max-width: 100%; height: auto; border-radius: 0.75rem; }
+        #hero-detail[data-theme="warm"] > header, #hero-detail[data-theme="warm"] > section:not(#team-section) { background-color: #fffbeb; }
+        #hero-detail[data-theme="dark"] > header, #hero-detail[data-theme="dark"] > section { background-color: #172033; color: #f8fafc; border-color: #334155; }
+        #hero-detail[data-theme="dark"] h1, #hero-detail[data-theme="dark"] h2, #hero-detail[data-theme="dark"] h3, #hero-detail[data-theme="dark"] p { color: #f8fafc; }
+        @media (max-width: 640px) {
+            .site-header-inner { padding: 0.4rem 0.75rem; }
+            main { padding: 0.75rem 0.75rem 2rem; }
+            .hero-media { min-height: 7rem; max-height: 12rem; border-radius: 0.9rem; }
+            .hero-media img, .hero-media video, .hero-media iframe { height: clamp(7rem, 42vw, 12rem); }
+            #hero-detail { gap: 1rem; }
+            #hero-detail > header { padding: 1.1rem; border-radius: 1rem; }
+            #hero-detail > header h1 { font-size: 1.65rem; }
+            #hero-detail > header > p:nth-of-type(2) { margin-top: 0.6rem; font-size: 1rem; line-height: 1.6; }
+            #highlight-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+            #highlight-grid article { padding: 0.75rem; }
+            #detail-panels { overflow-wrap: anywhere; }
+            #team-grid { grid-template-columns: minmax(0, 1fr); }
+            .countdown span { min-width: 3.5rem; padding: 0.55rem; }
+        }
+        @media (max-width: 380px) {
+            #highlight-grid { grid-template-columns: minmax(0, 1fr); }
+            .site-logo { width: 72px; height: 44px; }
+            .site-nav { gap: 0.5rem; font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="site-header-inner">
+            <a href="index.html" aria-label="SpotMoCity 澳聚光首頁"><img class="site-logo" src="head.logo.png" alt="SpotMoCity 澳聚光"></a>
+            <nav class="site-nav" aria-label="主要導覽"><a href="index.html">首頁</a><a href="hero-gallery.html">置頂內容</a></nav>
+        </div>
+    </header>
+    <main>
+        <a href="hero-gallery.html" class="inline-flex mb-4 text-sm font-medium text-blue-700 hover:underline">← 返回置頂內容</a>
+        <p id="page-status" role="status" class="py-12 text-center text-gray-500">正在載入內容…</p>
+        <article id="hero-detail" class="hidden space-y-8">
+            <section class="hero-media" id="hero-media"></section>
+            <header class="rounded-2xl bg-white p-6 shadow-sm sm:p-9">
+                <p id="hero-kicker" class="mb-2 text-sm font-semibold uppercase tracking-wide text-blue-700"></p>
+                <h1 id="hero-title" class="text-3xl font-bold leading-tight text-gray-900 sm:text-5xl"></h1>
+                <p id="hero-subtitle" class="mt-4 whitespace-pre-line text-lg leading-8 text-gray-600"></p>
+                <div id="countdown-wrap" class="hidden mt-6 rounded-xl bg-blue-50 p-4">
+                    <p class="mb-3 font-semibold text-blue-900">⏳ 距離活動時間</p><div id="countdown" class="countdown flex flex-wrap gap-2 text-blue-900"></div>
+                </div>
+                <a id="hero-cta" class="hidden mt-6 inline-flex rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white shadow hover:bg-blue-800"></a>
+            </header>
+            <section id="highlight-grid" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"></section>
+            <section class="rounded-2xl bg-white p-5 shadow-sm sm:p-8">
+                <div id="detail-tabs" role="tablist" aria-label="活動詳細內容" class="mb-5 flex flex-wrap gap-2"></div>
+                <div id="detail-panels"></div>
+            </section>
+            <section id="team-section" class="hidden">
+                <h2 class="mb-4 text-2xl font-bold">嘉賓／導師／品牌團隊</h2><div id="team-grid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
+            </section>
+        </article>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseClient = window.supabase.createClient(
+            'https://owvsfvunlqudrhdsuqvk.supabase.co',
+            'sb_publishable_4kBnCjtv4c7j-sb8l3BrUw_j63egBDR'
+        );
+
+        function safeHttpsUrl(value) {
+            try {
+                const url = new URL(String(value || ''), window.location.href);
+                return url.protocol === 'https:' ? url.href : '';
+            } catch {
+                return '';
+            }
+        }
+
+        function parseArray(value) {
+            try {
+                const parsed = JSON.parse(value || '[]');
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function renderHeroMedia(item) {
+            const container = document.getElementById('hero-media');
+            const mediaType = item.heroMediaType || 'image';
+            const mediaUrl = safeHttpsUrl(item.heroMediaUrl);
+            if (mediaType === 'youtube' && mediaUrl) {
+                const url = new URL(mediaUrl);
+                let videoId = '';
+                if (url.hostname === 'youtu.be') videoId = url.pathname.slice(1);
+                if (url.hostname === 'youtube.com' || url.hostname.endsWith('.youtube.com')) {
+                    if (url.pathname === '/watch') videoId = url.searchParams.get('v') || '';
+                    else if (url.pathname.startsWith('/embed/')) videoId = url.pathname.split('/')[2] || '';
+                }
+                if (/^[\w-]{11}$/.test(videoId)) {
+                    container.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}" title="活動影片" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>`;
+                    return;
+                }
+            }
+            if (mediaType === 'mp4' && mediaUrl) {
+                const video = document.createElement('video');
+                video.src = mediaUrl;
+                video.controls = true;
+                video.playsInline = true;
+                video.preload = 'metadata';
+                container.replaceChildren(video);
+                return;
+            }
+            const imageUrl = safeHttpsUrl(item.imageUrl);
+            if (!imageUrl) {
+                container.classList.add('hidden');
+                return;
+            }
+            const picture = document.createElement('picture');
+            const mobile = safeHttpsUrl(item.mobileImageUrl);
+            if (mobile) {
+                const source = document.createElement('source');
+                source.media = '(max-width: 767px)';
+                source.srcset = mobile;
+                picture.append(source);
+            }
+            const image = document.createElement('img');
+            image.src = imageUrl;
+            image.alt = item.headline || item.title || '活動主視覺';
+            image.fetchPriority = 'high';
+            picture.append(image);
+            container.replaceChildren(picture);
+        }
+
+        function renderHighlights(highlights) {
+            const grid = document.getElementById('highlight-grid');
+            const entries = [
+                ['💰 價錢', highlights.ticket],
+                ['👥 適合對象', highlights.audience],
+                ['📍 活動地點／交通', highlights.venue]
+            ].filter(([, value]) => typeof value === 'string' && value.trim());
+            grid.innerHTML = entries.map(([label, value]) => {
+                const card = document.createElement('article');
+                card.className = 'rounded-xl border border-gray-200 bg-white p-4 shadow-sm';
+                const title = document.createElement('h2');
+                title.className = 'text-sm font-semibold text-gray-500';
+                title.textContent = label;
+                const detail = document.createElement('p');
+                detail.className = 'mt-2 whitespace-pre-line font-medium text-gray-800';
+                detail.textContent = value;
+                card.append(title, detail);
+                return card.outerHTML;
+            }).join('');
+        }
+
+        function renderTabs(tabs) {
+            const data = [
+                ['highlights', '活動／品牌亮點', tabs.highlights],
+                ['schedule', '詳細內容', tabs.schedule],
+                ['faq', '常見問題 FAQ', tabs.faq]
+            ];
+            const available = data.filter(([key, , content]) =>
+                (typeof content === 'string' && content.trim()) ||
+                (key === 'highlights' && getHighlightImages(tabs).length)
+            );
+            const tabList = document.getElementById('detail-tabs');
+            const panels = document.getElementById('detail-panels');
+            if (!available.length) {
+                document.getElementById('detail-tabs').classList.add('hidden');
+                panels.textContent = '暫無詳細內容。';
+                return;
+            }
+            tabList.innerHTML = available.map(([key, label], index) =>
+                `<button type="button" class="tab-button rounded-lg border px-4 py-2 text-sm font-semibold" role="tab" id="tab-${key}" aria-controls="panel-${key}" aria-selected="${index === 0}" tabindex="${index === 0 ? 0 : -1}" data-tab="${key}">${label}</button>`
+            ).join('');
+            panels.replaceChildren();
+            available.forEach(([key, , content], index) => {
+                const panel = document.createElement('div');
+                panel.id = `panel-${key}`;
+                panel.setAttribute('role', 'tabpanel');
+                panel.setAttribute('aria-labelledby', `tab-${key}`);
+                panel.className = `${index ? 'hidden' : ''} rich-content whitespace-pre-line leading-7 text-gray-700`;
+                if (key === 'highlights') {
+                    const imageUrls = getHighlightImages(tabs);
+                    if (imageUrls.length) {
+                        const gallery = document.createElement('div');
+                        gallery.className = 'mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3';
+                        imageUrls.forEach((imageUrl, imageIndex) => {
+                        const image = document.createElement('img');
+                        image.src = imageUrl;
+                        image.alt = `活動／品牌亮點圖片 ${imageIndex + 1}`;
+                        image.loading = 'lazy';
+                        image.className = 'max-h-[34rem] w-full rounded-xl object-cover';
+                        gallery.append(image);
+                        });
+                        panel.append(gallery);
+                    }
+                }
+                const text = document.createElement('div');
+                text.className = 'rich-content';
+                text.innerHTML = sanitizeRichContent(content);
+                panel.append(text);
+                panels.append(panel);
+            });
+            tabList.addEventListener('click', event => {
+                const button = event.target.closest('[data-tab]');
+                if (!button) return;
+                tabList.querySelectorAll('[data-tab]').forEach(tab => {
+                    const selected = tab === button;
+                    tab.setAttribute('aria-selected', String(selected));
+                    tab.tabIndex = selected ? 0 : -1;
+                });
+                panels.querySelectorAll('[role="tabpanel"]').forEach(panel => panel.classList.toggle('hidden', panel.id !== `panel-${button.dataset.tab}`));
+            });
+        }
+
+        function getHighlightImages(tabs) {
+            const urls = Array.isArray(tabs.highlightsImageUrls)
+                ? tabs.highlightsImageUrls
+                : [tabs.highlightsImageUrl];
+            return urls.map(safeHttpsUrl).filter(Boolean).slice(0, 5);
+        }
+
+        function sanitizeRichContent(value) {
+            const template = document.createElement('template');
+            template.innerHTML = String(value || '');
+            const allowedTags = new Set(['P', 'BR', 'H2', 'H3', 'UL', 'OL', 'LI', 'STRONG', 'B', 'EM', 'I', 'U', 'BLOCKQUOTE', 'A', 'IMG', 'SPAN']);
+            const cleanNode = node => {
+                if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.textContent || '');
+                if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
+                if (!allowedTags.has(node.tagName)) {
+                    const fragment = document.createDocumentFragment();
+                    Array.from(node.childNodes).forEach(child => fragment.append(cleanNode(child)));
+                    return fragment;
+                }
+                const element = document.createElement(node.tagName.toLowerCase());
+                if (node.tagName === 'A') {
+                    const href = safeHttpsUrl(node.getAttribute('href'));
+                    if (!href) {
+                        const fragment = document.createDocumentFragment();
+                        Array.from(node.childNodes).forEach(child => fragment.append(cleanNode(child)));
+                        return fragment;
+                    }
+                    element.href = href;
+                    element.rel = 'noopener noreferrer';
+                }
+                if (node.tagName === 'IMG') {
+                    const src = safeHttpsUrl(node.getAttribute('src'));
+                    if (!src) return document.createDocumentFragment();
+                    element.src = src;
+                    element.alt = (node.getAttribute('alt') || '').slice(0, 200);
+                    element.loading = 'lazy';
+                    element.className = 'my-3 max-h-[32rem] max-w-full rounded-lg object-contain';
+                } else if (node.tagName === 'SPAN') {
+                    const fontFamily = node.style.fontFamily;
+                    const allowedFamilies = [
+                        'Arial, "Noto Sans TC", sans-serif',
+                        'Georgia, "Noto Serif TC", serif',
+                        'KaiTi, DFKai-SB, serif',
+                        '"Courier New", monospace'
+                    ];
+                    const fontWeight = node.style.fontWeight;
+                    const fontSize = node.style.fontSize;
+                    if (allowedFamilies.includes(fontFamily)) element.style.fontFamily = fontFamily;
+                    if (['400', '500', '600', '700'].includes(fontWeight)) element.style.fontWeight = fontWeight;
+                    if (/^(12|14|16|18|20|24|28|32|36)px$/.test(fontSize)) element.style.fontSize = fontSize;
+                } else {
+                    Array.from(node.childNodes).forEach(child => element.append(cleanNode(child)));
+                }
+                return element;
+            };
+            const output = document.createDocumentFragment();
+            Array.from(template.content.childNodes).forEach(child => output.append(cleanNode(child)));
+            return Array.from(output.childNodes).map(node => {
+                const wrapper = document.createElement('div');
+                wrapper.append(node.cloneNode(true));
+                return wrapper.innerHTML;
+            }).join('');
+        }
+
+        function renderTeam(members) {
+            if (!members.length) return;
+            const section = document.getElementById('team-section');
+            const grid = document.getElementById('team-grid');
+            grid.innerHTML = members.filter(member => member && typeof member === 'object').map(member => {
+                const card = document.createElement('article');
+                card.className = 'rounded-xl border bg-white p-5 shadow-sm';
+                const imageUrl = safeHttpsUrl(member.imageUrl);
+                if (imageUrl) {
+                    const image = document.createElement('img');
+                    image.src = imageUrl;
+                    image.alt = '';
+                    image.loading = 'lazy';
+                    image.className = 'mb-4 h-20 w-20 rounded-full object-cover';
+                    card.append(image);
+                }
+                const name = document.createElement('h3');
+                name.className = 'font-bold text-gray-900';
+                name.textContent = typeof member.name === 'string' ? member.name : '';
+                const role = document.createElement('p');
+                role.className = 'mt-1 text-sm font-medium text-blue-700';
+                role.textContent = typeof member.role === 'string' ? member.role : '';
+                const bio = document.createElement('p');
+                bio.className = 'mt-3 whitespace-pre-line text-sm leading-6 text-gray-600';
+                bio.textContent = typeof member.bio === 'string' ? member.bio : '';
+                card.append(name, role, bio);
+                return card.outerHTML;
+            }).join('');
+            section.classList.remove('hidden');
+        }
+
+        function renderCountdown(target) {
+            const wrap = document.getElementById('countdown-wrap');
+            const output = document.getElementById('countdown');
+            const timestamp = Date.parse(String(target || '').replace(' ', 'T') + (String(target || '').includes('+') ? '' : '+08:00'));
+            if (!Number.isFinite(timestamp) || timestamp <= Date.now()) return;
+            wrap.classList.remove('hidden');
+            const update = () => {
+                const remaining = Math.max(0, timestamp - Date.now());
+                const units = [
+                    ['天', Math.floor(remaining / 86400000)],
+                    ['小時', Math.floor(remaining / 3600000) % 24],
+                    ['分鐘', Math.floor(remaining / 60000) % 60],
+                    ['秒', Math.floor(remaining / 1000) % 60]
+                ];
+                output.innerHTML = units.map(([label, value]) => `<span><strong class="text-2xl">${value}</strong><small>${label}</small></span>`).join('');
+                if (remaining === 0) wrap.classList.add('hidden');
+            };
+            update();
+            window.setInterval(update, 1000);
+        }
+
+        async function loadDetail() {
+            const requestedId = new URLSearchParams(location.search).get('id');
+            const status = document.getElementById('page-status');
+            if (!requestedId) {
+                status.textContent = '未指定置頂內容。';
+                return;
+            }
+            const { data, error } = await supabaseClient.from('site_settings').select('value').eq('key', 'home_hero_items').maybeSingle();
+            if (error) {
+                status.textContent = '內容載入失敗，請稍後再試。';
+                console.error('Featured detail load failed:', error.message);
+                return;
+            }
+            const item = parseArray(data?.value).find((entry, index) =>
+                String(entry.pageId || `hero-${entry.order || index + 1}`) === requestedId
+            );
+            if (!item) {
+                status.textContent = '找不到此置頂內容，可能已下架。';
+                return;
+            }
+            const details = item.details && typeof item.details === 'object' ? item.details : {};
+            const title = item.headline || item.title || '置頂內容';
+            document.title = `${title}｜SpotMoCity 澳聚光`;
+            document.getElementById('hero-detail').dataset.theme = item.template === 'custom' && ['warm', 'dark'].includes(item.customTheme) ? item.customTheme : 'light';
+            const backgroundUrl = safeHttpsUrl(item.pageBackgroundUrl);
+            if (backgroundUrl) {
+                const scale = Math.min(160, Math.max(100, Number(item.pageBackgroundScale) || 100));
+                const position = Math.min(100, Math.max(0, Number(item.pageBackgroundPosition ?? 50)));
+                document.body.style.backgroundImage = `linear-gradient(rgb(248 250 252 / 78%), rgb(248 250 252 / 78%)), url("${backgroundUrl}")`;
+                document.body.style.backgroundSize = `cover, ${scale}% auto`;
+                document.body.style.backgroundPosition = `center, center ${position}%`;
+                document.body.style.backgroundAttachment = 'fixed';
+            }
+            document.getElementById('hero-title').textContent = title;
+            document.getElementById('hero-subtitle').textContent = item.subtitle || item.description || '';
+            document.getElementById('hero-kicker').textContent = item.template === 'custom' ? 'SpotMoCity 精選' : '活動／品牌介紹';
+            renderHeroMedia(item);
+            renderHighlights(details.highlights || {});
+            renderTabs(details.tabs || {});
+            renderTeam(Array.isArray(details.members) ? details.members : []);
+            if (item.countdownEnabled) renderCountdown(item.countdownTarget);
+            const ctaUrl = safeHttpsUrl(item.ctaUrl);
+            if (ctaUrl && item.ctaLabel) {
+                const cta = document.getElementById('hero-cta');
+                cta.href = ctaUrl;
+                cta.textContent = item.ctaLabel;
+                cta.target = '_blank';
+                cta.rel = 'noopener noreferrer';
+                cta.classList.remove('hidden');
+            }
+            document.getElementById('hero-detail').classList.remove('hidden');
+            status.classList.add('hidden');
+        }
+
+        loadDetail();
+    </script>
+</body>
+</html>
