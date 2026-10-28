@@ -1,0 +1,8 @@
+[functions.notify-admin-on-submission]
+verify_jwt = false
+
+[functions.daily-activity-curation]
+verify_jwt = false
+
+[functions.hero-design-assistant]
+verify_jwt = false
