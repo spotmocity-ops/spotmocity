@@ -349,9 +349,11 @@ function renderCuratedActivityDrafts() {
                     <label class="block text-sm font-semibold mt-3">或輸入海報圖片網址<input data-field="poster_url" type="url" value="${escapeHtml(item.poster_url || '')}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
                 </div>
             </div>
-            ${imageCandidates.length ? `<div class="mt-3"><p class="text-xs text-gray-500 mb-2">候選圖片（請核對原始來源及使用權；點擊可填入海報網址）</p><div class="flex flex-wrap gap-2">${imageCandidates.map(url => `<button type="button" data-curated-image="${escapeHtml(url)}" class="border rounded-lg p-1 hover:border-blue-500"><img src="${escapeHtml(url)}" alt="候選活動海報" loading="lazy" class="w-24 h-20 object-cover rounded"></button>`).join('')}</div></div>` : ''}
+            <div data-curated-candidates class="mt-3">${renderCuratedImageCandidates(imageCandidates)}</div>
+            ${item.status === 'draft' ? '<section data-draft-ai-preview class="hidden mt-4 rounded-lg border border-violet-200 bg-violet-50 p-4" aria-live="polite"></section>' : ''}
             <div class="flex flex-wrap gap-2 mt-4">
                 <button type="button" data-save-curated-draft class="bg-blue-700 hover:bg-blue-800 text-white text-sm font-semibold px-4 py-2 rounded-lg">儲存修改</button>
+                ${item.status === 'draft' ? '<button type="button" data-preview-curated-ai class="bg-violet-700 hover:bg-violet-800 text-white text-sm font-semibold px-4 py-2 rounded-lg">AI 重新整理建議</button>' : ''}
                 ${item.status === 'published'
                     ? '<button type="button" data-unpublish-curated-draft class="bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2 rounded-lg">手動下架</button>'
                     : '<button type="button" data-publish-curated-draft class="bg-green-700 hover:bg-green-800 text-white text-sm font-semibold px-4 py-2 rounded-lg">儲存並上架</button>'}
@@ -375,6 +377,12 @@ function renderCuratedActivityDrafts() {
         card.querySelector('[data-poster-display-position]').addEventListener('input', updatePosterCropPreview);
     }
 }
+
+function renderCuratedImageCandidates(urls) {
+    return urls.length ? `<p class="text-xs text-gray-500 mb-2">候選圖片（請核對原始來源及使用權；點擊可填入海報網址）</p><div class="flex flex-wrap gap-2">${urls.map(url => `<button type="button" data-curated-image="${escapeHtml(url)}" class="border rounded-lg p-1 hover:border-blue-500"><img src="${escapeHtml(url)}" alt="候選活動海報" loading="lazy" class="w-24 h-20 object-cover rounded"></button>`).join('')}</div>` : '';
+}
+
+const curatedCandidateEdits = new WeakMap();
 
 function getPosterDisplayScale(value) {
     const scale = Number(value);
@@ -521,6 +529,7 @@ async function saveCuratedActivityDraft(card, status) {
         status,
         updated_at: new Date().toISOString()
     };
+    if (curatedCandidateEdits.has(card)) changes.candidate_image_urls = curatedCandidateEdits.get(card);
 
     const relatedLinksText = read('related_links');
     const relatedLinkLines = relatedLinksText ? relatedLinksText.split(/\r?\n/).map(line => line.trim()).filter(Boolean) : [];
@@ -613,7 +622,97 @@ async function saveCuratedActivityDraft(card, status) {
     await fetchCuratedActivityDrafts();
 }
 
+const curatedAiFields = [
+    ['description', '活動簡介'],
+    ['promo_copy', '宣傳文案'],
+    ['age_range', '適合年齡'],
+    ['location', '活動地址'],
+    ['fee', '費用']
+];
+const pendingCuratedSuggestions = new WeakMap();
+
+async function previewCuratedAi(card, button) {
+    const preview = card.querySelector('[data-draft-ai-preview]');
+    const original = Object.fromEntries(curatedAiFields.map(([field]) => [field, card.querySelector(`[data-field="${field}"]`).value]));
+    original.related_links = card.querySelector('[data-field="related_links"]').value;
+    pendingCuratedSuggestions.delete(card);
+    preview.classList.add('hidden');
+    button.disabled = true;
+    button.textContent = 'AI 整理中…';
+    try {
+        const { data, error } = await supabaseClient.functions.invoke('daily-activity-curation', {
+            body: { action: 'preview_draft', draft_id: card.dataset.curatedDraft }
+        });
+        if (error) {
+            const message = await error.context?.text?.().catch(() => '');
+            throw new Error(message || error.message || '無法產生 AI 建議。');
+        }
+        if (!data?.suggestion || typeof data.suggestion !== 'object') throw new Error('AI 沒有回傳有效的草稿建議。');
+        const suggestion = data.suggestion;
+        if (curatedAiFields.some(([field]) => typeof suggestion[field] !== 'string')) throw new Error('AI 草稿建議格式無效。');
+        if (!Array.isArray(suggestion.image_urls) || !Array.isArray(suggestion.related_links)) throw new Error('來源圖片或連結格式無效；請確認後端已更新。');
+        const imageUrls = suggestion.image_urls.filter(url => typeof url === 'string' && isAllowedHttpsUrl(url) && url).slice(0, 12);
+        const links = suggestion.related_links.filter(link => link && typeof link.label === 'string' && link.label.trim() && typeof link.url === 'string' && link.url && isAllowedHttpsUrl(link.url)).slice(0, 10);
+        const summary = curatedAiFields.map(([field, label]) => `${label}\n目前：${original[field] || '（空白）'}\n建議：${suggestion[field] || '（空白）'}`).join('\n\n') +
+            `\n\n來源連結建議：\n${links.map(link => `${link.label} | ${link.url}`).join('\n') || '（無）'}\n\n候選圖片：${imageUrls.length} 張` +
+            (suggestion.source_warning ? `\n${suggestion.source_warning}` : '');
+        preview.innerHTML = '<h4 class="font-semibold text-violet-900">AI 草稿建議</h4><p class="mt-1 text-sm">內容根據上次儲存的草稿整理，連結及候選圖片來自來源頁。全年齡預設值、內容及圖片使用權請自行核實；確認後仍須按「儲存修改」。</p><pre data-draft-ai-summary class="mt-3 whitespace-pre-wrap break-words rounded bg-white p-3 text-sm"></pre><div data-preview-images class="mt-3"></div><div class="mt-3 flex gap-2"><button type="button" data-apply-curated-ai class="rounded bg-violet-700 px-3 py-2 text-sm text-white">確認套用建議</button><button type="button" data-cancel-curated-ai class="rounded border px-3 py-2 text-sm">取消</button></div>';
+        preview.querySelector('[data-draft-ai-summary]').textContent = summary;
+        preview.querySelector('[data-preview-images]').innerHTML = renderCuratedImageCandidates(imageUrls).replaceAll('data-curated-image=', 'data-preview-image=');
+        pendingCuratedSuggestions.set(card, { original, suggestion, imageUrls, links });
+        preview.classList.remove('hidden');
+    } catch (error) {
+        alert(`AI 重新整理失敗：${error?.message || '請檢查 AI 設定。'}`);
+    } finally {
+        button.disabled = false;
+        button.textContent = 'AI 重新整理建議';
+    }
+}
+
 function handleCuratedDraftActions(event) {
+    const previewButton = event.target.closest('[data-preview-curated-ai]');
+    if (previewButton) {
+        previewCuratedAi(previewButton.closest('[data-curated-draft]'), previewButton);
+        return;
+    }
+    const applyButton = event.target.closest('[data-apply-curated-ai]');
+    if (applyButton) {
+        const card = applyButton.closest('[data-curated-draft]');
+        const pending = pendingCuratedSuggestions.get(card);
+        if (!pending) {
+            alert('找不到 AI 建議，請重新產生。');
+            return;
+        }
+        if ([...curatedAiFields.map(([field]) => field), 'related_links'].some(field => card.querySelector(`[data-field="${field}"]`).value !== pending.original[field])) {
+            alert('欄位已在產生建議後變更；為避免覆蓋，請重新產生建議。');
+            return;
+        }
+        const relatedField = card.querySelector('[data-field="related_links"]');
+        const lines = relatedField.value.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+        const existingUrls = new Set(lines.map(line => line.slice(line.indexOf('|') + 1).trim()));
+        const additions = pending.links.filter(link => !existingUrls.has(link.url)).map(link => `${link.label.replace(/\|/g, ' ')} | ${link.url}`);
+        if (lines.length + additions.length > 10) {
+            alert('相關連結合共超過 10 個，請先整理現有連結再重新產生建議。');
+            return;
+        }
+        curatedAiFields.forEach(([field]) => { card.querySelector(`[data-field="${field}"]`).value = pending.suggestion[field]; });
+        relatedField.value = [...lines, ...additions].join('\n');
+        const existing = curatedCandidateEdits.get(card) || curatedActivityDrafts.find(item => String(item.id) === card.dataset.curatedDraft)?.candidate_image_urls || [];
+        const candidates = [...new Set([...existing, ...pending.imageUrls])].slice(0, 12);
+        curatedCandidateEdits.set(card, candidates);
+        card.querySelector('[data-curated-candidates]').innerHTML = renderCuratedImageCandidates(candidates);
+        pendingCuratedSuggestions.delete(card);
+        card.querySelector('[data-draft-ai-preview]').classList.add('hidden');
+        alert('建議已填入編輯器；請核對後按「儲存修改」。');
+        return;
+    }
+    const cancelButton = event.target.closest('[data-cancel-curated-ai]');
+    if (cancelButton) {
+        const card = cancelButton.closest('[data-curated-draft]');
+        pendingCuratedSuggestions.delete(card);
+        card.querySelector('[data-draft-ai-preview]').classList.add('hidden');
+        return;
+    }
     const imageButton = event.target.closest('[data-curated-image]');
     if (imageButton) {
         const card = imageButton.closest('[data-curated-draft]');
@@ -1368,12 +1467,10 @@ function renderHomeHeroEditors() {
             <input data-content-field="pageId" type="hidden" value="${escapeHtml(pageId)}">
             <div class="flex flex-wrap items-center justify-between gap-2">
                 <h3 class="font-semibold text-gray-800">置頂內容 ${index + 1}</h3>
-                <div class="flex flex-wrap gap-2"><button type="button" data-save-hero="${index}" class="rounded bg-green-700 px-3 py-1.5 text-sm text-white hover:bg-green-800">儲存此內容</button><button type="button" data-hero-ai="${index}" class="rounded border border-violet-300 px-3 py-1.5 text-sm text-violet-800 hover:bg-violet-50">✨ AI 設計助手</button><button type="button" data-remove-hero="${index}" class="rounded border border-red-200 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50">移除此內容</button></div>
+                <div class="flex flex-wrap gap-2"><button type="button" data-save-hero="${index}" class="rounded bg-green-700 px-3 py-1.5 text-sm text-white hover:bg-green-800">儲存此內容</button><button type="button" data-remove-hero="${index}" class="rounded border border-red-200 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50">移除此內容</button></div>
             </div>
             <div class="grid gap-3 md:grid-cols-2">
                 ${renderHeroTextField('order', '顯示次序', item.order ?? index + 1, 'number', 'min="1" step="1" required')}
-                <label class="block text-sm font-medium text-gray-700">詳情頁模板<select data-content-field="template" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="basic" ${template === 'basic' ? 'selected' : ''}>基本版</option><option value="custom" ${template === 'custom' ? 'selected' : ''}>自訂版</option></select></label>
-                <label class="block text-sm font-medium text-gray-700">自訂版風格<select data-content-field="customTheme" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="light" ${item.customTheme === 'warm' || item.customTheme === 'dark' ? '' : 'selected'}>清新明亮</option><option value="warm" ${item.customTheme === 'warm' ? 'selected' : ''}>溫暖活力</option><option value="dark" ${item.customTheme === 'dark' ? 'selected' : ''}>沉浸深色</option></select></label>
                 ${renderHeroTextField('title', '卡片標題', item.title || '')}
                 ${renderHeroTextField('description', '卡片簡介', item.description || '')}
                 ${renderHeroImageField(item, 'imageUrl', '拍立得圖片', '建議 1200 × 400 px（3:1），可上傳後裁剪，JPG／PNG／WebP，最多 10 MB。', { ratio: 3, width: 1200, height: 400 })}
@@ -1384,6 +1481,19 @@ function renderHomeHeroEditors() {
             <details class="rounded-lg border bg-gray-50 p-3">
                 <summary class="cursor-pointer font-semibold text-sm text-gray-800">編輯詳細內容頁</summary>
                 <div class="mt-4 space-y-4">
+                    <label class="block text-sm font-medium text-gray-700">詳情頁版本<select data-content-field="template" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="basic" ${template === 'basic' ? 'selected' : ''}>基本版（一般排版）</option><option value="custom" ${template === 'custom' ? 'selected' : ''}>自訂版（可使用 AI 設計）</option></select></label>
+                    <div data-hero-custom-options class="${template === 'custom' ? '' : 'hidden'} space-y-3 rounded-lg border border-violet-200 bg-white p-3">
+                        <div class="grid gap-3 md:grid-cols-2">
+                            <label class="block text-sm font-medium text-gray-700">自訂版風格<select data-content-field="customTheme" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal">${[['light', '清新明亮'], ['warm', '溫暖活力'], ['dark', '沉浸深色'], ['blue', '清爽藍色'], ['green', '自然綠色']].map(([value, label]) => `<option value="${value}" ${(item.customTheme || 'light') === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
+                            <label class="block text-sm font-medium text-gray-700">自訂版排版<select data-content-field="customLayout" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="classic" ${item.customLayout !== 'split' ? 'selected' : ''}>上下排列</option><option value="split" ${item.customLayout === 'split' ? 'selected' : ''}>圖片與標題並排（電腦版）</option></select></label>
+                            <label class="block text-sm font-medium text-gray-700">自訂版內容順序<select data-content-field="customOrder" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="standard" ${!['details-first', 'people-first'].includes(item.customOrder) ? 'selected' : ''}>亮點優先</option><option value="details-first" ${item.customOrder === 'details-first' ? 'selected' : ''}>詳細內容優先</option><option value="people-first" ${item.customOrder === 'people-first' ? 'selected' : ''}>團隊優先</option></select></label>
+                        </div>
+                        ${renderHeroTextarea('customPrompt', '自訂版設計要求', item.customPrompt || '', '例如：藍色、圖片與標題並排、詳細內容優先。', 3)}
+                        <label class="flex items-start gap-2 text-sm text-gray-700"><input type="checkbox" data-hero-ai-rewrite><span>允許 AI 建議改寫標題、副標題、按鈕及亮點文字（預設保留原文）</span></label>
+                        <p class="text-xs text-gray-500">AI 可選五種配色、兩種排版及三種內容順序；不會產生圖片或改寫詳細分頁及團隊。</p>
+                        <div class="flex flex-wrap gap-2"><button type="button" data-hero-ai="${index}" class="rounded border border-violet-300 px-3 py-1.5 text-sm text-violet-800 hover:bg-violet-50">✨ AI 設計助手</button><button type="button" data-show-hero-ai-preview class="hidden rounded border bg-white px-3 py-1.5 text-sm">預覽 AI 設計</button></div>
+                        <div data-hero-ai-preview class="hidden rounded-lg border border-violet-200 bg-violet-50 p-3"></div>
+                    </div>
                     <fieldset class="space-y-3"><legend class="font-semibold text-gray-800 mb-2">1. 頂部視覺與核心行動區</legend>
                         <div class="rounded-lg border bg-white p-3">
                             <p class="text-sm font-semibold text-gray-800">詳情頁背景圖片</p>
@@ -1435,26 +1545,89 @@ function renderHomeHeroEditors() {
                         <button type="button" data-add-team-member class="rounded border border-blue-300 px-3 py-2 text-sm font-medium text-blue-800 hover:bg-blue-50">＋ 新增嘉賓／團隊成員</button>
                         <p class="text-xs text-gray-500">每位成員可直接填寫姓名、職稱、簡介並上傳圖片；圖片限 JPG／PNG／WebP，每張不超過 10 MB。</p>
                         <textarea data-content-field="teamJson" class="hidden">${escapeHtml(memberJson)}</textarea>
-                        ${renderHeroTextarea('customPrompt', '自訂版設計要求', item.customPrompt || '', '描述想要的版面風格與內容重點，AI 助手會依此產生建議。', 3)}
                     </fieldset>
                 </div>
             </details>
         </article>`;
-    }).join('') : '<p class="text-sm text-gray-500">尚未新增置頂內容，請選擇基本版或自訂版開始。</p>';
+    }).join('') : '<p class="text-sm text-gray-500">尚未新增置頂內容，請先新增，再於詳細內容頁選擇版本。</p>';
 }
 
-async function requestHeroAiDesign(index) {
+function snapshotHeroEditor(row) {
+    return JSON.stringify(Array.from(row.querySelectorAll('input, select, textarea, [data-rich-editor]')).filter(input => !input.closest('[data-hero-ai-preview]')).map(input => {
+        if (input.matches('[data-rich-editor]')) return input.innerHTML;
+        if (input.type === 'file') return Array.from(input.files).map(file => [file.name, file.size, file.lastModified]);
+        return input.type === 'checkbox' ? input.checked : input.value;
+    }));
+}
+
+function heroPreviewItem(row, design, allowRewrite) {
+    const item = Object.fromEntries(Array.from(row.querySelectorAll('[data-content-field]')).map(input => [
+        input.dataset.contentField, input.type === 'checkbox' ? input.checked : input.value
+    ]));
+    const members = JSON.parse(item.teamJson || '[]');
+    const value = (name, suggestion) => allowRewrite && typeof suggestion === 'string' && suggestion.trim() ? suggestion : item[name];
+    return {
+        ...item, template: 'custom',
+        customTheme: design.customTheme, customLayout: design.customLayout, customOrder: design.customOrder,
+        headline: value('headline', design.headline), subtitle: value('subtitle', design.subtitle),
+        ctaLabel: value('ctaLabel', design.ctaLabel),
+        details: {
+            highlights: {
+                ticket: value('highlightTicket', design.highlights.ticket),
+                audience: value('highlightAudience', design.highlights.audience),
+                venue: value('highlightVenue', design.highlights.venue)
+            },
+            tabs: {
+                highlights: item.tabHighlights, schedule: item.tabSchedule, faq: item.tabFaq,
+                highlightsImageUrls: Array.from({ length: 5 }, (_, i) => item[`tabHighlightsImageUrl${i + 1}`]).filter(Boolean)
+            },
+            members
+        }
+    };
+}
+
+const heroAiDrafts = new WeakMap();
+
+async function requestHeroAiDesign(index, mode = 'new') {
     const row = document.querySelector(`#home-hero-editor [data-home-hero-card="${index}"]`);
     if (!row) return;
-    const prompt = row.querySelector('[data-content-field="customPrompt"]').value.trim();
+    if (row.querySelector('[data-content-field="template"]').value !== 'custom') return;
+    const previous = heroAiDrafts.get(row);
+    if (mode === 'refine' && (!previous || previous.snapshot !== snapshotHeroEditor(row))) {
+        alert('編輯器內容已變動，請先重新生成設計，避免覆蓋修改。');
+        return;
+    }
+    const prompt = mode === 'refine'
+        ? row.querySelector('[data-hero-ai-revision]').value.trim()
+        : row.querySelector('[data-content-field="customPrompt"]').value.trim();
+    if (mode === 'refine' && !prompt) {
+        alert('請輸入想在目前設計上修改的要求。');
+        return;
+    }
     const title = row.querySelector('[data-content-field="title"]').value.trim();
     const description = row.querySelector('[data-content-field="description"]').value.trim();
+    const allowRewrite = row.querySelector('[data-hero-ai-rewrite]').checked;
+    const snapshot = snapshotHeroEditor(row);
+    const current = Object.fromEntries(['headline', 'subtitle', 'ctaLabel', 'highlightTicket', 'highlightAudience', 'highlightVenue', 'customTheme', 'customLayout', 'customOrder'].map(name =>
+        [name, row.querySelector(`[data-content-field="${name}"]`).value.trim()]
+    ));
     const button = row.querySelector('[data-hero-ai]');
+    if (button.disabled) return;
+    if (mode === 'refine') {
+        Object.assign(current, {
+            headline: previous.item.headline, subtitle: previous.item.subtitle, ctaLabel: previous.item.ctaLabel,
+            highlightTicket: previous.item.details.highlights.ticket,
+            highlightAudience: previous.item.details.highlights.audience,
+            highlightVenue: previous.item.details.highlights.venue,
+            customTheme: previous.item.customTheme, customLayout: previous.item.customLayout, customOrder: previous.item.customOrder
+        });
+    }
     button.disabled = true;
     button.textContent = 'AI 設計中…';
+    row.querySelectorAll('[data-hero-ai-action]').forEach(control => { control.disabled = true; });
     try {
         const { data, error } = await supabaseClient.functions.invoke('hero-design-assistant', {
-            body: { title, description, prompt }
+            body: { title, description, prompt, current, allowRewrite, mode }
         });
         if (error) {
             const responseMessage = await error.context?.text?.().catch(() => '');
@@ -1462,39 +1635,71 @@ async function requestHeroAiDesign(index) {
         }
         if (!data?.design) throw new Error(data?.error || 'AI 沒有回傳可用設計');
         const design = data.design;
-        const setValue = (name, value) => {
-            const field = row.querySelector(`[data-content-field="${name}"]`);
-            if (!field || typeof value !== 'string') return;
-            field.value = value;
-            if (field.hasAttribute('data-rich-value')) {
-                const editor = field.parentElement.querySelector('[data-rich-editor]');
-                if (editor) editor.innerHTML = sanitizeHeroRichHtml(value);
-            }
-        };
-        setValue('headline', design.headline);
-        setValue('subtitle', design.subtitle);
-        setValue('ctaLabel', design.ctaLabel);
-        setValue('highlightTicket', design.highlights?.ticket);
-        setValue('highlightAudience', design.highlights?.audience);
-        setValue('highlightAward', design.highlights?.award);
-        setValue('highlightVenue', design.highlights?.venue);
-        setValue('tabHighlights', design.tabs?.highlights);
-        setValue('tabSchedule', design.tabs?.schedule);
-        setValue('tabFaq', design.tabs?.faq);
-        if (Array.isArray(design.members)) {
-            const members = design.members.slice(0, 8);
-            row.querySelector('[data-team-members]').innerHTML =
-                members.map((member, memberIndex) => renderHeroTeamMember(member, memberIndex)).join('');
-            updateHeroTeamMemberIndexes(row);
+        if (!['light', 'warm', 'dark', 'blue', 'green'].includes(design.customTheme) ||
+            !['classic', 'split'].includes(design.customLayout) ||
+            !['standard', 'details-first', 'people-first'].includes(design.customOrder) ||
+            !design.highlights || ['headline', 'subtitle', 'ctaLabel'].some(name => typeof design[name] !== 'string') ||
+            ['ticket', 'audience', 'venue'].some(name => typeof design.highlights[name] !== 'string')) {
+            throw new Error('AI 回傳的設計格式無效，請確認已部署最新設計服務後重試。');
         }
-        row.querySelector('[data-content-field="template"]').value = 'custom';
-        if (['light', 'warm', 'dark'].includes(design.customTheme)) row.querySelector('[data-content-field="customTheme"]').value = design.customTheme;
-        alert('AI 已填入設計草稿，請核對與編輯後再儲存。');
+        if (!row.isConnected) return;
+        if (snapshotHeroEditor(row) !== snapshot) throw new Error('設計期間內容已修改，請重新產生預覽。');
+        const item = heroPreviewItem(row, design, allowRewrite);
+        if (mode === 'refine' && allowRewrite) {
+            for (const name of ['headline', 'subtitle', 'ctaLabel']) {
+                if (!design[name].trim()) item[name] = previous.item[name];
+            }
+            for (const name of ['ticket', 'audience', 'venue']) {
+                if (!design.highlights[name].trim()) item.details.highlights[name] = previous.item.details.highlights[name];
+            }
+        }
+        heroAiDrafts.set(row, { item, design, snapshot, allowRewrite });
+        const preview = row.querySelector('[data-hero-ai-preview]');
+        const hasPendingFiles = Array.from(row.querySelectorAll('[data-content-image], [data-content-media]')).some(input => input.files.length);
+        preview.innerHTML = `<h4 class="font-semibold text-violet-900">AI 設計預覽</h4>
+            <p class="mt-1 text-sm text-gray-700">預覽尚未套用或儲存。${allowRewrite ? '已允許 AI 建議改寫標題、副標題、按鈕及亮點，請核對內容。' : '所有原有文字保持不變，只建議調整配色、排版及順序。'}詳細分頁和團隊保持不變。</p>
+            <p data-hero-ai-explanation class="mt-1 whitespace-pre-line text-sm text-violet-900"></p>
+            ${hasPendingFiles ? '<p class="mt-1 text-sm text-amber-800">尚未上傳的圖片或影片不會出現在預覽，儲存後才會顯示。</p>' : ''}
+            <div class="mt-3 flex gap-2"><button type="button" data-hero-preview-size="desktop" aria-pressed="true" class="rounded border bg-white px-3 py-1 text-sm">電腦版</button><button type="button" data-hero-preview-size="mobile" aria-pressed="false" class="rounded border bg-white px-3 py-1 text-sm">手機版</button></div>
+            <div class="mt-2 overflow-x-auto"><iframe title="AI 置頂詳情頁預覽" class="h-[36rem] max-w-none rounded border bg-white" style="width: 1024px" src="hero-detail.html?embed=1&amp;preview=1"></iframe></div>
+            <label class="mt-3 block text-sm font-medium">在這個設計上修改<textarea data-hero-ai-revision rows="2" maxlength="1200" class="mt-1 w-full rounded border p-2 font-normal" placeholder="例如：保留排版，換成綠色"></textarea></label>
+            <div class="mt-3 flex flex-wrap gap-2"><button type="button" data-hero-ai-action data-refine-hero-ai class="rounded border border-violet-300 bg-white px-3 py-2 text-sm">按意見修改此設計</button><button type="button" data-hero-ai-action data-regenerate-hero-ai class="rounded border bg-white px-3 py-2 text-sm">重新生成</button><button type="button" data-hero-ai-action data-apply-hero-ai class="rounded bg-violet-700 px-3 py-2 text-sm text-white">確認套用到編輯器</button><button type="button" data-hero-ai-action data-cancel-hero-ai class="rounded border bg-white px-3 py-2 text-sm">關閉預覽</button></div>`;
+        preview.classList.remove('hidden');
+        row.querySelector('[data-show-hero-ai-preview]').classList.remove('hidden');
+        preview.querySelector('[data-hero-ai-explanation]').textContent = typeof design.explanation === 'string' ? design.explanation : '';
+        const frame = preview.querySelector('iframe');
+        preview.querySelectorAll('[data-hero-preview-size]').forEach(button => button.addEventListener('click', () => {
+            frame.style.width = button.dataset.heroPreviewSize === 'desktop' ? '1024px' : '390px';
+            preview.querySelectorAll('[data-hero-preview-size]').forEach(option => option.setAttribute('aria-pressed', String(option === button)));
+        }));
+        frame.addEventListener('load', () => frame.contentWindow.postMessage({ type: 'featured-design-preview', item }, location.protocol === 'file:' ? '*' : location.origin), { once: true });
+        preview.querySelector('[data-cancel-hero-ai]').addEventListener('click', () => preview.classList.add('hidden'));
+        preview.querySelector('[data-refine-hero-ai]').addEventListener('click', () => requestHeroAiDesign(index, 'refine'));
+        preview.querySelector('[data-regenerate-hero-ai]').addEventListener('click', () => requestHeroAiDesign(index, 'new'));
+        preview.querySelector('[data-apply-hero-ai]').addEventListener('click', () => {
+            if (snapshotHeroEditor(row) !== snapshot) {
+                alert('預覽後內容已修改，請重新產生 AI 預覽，避免覆蓋修改。');
+                return;
+            }
+            const fields = {
+                template: item.template, customTheme: item.customTheme, customLayout: item.customLayout,
+                customOrder: item.customOrder, headline: item.headline, subtitle: item.subtitle, ctaLabel: item.ctaLabel,
+                highlightTicket: item.details.highlights.ticket, highlightAudience: item.details.highlights.audience,
+                highlightVenue: item.details.highlights.venue
+            };
+            Object.entries(fields).forEach(([name, value]) => { row.querySelector(`[data-content-field="${name}"]`).value = value; });
+            heroAiDrafts.delete(row);
+            row.querySelector('[data-show-hero-ai-preview]').classList.add('hidden');
+            preview.replaceChildren();
+            preview.classList.add('hidden');
+            alert('已套用設計草稿；請核對後按「儲存此內容」或「儲存全部置頂內容」。');
+        });
     } catch (error) {
         alert(`AI 設計助手無法完成：${error?.message || '請稍後再試。'}`);
     } finally {
         button.disabled = false;
         button.textContent = '✨ AI 設計助手';
+        row.querySelectorAll('[data-hero-ai-action]').forEach(control => { control.disabled = false; });
     }
 }
 
@@ -2340,6 +2545,7 @@ async function fetchSubmissions() {
                     </div>
                     <p class="text-sm text-gray-600">主辦：${escapeHtml(item.org_name)} (${escapeHtml(item.identity_type)}) | 費用：${escapeHtml(item.fee || (Number(item.total_amount) > 0 ? `MOP ${item.total_amount}` : '免費'))}</p>
                     ${['club', 'org'].includes(item.identity_type) ? `<p class="text-sm text-gray-500 mt-1">負責人姓名：${escapeHtml(item.contact_person || '未提供')}</p>` : ''}
+                    ${['club', 'org'].includes(item.identity_type) ? `<p class="text-sm text-gray-500 mt-1">負責人電話（僅管理員）：${escapeHtml(item.contact_person_phone || '未提供')}</p>` : ''}
                     <p class="text-sm text-gray-500 mt-1">日期：${escapeHtml(item.event_time || '待安排')} 至 ${escapeHtml(getEventEndDateTime(item).replace('T', ' ') || '未設定')} | 年齡：${escapeHtml(item.age_range)}</p>
                     ${renderSubmissionCategoryBadges(item)}
                     <p class="text-sm text-gray-500 mt-1">${item.event_format === 'online' ? '線上平台／參加方式' : '活動地址'}：${escapeHtml(item.location || '未提供')}</p>
@@ -2389,10 +2595,6 @@ async function verifySubmissionIdentity(id) {
     if (!item || item.identity_verified) return;
     if (!item.identity_document_path && !String(item.reg_number || '').trim()) {
         alert('此申請沒有可核對的登記編號或身份核實文件。');
-        return;
-    }
-    if (item.identity_type === 'personal' && !item.phone_verified_at) {
-        alert('此個人申請尚未完成手機 OTP 驗證，不能核實身份。');
         return;
     }
     if (!confirm('確認已核對此提交者的身份／登記資料？核實後會清除線上證件編號及核實文件，僅保留已核實標記與時間。')) return;
@@ -2484,6 +2686,7 @@ function openEditModal(item) {
     document.getElementById('edit-video-url').value = item.video_url || '';
     document.getElementById('edit-contact-email').value = item.contact_email || '';
     document.getElementById('edit-contact-phone').value = item.contact_phone || '';
+    document.getElementById('edit-contact-person-phone').value = item.contact_person_phone || '';
     document.getElementById('edit-wechat').value = item.wechat_id || '';
     document.getElementById('edit-social-handle').value = item.social_handle || '';
     const modal = document.getElementById('edit-modal');
@@ -2602,6 +2805,7 @@ async function updateSubmission(status = null) {
         video_url: document.getElementById('edit-video-url').value.trim() || null,
         contact_email: document.getElementById('edit-contact-email').value.trim(),
         contact_phone: document.getElementById('edit-contact-phone').value.trim(),
+        contact_person_phone: document.getElementById('edit-contact-person-phone').value.trim() || null,
         wechat_id: document.getElementById('edit-wechat').value.trim(),
         social_handle: document.getElementById('edit-social-handle').value.trim(),
         is_life_service: status === 'rejected' ? false : isLifeService,
@@ -3082,8 +3286,8 @@ function bindEvents() {
         homeAdItems.splice(Number(button.dataset.removeAd), 1);
         renderHomeContentEditors();
     });
-    const addHomeHero = event => {
-        const template = event.currentTarget.dataset.template || 'basic';
+    const addHomeHero = () => {
+        const template = 'basic';
         if (homeHeroItems.length >= 9) {
             alert('首頁置頂內容最多設定 9 張。');
             return;
@@ -3104,10 +3308,23 @@ function bindEvents() {
         renderHomeContentEditors();
     };
     document.getElementById('add-home-hero-btn').addEventListener('click', addHomeHero);
-    document.getElementById('add-home-hero-custom-btn').addEventListener('click', addHomeHero);
-    document.getElementById('save-home-hero-btn').addEventListener('click', () => {
-        saveHomepageItems('home-hero-editor', 'home_hero_items', '置頂圖片', 'hero');
-    });
+    const saveAllHeroButtons = ['save-home-hero-btn', 'save-home-hero-top-btn'].map(id => document.getElementById(id));
+    const saveAllHeroes = async () => {
+        if (saveAllHeroButtons.some(button => button.disabled)) return;
+        saveAllHeroButtons.forEach(button => {
+            button.disabled = true;
+            button.textContent = '儲存中…';
+        });
+        try {
+            await saveHomepageItems('home-hero-editor', 'home_hero_items', '置頂圖片', 'hero');
+        } finally {
+            saveAllHeroButtons.forEach(button => {
+                button.disabled = false;
+                button.textContent = '儲存全部置頂內容';
+            });
+        }
+    };
+    saveAllHeroButtons.forEach(button => button.addEventListener('click', saveAllHeroes));
     document.getElementById('cancel-hero-crop-btn').addEventListener('click', () => closeHeroImageCropper(true));
     document.getElementById('apply-hero-crop-btn').addEventListener('click', applyHeroImageCrop);
     document.getElementById('hero-crop-modal').addEventListener('click', event => {
@@ -3168,6 +3385,11 @@ function bindEvents() {
             requestHeroAiDesign(Number(aiButton.dataset.heroAi));
             return;
         }
+        const showPreview = event.target.closest('[data-show-hero-ai-preview]');
+        if (showPreview) {
+            showPreview.closest('[data-content-row]').querySelector('[data-hero-ai-preview]').classList.remove('hidden');
+            return;
+        }
         const button = event.target.closest('[data-remove-hero]');
         if (!button) return;
         homeHeroItems = collectContentRows('home-hero-editor');
@@ -3201,6 +3423,10 @@ function bindEvents() {
     });
     document.getElementById('home-hero-editor').addEventListener('change', event => {
         const row = event.target.closest('[data-home-hero-card]');
+        if (row && event.target.matches('[data-content-field="template"]')) {
+            row.querySelector('[data-hero-custom-options]').classList.toggle('hidden', event.target.value !== 'custom');
+            return;
+        }
         if (row && event.target.matches('[data-team-member-field="memberType"]')) {
             updateHeroTeamMemberIndexes(row);
             return;

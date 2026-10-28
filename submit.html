@@ -35,14 +35,12 @@
                     <input type="file" id="identity-proof" name="identityProof" accept="application/pdf,image/jpeg,image/png,image/webp" class="w-full border rounded-lg p-2 text-sm">
                     <p class="text-xs text-gray-500 mt-1">請提供登記編號或文件副本其中一項。文件僅供管理員核實，核實後會從線上資料庫及儲存空間刪除。PDF、JPG、PNG 或 WebP，最多 10 MB。</p>
                 </div>
-                <div id="verification-phone-field" class="hidden">
-                    <label for="verification-phone" class="block text-sm font-semibold mb-1">澳門手機號碼（身份核實）<span class="text-red-500">*</span></label>
-                    <input id="verification-phone" type="tel" name="verificationPhone" autocomplete="tel" placeholder="+853 6xxxxxxx" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <p class="text-xs text-amber-700 mt-1">簡訊 OTP 服務尚未接通；個人提交暫不開放，完成 OTP 驗證後才可提交。此號碼僅供身份核實，不會公開顯示。</p>
-                </div>
                 <div id="div-contact">
                     <label class="block text-sm font-semibold mb-1">負責人姓名 <span class="text-red-500">*</span></label>
                     <input type="text" name="contactPerson" required class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <label for="contact-person-phone" class="block text-sm font-semibold mt-3 mb-1">負責人聯絡電話 <span class="text-red-500">*</span></label>
+                    <input id="contact-person-phone" type="tel" name="contactPersonPhone" required maxlength="50" autocomplete="tel" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <p class="text-xs text-gray-500 mt-1">僅供管理員聯絡負責人，不會在活動詳情公開。</p>
                 </div>
             </div>
 
@@ -138,8 +136,8 @@
                 <p class="text-sm text-gray-500 mb-3">以下聯絡方式會顯示在活動詳情，方便瀏覽者聯絡主辦方。</p>
                 <div class="grid gap-3 sm:grid-cols-2">
                     <div>
-                        <label for="contact-email" class="block text-sm font-semibold mb-1">Email <span class="text-red-500">*</span></label>
-                        <input id="contact-email" type="email" name="contactEmail" required autocomplete="email" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                        <label for="contact-email" class="block text-sm font-semibold mb-1">Email（選填）</label>
+                        <input id="contact-email" type="email" name="contactEmail" autocomplete="email" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div>
                         <label for="contact-phone" class="block text-sm font-semibold mb-1">聯絡電話 <span class="text-red-500">*</span></label>
@@ -253,10 +251,9 @@
             const inputReg = document.getElementById('input-reg');
             const divReg = document.getElementById('div-reg');
             const identityProof = document.getElementById('identity-proof');
-            const verificationPhoneField = document.getElementById('verification-phone-field');
-            const verificationPhone = document.getElementById('verification-phone');
             const divContact = document.getElementById('div-contact');
             const contactPerson = document.querySelector('[name="contactPerson"]');
+            const contactPersonPhone = document.getElementById('contact-person-phone');
             const privacyNote = document.getElementById('privacy-note');
 
             if (type === 'club') {
@@ -267,6 +264,7 @@
                 inputReg.disabled = false;
                 identityProof.required = false;
                 contactPerson.required = true;
+                contactPersonPhone.required = true;
                 divContact.classList.remove('hidden');
                 privacyNote.classList.add('hidden');
             } else if (type === 'org') {
@@ -277,25 +275,20 @@
                 inputReg.disabled = false;
                 identityProof.required = false;
                 contactPerson.required = true;
+                contactPersonPhone.required = true;
                 divContact.classList.remove('hidden');
                 privacyNote.classList.add('hidden');
             } else {
                 lblName.innerText = '中/英全名 *';
-                lblReg.innerText = '身份證明文件號碼 *';
+                lblReg.innerText = '身份證明文件號碼（或提供核實文件）';
                 divReg.classList.remove('hidden');
                 inputReg.required = false;
                 inputReg.disabled = false;
                 identityProof.required = false;
-                verificationPhoneField.classList.remove('hidden');
-                verificationPhone.required = true;
                 contactPerson.required = false;
+                contactPersonPhone.required = false;
                 divContact.classList.add('hidden');
                 privacyNote.classList.remove('hidden');
-            }
-            if (type !== 'personal') {
-                verificationPhoneField.classList.add('hidden');
-                verificationPhone.required = false;
-                verificationPhone.value = '';
             }
         }
 
@@ -413,11 +406,6 @@
         async function handleSubmit(e) {
             e.preventDefault();
 
-            if (currentIdentity === 'personal') {
-                alert('個人提交暫未開放：手機 OTP 服務尚未接通。請待 OTP 驗證功能啟用後再提交。');
-                return;
-            }
-
             const formData = new FormData(e.target);
             const selectedCategories = formData.getAll('category').filter(Boolean);
             const selectedSubcategories = formData.getAll('subcategory').filter(Boolean);
@@ -448,6 +436,11 @@
             const promotionFiles = formData.getAll('promotionFiles').filter(file => file.size > 0);
             const identityProof = formData.get('identityProof');
             const registrationReference = (formData.get('regNumber') || '').toString().trim();
+            const contactPersonPhone = (formData.get('contactPersonPhone') || '').toString().trim();
+            if (currentIdentity !== 'personal' && !contactPersonPhone) {
+                alert('請輸入負責人聯絡電話。');
+                return;
+            }
             const videoUrl = (formData.get('videoUrl') || '').toString().trim();
             if (!registrationReference && !(identityProof instanceof File && identityProof.size > 0)) {
                 alert('請提供登記／身份證明編號或核實文件副本其中一項。');
@@ -535,9 +528,9 @@
                 reg_number: registrationReference,
                 identity_document_path: identityDocumentPath,
                 identity_verified: false,
-                verification_phone: (formData.get('verificationPhone') || '').toString().trim() || null,
                 terms_version: '2026-10-27',
                 contact_person: formData.get('contactPerson') || '',
+                contact_person_phone: currentIdentity === 'personal' ? null : contactPersonPhone,
                 title: formData.get('title') || '',
                 description: (formData.get('description') || '').toString().trim(),
                 location: (formData.get('location') || '').toString().trim(),

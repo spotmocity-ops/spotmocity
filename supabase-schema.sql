@@ -4,6 +4,7 @@ create table if not exists public.submissions (
     org_name text not null,
     reg_number text not null,
     contact_person text,
+    contact_person_phone text,
     title text not null,
     description text not null default '',
     category text not null,
@@ -47,6 +48,17 @@ create index if not exists submissions_status_created_at_idx
 
 alter table public.submissions
     add column if not exists event_end_date date;
+
+alter table public.submissions
+    add column if not exists contact_person_phone text;
+
+alter table public.submissions
+    add column if not exists identity_document_path text,
+    add column if not exists identity_verified boolean not null default false,
+    add column if not exists identity_verified_at timestamptz,
+    add column if not exists verification_phone text,
+    add column if not exists phone_verified_at timestamptz,
+    add column if not exists terms_version text;
 
 alter table public.submissions
     add column if not exists event_end_time timestamp without time zone;
@@ -453,6 +465,7 @@ grant insert on public.activity_feedback to anon, authenticated;
 grant select, update on public.activity_feedback to authenticated;
 
 drop policy if exists "Public can submit pending activities" on public.submissions;
+drop policy if exists "Require responsible person phone" on public.submissions;
 drop policy if exists "Admins can view submissions" on public.submissions;
 drop policy if exists "Admins can update submissions" on public.submissions;
 drop policy if exists "Admins can view curated activity drafts" on public.curated_activity_drafts;
@@ -473,7 +486,29 @@ create policy "Public can submit pending activities"
 on public.submissions
 for insert
 to anon, authenticated
-with check (status = 'pending' and is_locked = false);
+with check (
+    identity_type in ('club', 'org', 'personal')
+    and status = 'pending'
+    and is_locked = false
+    and identity_verified = false
+    and identity_verified_at is null
+    and phone_verified_at is null
+    and (
+        identity_document_path is null
+        or identity_document_path ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(identity|business)-proof\.(pdf|jpg|jpeg|png|webp)$'
+    )
+    and (nullif(btrim(reg_number), '') is not null or identity_document_path is not null)
+);
+
+create policy "Require responsible person phone"
+on public.submissions
+as restrictive
+for insert
+to anon, authenticated
+with check (
+    identity_type not in ('club', 'org')
+    or (nullif(btrim(contact_person_phone), '') is not null and length(contact_person_phone) <= 50)
+);
 
 create policy "Admins can view submissions"
 on public.submissions

@@ -3,6 +3,9 @@ type SearchResult = {
     url?: string;
     content?: string;
     published_date?: string;
+    image_urls?: string[];
+    related_links?: Array<{ label: string; url: string }>;
+    source_warning?: string;
 };
 
 type ActivitySuggestion = {
@@ -21,6 +24,17 @@ type ActivitySuggestion = {
     image_url?: string;
     source_url?: string;
     source_title?: string;
+};
+
+type OpenAiActivityDraft = {
+    source_url?: unknown;
+    description?: unknown;
+    promo_copy?: unknown;
+    age_range?: unknown;
+    location?: unknown;
+    fee?: unknown;
+    category?: unknown;
+    subcategory?: unknown;
 };
 
 const categories = [
@@ -89,6 +103,121 @@ function getSupabaseServiceKey(): string | undefined {
     return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 }
 
+function getOpenAiBaseUrl(): string {
+    const configuredUrl = Deno.env.get('OPENAI_BASE_URL')?.trim() || 'https://api.openai.com/v1';
+    return configuredUrl.replace(/\/+$/, '').replace(/\/chat\/completions$/, '');
+}
+
+function parseJsonObject(content: string): OpenAiActivityDraft[] {
+    const normalized = content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    const parsed: unknown = JSON.parse(normalized);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        throw new Error('OpenAI 回傳的活動草稿格式無效。');
+    }
+    const drafts = (parsed as { drafts?: unknown }).drafts;
+    if (!Array.isArray(drafts)) throw new Error('OpenAI 回傳缺少 drafts 陣列。');
+    return drafts.filter((draft): draft is OpenAiActivityDraft =>
+        typeof draft === 'object' && draft !== null && !Array.isArray(draft)
+    ).slice(0, 5);
+}
+
+async function enrichActivitySuggestions(
+    suggestions: ActivitySuggestion[],
+    sources: SearchResult[],
+    required = false
+): Promise<ActivitySuggestion[]> {
+    if (!required && (Deno.env.get('ACTIVITY_CURATION_AI_ENABLED') !== 'true' || suggestions.length === 0)) {
+        return suggestions;
+    }
+
+    const apiKey = Deno.env.get('OPENAI_API_KEY')?.trim();
+    if (!apiKey) {
+        throw new Error('AI 活動整理尚未設定 OPENAI_API_KEY。');
+    }
+
+    const sourceByUrl = new Map(sources.map(source => [safeHttpsUrl(source.url), source]));
+    const sourceInput = suggestions.map(suggestion => ({
+        source_url: safeHttpsUrl(suggestion.source_url),
+        title: suggestion.title || '',
+        organization: suggestion.org_name || '',
+        description: suggestion.description || '',
+        age_range: suggestion.age_range || '',
+        location: suggestion.location || '',
+        fee: suggestion.fee || '',
+        event_start: suggestion.event_start || '',
+        event_end: suggestion.event_end || '',
+        category: suggestion.category || '',
+        subcategory: suggestion.subcategory || ''
+    }));
+    const response = await fetch(`${getOpenAiBaseUrl()}/chat/completions`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model: Deno.env.get('OPENAI_MODEL')?.trim() || 'gpt-4o-mini',
+            response_format: { type: 'json_object' },
+            messages: [
+                {
+                    role: 'system',
+                    content: `你是澳門活動資料整理助手。只根據提供的官方來源資料整理草稿，不可猜測或補造日期、時間、地點、費用、報名方式或主辦資料。保留 source_url、event_start、event_end、title、org_name 不變。description 可整理來源內容，promo_copy 可寫一段中性繁體中文宣傳文案；資料不明時留空或保留原值。category 必須是以下其中一個：${categories.map(category => category.value).join(', ')}。subcategory 必須是對應分類的有效子分類。只輸出 JSON：{"drafts":[{"source_url":"","description":"","promo_copy":"","age_range":"","location":"","fee":"","category":"","subcategory":""}]}。`
+                },
+                {
+                    role: 'user',
+                    content: JSON.stringify(sourceInput)
+                }
+            ],
+            max_tokens: 2400
+        })
+    });
+    if (!response.ok) {
+        const errorText = (await response.text()).slice(0, 500);
+        console.error('OpenAI activity draft request failed:', response.status, errorText);
+        throw new Error('OpenAI 活動草稿整理失敗。');
+    }
+
+    const result = await response.json();
+    const content = result.choices?.[0]?.message?.content;
+    if (typeof content !== 'string') throw new Error('OpenAI 沒有回傳活動草稿內容。');
+    const generatedDrafts = parseJsonObject(content);
+    const generatedByUrl = new Map(
+        generatedDrafts
+            .map(draft => [safeHttpsUrl(draft.source_url), draft] as const)
+            .filter(([url]) => Boolean(url))
+    );
+
+    return suggestions.map(suggestion => {
+        const sourceUrl = safeHttpsUrl(suggestion.source_url);
+        const generated = generatedByUrl.get(sourceUrl);
+        const source = sourceByUrl.get(sourceUrl);
+        if (!generated || !source) {
+            if (required) throw new Error('AI 沒有回傳符合來源的草稿建議。');
+            return suggestion;
+        }
+        const category = categories.find(item => item.value === safeText(generated.category, 80));
+        const subcategory = category?.subcategories.includes(safeText(generated.subcategory, 80))
+            ? safeText(generated.subcategory, 80)
+            : suggestion.subcategory;
+        return {
+            ...suggestion,
+            description: safeText(generated.description, 1600) || suggestion.description,
+            promo_copy: safeText(generated.promo_copy, 1000),
+            age_range: suggestion.age_range || (
+                safeText(generated.age_range, 80) &&
+                String(suggestion.description || '').includes(safeText(generated.age_range, 80))
+                    ? safeText(generated.age_range, 80) : ''
+            ),
+            location: safeText(generated.location, 240) || suggestion.location,
+            fee: safeText(generated.fee, 120) || suggestion.fee,
+            category: category?.value || suggestion.category,
+            subcategory,
+            source_url: source.url,
+            source_title: suggestion.source_title || source.title
+        };
+    });
+}
+
 const macauCultureEventsFeed = 'https://www.icm.gov.mo/rss/files/rssEvents_C.xml';
 const macauTourismWhatsonApi = 'https://www.macaotourism.gov.mo/api/enf/whatson';
 const macauTourismWhatsonPage = 'https://www.macaotourism.gov.mo/zh-hant/events/whatson';
@@ -122,6 +251,103 @@ function readXmlTag(xml: string, tag: string): string {
 
 function plainText(value: string): string {
     return decodeXml(value).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function defaultAge(value: unknown): string {
+    const age = safeText(value, 80);
+    return !age || /^(年齡待公布|待確認|未公布|待公布)$/.test(age) ? '全年齡（待確認）' : age;
+}
+
+function resolveHttpsUrl(value: string, base: string): string {
+    try {
+        if (!value.trim()) return '';
+        const url = new URL(decodeXml(value.trim()), base);
+        if (url.username || url.password || url.port || /^(localhost|.*\.local|.*\.localhost)$/i.test(url.hostname) ||
+            /^[\d.]+$/.test(url.hostname) || url.hostname.includes(':')) return '';
+        return safeHttpsUrl(url.href);
+    } catch {
+        return '';
+    }
+}
+
+function readHtmlAttribute(tag: string, name: string): string {
+    const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'));
+    return decodeXml(match?.[1] || match?.[2] || match?.[3] || '');
+}
+
+function sourcePageUrl(value: unknown): string {
+    const url = safeHttpsUrl(value);
+    if (!url) return '';
+    const parsed = new URL(url);
+    const hosts = ['www.icm.gov.mo', 'www.macaotourism.gov.mo', 'www.macauticket.com', 'ticketing.enjoymacao.mo'];
+    return hosts.includes(parsed.hostname) && !parsed.username && !parsed.password && !parsed.port ? url : '';
+}
+
+async function getSourcePage(sourceUrl: string): Promise<{ image_urls: string[]; related_links: Array<{ label: string; url: string }> }> {
+    const allowedUrl = sourcePageUrl(sourceUrl);
+    if (!allowedUrl) throw new Error('來源網址不屬於可讀取的活動網站。');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+        const response = await fetch(allowedUrl, {
+            headers: { Accept: 'text/html' },
+            redirect: 'manual',
+            signal: controller.signal
+        });
+        if (!response.ok) throw new Error(`來源頁面 HTTP ${response.status}`);
+        if (!(response.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
+            throw new Error('來源頁面不是 HTML。');
+        }
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('來源頁面沒有內容。');
+        const decoder = new TextDecoder();
+        let html = '';
+        let bytes = 0;
+        try {
+            while (true) {
+                const chunk = await reader.read();
+                if (chunk.done) break;
+                bytes += chunk.value.byteLength;
+                if (bytes > 2_000_000) throw new Error('來源頁面超過大小限制。');
+                html += decoder.decode(chunk.value, { stream: true });
+            }
+            html += decoder.decode();
+        } finally {
+            await reader.cancel();
+        }
+        const images = new Set<string>();
+        for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
+            const property = (readHtmlAttribute(match[0], 'property') || readHtmlAttribute(match[0], 'name')).toLowerCase();
+            if (['og:image', 'og:image:url', 'twitter:image'].includes(property)) {
+                const image = resolveHttpsUrl(readHtmlAttribute(match[0], 'content'), allowedUrl);
+                if (image) images.add(image);
+            }
+        }
+        const links = new Map<string, { label: string; url: string }>();
+        links.set(allowedUrl, { label: '活動原始網頁', url: allowedUrl });
+        for (const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)) {
+            const label = safeText(plainText(match[2]), 60);
+            if (!/報名|購票|售票|訂票|主辦|活動詳情|官方網站|registration|tickets?/i.test(label)) continue;
+            const url = resolveHttpsUrl(readHtmlAttribute(match[1], 'href'), allowedUrl);
+            if (url && !links.has(url)) links.set(url, { label, url });
+            if (links.size >= 10) break;
+        }
+        return { image_urls: [...images].slice(0, 12), related_links: [...links.values()] };
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
+async function collectSourceDetails(source: SearchResult): Promise<SearchResult> {
+    const sourceUrl = safeHttpsUrl(source.url);
+    const fallbackLinks = sourceUrl ? [{ label: '活動原始網頁', url: sourceUrl }] : [];
+    try {
+        const details = await getSourcePage(sourceUrl);
+        return { ...source, image_urls: [...new Set([...(source.image_urls || []), ...details.image_urls])].slice(0, 12), related_links: details.related_links };
+    } catch (error) {
+        console.error('Unable to inspect activity source page:', sourceUrl, error);
+        return { ...source, related_links: fallbackLinks, source_warning: '無法讀取來源頁面，請手動核對圖片及相關連結。' };
+    }
 }
 
 function parseFeedDateRange(description: string, today: string): { start: string | null; end: string | null } {
@@ -499,7 +725,6 @@ function prepareDraft(suggestion: ActivitySuggestion, sourceResults: SearchResul
     const endTimestamp = eventEnd ? Date.parse(`${eventEnd.replace(' ', 'T')}:00+08:00`) : NaN;
     if ((eventEnd && Number.isFinite(endTimestamp) && endTimestamp < Date.now()) ||
         (!eventEnd && eventStart && eventStart.slice(0, 10) < macauDate())) return null;
-    const imageUrl = safeHttpsUrl(suggestion.image_url);
     const eventFormat = ['online', '線上'].includes(String(suggestion.event_format || '').toLowerCase())
         ? 'online'
         : 'offline';
@@ -511,15 +736,16 @@ function prepareDraft(suggestion: ActivitySuggestion, sourceResults: SearchResul
         promo_copy: safeText(suggestion.promo_copy, 1000),
         category: category?.value || '',
         subcategory,
-        age_range: safeText(suggestion.age_range, 80) || '年齡待公布',
+        age_range: defaultAge(suggestion.age_range),
         event_time: eventStart,
         event_end_date: eventEnd?.slice(0, 10) || null,
         event_end_time: eventEnd,
         event_format: eventFormat,
         location: safeText(suggestion.location, 240),
         fee: safeText(suggestion.fee, 120) || '費用待公布',
-        poster_url: imageUrls.has(imageUrl) ? imageUrl : '',
+        poster_url: '',
         candidate_image_urls: [...imageUrls].slice(0, 12),
+        related_links: source.related_links || [{ label: '活動原始網頁', url: sourceUrl }],
         source_url: sourceUrl,
         source_title: safeText(suggestion.source_title || source.title, 300),
         status: 'draft' as const,
@@ -588,6 +814,60 @@ Deno.serve(async request => {
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
         auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
     });
+    let body: unknown;
+    try {
+        body = await request.json();
+    } catch {
+        return textResponse('請提供有效的 JSON 請求。', 400);
+    }
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+        return textResponse('請提供有效的 JSON 請求。', 400);
+    }
+    const requestBody = body as Record<string, unknown>;
+    if (requestBody.action === 'preview_draft') {
+        if (cronAuthorized) return textResponse('此功能僅供登入的管理員使用。', 403);
+        const draftId = requestBody.draft_id;
+        if ((typeof draftId !== 'number' && typeof draftId !== 'string') || !/^[1-9]\d*$/.test(String(draftId))) {
+            return textResponse('草稿編號無效。', 400);
+        }
+        const { data: draft, error: draftError } = await supabase.from('curated_activity_drafts')
+            .select('title,org_name,description,promo_copy,category,subcategory,age_range,event_time,event_end_time,location,fee,source_url,source_title,status')
+            .eq('id', draftId).maybeSingle();
+        if (draftError) {
+            console.error('Could not read draft for AI preview:', draftError.message);
+            return textResponse('無法讀取活動草稿。', 500);
+        }
+        if (!draft || draft.status !== 'draft') return textResponse('找不到未上架的活動草稿。', 404);
+        const sourceUrl = safeHttpsUrl(draft.source_url);
+        if (!sourceUrl) return textResponse('草稿的來源網址無效，無法產生建議。', 400);
+        try {
+            const suggestion: ActivitySuggestion = {
+                title: draft.title, org_name: draft.org_name, description: draft.description,
+                promo_copy: draft.promo_copy, category: draft.category, subcategory: draft.subcategory,
+                age_range: draft.age_range, event_start: draft.event_time, event_end: draft.event_end_time,
+                location: draft.location, fee: draft.fee, source_url: sourceUrl, source_title: draft.source_title
+            };
+            const source = await collectSourceDetails({ url: sourceUrl, title: draft.source_title });
+            const [result] = await enrichActivitySuggestions(
+                [suggestion], [{ url: sourceUrl, title: draft.source_title }], true
+            );
+            return jsonResponse({
+                suggestion: {
+                    description: result.description || '',
+                    promo_copy: result.promo_copy || '',
+                    age_range: defaultAge(result.age_range),
+                    location: result.location || '',
+                    fee: result.fee || '',
+                    image_urls: source.image_urls || [],
+                    related_links: source.related_links || [],
+                    source_warning: source.source_warning || ''
+                }
+            });
+        } catch (error) {
+            console.error('Could not generate activity draft preview:', error);
+            return textResponse(error instanceof Error ? error.message : 'AI 草稿建議產生失敗。', 500);
+        }
+    }
     const { data: run, error: runInsertError } = await supabase
         .from('activity_curation_runs')
         .insert({ status: 'running' })
@@ -617,13 +897,14 @@ Deno.serve(async request => {
                 (result.data || []).map((item: { source_url: string }) => item.source_url)
             ));
         }
-        const suggestions = feedSuggestions
+        const selectedSuggestions = feedSuggestions
             .filter(suggestion => !seenSourceUrls.has(String(suggestion.source_url)))
             .slice(0, 5);
-        const selectedSourceUrls = new Set(suggestions.map(suggestion => suggestion.source_url));
-        const sources = feedSources.filter(source => selectedSourceUrls.has(source.url));
+        const selectedSourceUrls = new Set(selectedSuggestions.map(suggestion => suggestion.source_url));
+        const sources = await Promise.all(feedSources.filter(source => selectedSourceUrls.has(source.url)).map(collectSourceDetails));
+        const suggestions = await enrichActivitySuggestions(selectedSuggestions, sources);
         const drafts = suggestions
-            .map(suggestion => prepareDraft(suggestion, sources, new Set<string>()))
+            .map(suggestion => prepareDraft(suggestion, sources, new Set(sources.find(source => source.url === suggestion.source_url)?.image_urls || [])))
             .filter((draft): draft is NonNullable<typeof draft> => draft !== null);
 
         const { data: inserted, error: insertError } = drafts.length

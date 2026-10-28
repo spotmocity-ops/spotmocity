@@ -13,7 +13,7 @@ on public.submissions
 for insert
 to anon, authenticated
 with check (
-    identity_type in ('club', 'org')
+    identity_type in ('club', 'org', 'personal')
     and
     status = 'pending'
     and is_locked = false

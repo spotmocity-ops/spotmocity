@@ -164,15 +164,15 @@
 
     <section class="w-full max-w-none mx-auto px-4 mt-6" aria-label="搜尋活動">
         <div class="relative max-w-2xl mx-auto">
-            <label for="activity-search" class="sr-only">搜尋活動名稱、主辦單位或地點</label>
+            <label for="activity-search" class="sr-only">搜尋活動及生活服務</label>
             <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="11" cy="11" r="7" stroke-width="2"></circle>
                 <path d="m16 16 4 4" stroke-width="2" stroke-linecap="round"></path>
             </svg>
-            <input id="activity-search" type="search" autocomplete="off" placeholder="搜尋活動、主辦單位、地點..." class="w-full bg-white border border-gray-300 rounded-xl py-3 pl-12 pr-12 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none">
+            <input id="activity-search" type="search" autocomplete="off" placeholder="搜尋活動、生活服務、主辦單位、地點..." class="w-full bg-white border border-gray-300 rounded-xl py-3 pl-12 pr-12 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none">
             <button id="clear-search" type="button" aria-label="清除搜尋" class="hidden absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 text-gray-500 hover:text-gray-800 rounded-full hover:bg-gray-100">&times;</button>
         </div>
-        <p class="max-w-2xl mx-auto mt-2 text-xs text-gray-500">搜尋會跨所有分類、子分類及線上／線下活動。</p>
+        <p class="max-w-2xl mx-auto mt-2 text-xs text-gray-500">搜尋涵蓋活動及生活服務的分類、簡介和詳情，結果顯示於活動列表。</p>
     </section>
 
     <div id="middle-background" class="w-full mt-8 bg-cover bg-center bg-no-repeat">
@@ -712,6 +712,8 @@
             document.getElementById('homepage-warm-info-content').textContent = settings.home_warm_info_content?.trim() || '暫無溫馨資訊';
             renderHomepageServiceCategories(parseJsonArray(settings.home_service_categories));
             setActivityCategoryGroups(homepageServiceCategories);
+            renderCalendar();
+            renderActivities();
             quoteElement.style.color = /^#[0-9a-fA-F]{6}$/.test(settings.home_mindfulness_quote_color || '')
                 ? settings.home_mindfulness_quote_color
                 : '#4b5563';
@@ -1069,6 +1071,10 @@
         }
 
         function matchesActivityFilters(activity, includeDate = true) {
+            const serviceCategory = activity.isLifeService
+                ? homepageServiceCategories.find(category => category.id === activity.lifeServiceCategory)
+                : null;
+            const serviceSubcategory = serviceCategory?.subcategories.find(item => item.id === activity.lifeServiceSubcategory);
             const searchableText = [
                 activity.title,
                 activity.org,
@@ -1078,7 +1084,13 @@
                 activity.time,
                 activity.loc,
                 activity.description,
-                activity.fee
+                activity.fee,
+                ...(activity.isLifeService ? [
+                    serviceCategory?.name,
+                    serviceSubcategory?.name,
+                    activity.lifeServiceSummary,
+                    activity.lifeServiceDetails
+                ] : [])
             ].join(' ').toLocaleLowerCase();
             if (searchQuery) return searchableText.includes(searchQuery);
 
@@ -1119,6 +1131,7 @@
                             <p class="text-xs text-gray-500 mt-1">${escapeHtml(act.cats.map(value => categoryNames[value] || value).join('、'))}${act.subcats.length ? ` · ${escapeHtml(act.subcats.map(value => subcategoryNames[value] || value).join('、'))}` : ''}</p>
                             <p class="text-sm text-gray-600 mt-2 line-clamp-2">${escapeHtml(act.description || '活動免費參加')}</p>
                             <div class="flex flex-wrap gap-2 mt-3">
+                                ${act.isLifeService ? '<span class="inline-block text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded font-medium">生活服務</span>' : ''}
                                 <span class="inline-block text-xs ${act.fee === '免費' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'} px-2 py-1 rounded font-medium">${escapeHtml(act.fee)}</span>
                                 <span class="inline-block text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded font-medium">年齡︰${act.age}</span>
                             </div>
@@ -1345,6 +1358,10 @@
             const videoEmbedUrl = getVideoEmbedUrl(act.videoUrl);
             const videoLink = safeExternalUrl(act.videoUrl);
             const mapLink = act.eventFormat === 'online' ? '' : getMapUrl(act.mapUrl, act.loc);
+            const serviceCategory = act.isLifeService ? homepageServiceCategories.find(category => category.id === act.lifeServiceCategory) : null;
+            const serviceSubcategory = serviceCategory?.subcategories.find(item => item.id === act.lifeServiceSubcategory);
+            const serviceSummary = act.lifeServiceSummary && act.lifeServiceSummary !== act.description ? act.lifeServiceSummary : '';
+            const serviceDetails = act.lifeServiceDetails && act.lifeServiceDetails !== act.description && act.lifeServiceDetails !== serviceSummary ? act.lifeServiceDetails : '';
 
             content.innerHTML = `
                 ${posterUrl ? `<button type="button" data-full-image="${escapeHtml(posterUrl)}" data-full-image-alt="${escapeHtml(act.title)} 活動海報" aria-label="放大查看活動海報" class="block w-full mb-4 cursor-zoom-in"><img src="${escapeHtml(posterUrl)}" alt="${escapeHtml(act.title)} 活動海報（點擊查看完整圖片）" class="w-full max-h-[420px] object-contain bg-gray-50 rounded-xl"></button>` : ''}
@@ -1356,6 +1373,12 @@
                 <p class="text-sm text-gray-600 mb-2">主辦單位：${escapeHtml(act.org)}</p>
                 <p class="text-sm text-gray-600 mb-4">分類：${escapeHtml(act.cats.map(value => categoryNames[value] || value).join('、'))}${act.subcats.length ? ` · ${escapeHtml(act.subcats.map(value => subcategoryNames[value] || value).join('、'))}` : ''}</p>
                 ${act.description ? `<p class="text-gray-700 leading-7 whitespace-pre-line mb-5">${escapeHtml(act.description)}</p>` : ''}
+                ${act.isLifeService ? `<section class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <h3 class="font-semibold text-amber-900">生活服務與資源對接</h3>
+                    ${serviceCategory ? `<p class="mt-1 text-sm text-gray-700">分類：${escapeHtml(serviceCategory.name)}${serviceSubcategory ? ` · ${escapeHtml(serviceSubcategory.name)}` : ''}</p>` : ''}
+                    ${serviceSummary ? `<p class="mt-2 text-sm text-gray-700 whitespace-pre-line">${escapeHtml(serviceSummary)}</p>` : ''}
+                    ${serviceDetails ? `<p class="mt-2 text-sm text-gray-700 whitespace-pre-line">${escapeHtml(serviceDetails)}</p>` : ''}
+                </section>` : ''}
 
                 <div class="space-y-3 mb-6 text-sm bg-gray-50 p-5 rounded-xl border border-gray-100">
                     <p class="flex items-start gap-2"><span class="font-bold text-gray-700 w-20 shrink-0">⏰ 活動期：</span><span class="text-gray-600">${escapeHtml(act.time)}${act.endTime ? ` 至 ${escapeHtml(act.endTime.replace('T', ' '))}` : ''}</span></p>

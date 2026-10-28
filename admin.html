@@ -228,13 +228,14 @@
                     <div class="flex items-center justify-between gap-3 mb-3">
                         <h2 class="text-lg font-bold text-gray-800">首頁置頂內容（拍立得）</h2>
                         <div class="flex flex-wrap gap-2">
-                            <button id="add-home-hero-btn" data-template="basic" type="button" class="border bg-white hover:bg-gray-50 px-3 py-2 rounded-lg text-sm">＋ 新增基本版</button>
-                            <button id="add-home-hero-custom-btn" data-template="custom" type="button" class="border border-violet-300 bg-violet-50 hover:bg-violet-100 px-3 py-2 rounded-lg text-sm text-violet-800">＋ 新增自訂版</button>
+                            <button id="add-home-hero-btn" type="button" class="border bg-white hover:bg-gray-50 px-3 py-2 rounded-lg text-sm">＋ 新增置頂內容</button>
+                            <button id="save-home-hero-top-btn" type="button" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-3 py-2 rounded-lg text-sm disabled:opacity-50">儲存全部置頂內容</button>
                         </div>
                     </div>
                     <p class="text-xs text-gray-500 mb-3">最多 9 個獨立置頂內容，可分別儲存基本版或自訂版。拍立得圖片建議 1200 × 400 px；邊框建議 1200 × 500 px 透明 PNG（手機版建議 960 × 580 px），透明區域預留給照片。可設定詳情頁背景圖片與縮放／位置、大圖、YouTube 或 MP4（最多 50 MB）、倒數、行動按鈕、亮點、A/B/C 圖文編輯器、表格（最多 20 列、10 欄）、最多 5 張現場／產品相片及團隊頭像。圖文工具支援粗體、斜體、標題、清單、表格、字體、字重、字體大小、HTTPS 連結及 HTTPS 圖片網址；圖片可上傳 JPG／PNG／WebP、貼上剪貼簿截圖，並拖曳圖片右下角調整寬度；每張圖片最多 10 MB。選取文字後再套用字體、字重或大小。AI 助手需先設定伺服器端 OPENAI_API_KEY；不會將金鑰放在網頁中。</p>
                     <div id="home-hero-editor" class="space-y-3"></div>
-                    <button id="save-home-hero-btn" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg">儲存置頂內容</button>
+                    <p class="mt-3 text-xs text-gray-500">「儲存全部置頂內容」會儲存目前列表中的所有項目及移除操作；每項的「儲存此內容」只儲存該項。</p>
+                    <button id="save-home-hero-btn" type="button" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-5 rounded-lg disabled:opacity-50">儲存全部置頂內容</button>
                 </section>
             </div>
 
@@ -457,6 +458,7 @@
                     <div class="grid gap-3 sm:grid-cols-2">
                         <label class="text-sm font-bold">Email<input type="email" id="edit-contact-email" class="mt-1 w-full border rounded p-2 font-normal"></label>
                         <label class="text-sm font-bold">聯絡電話<input type="tel" id="edit-contact-phone" class="mt-1 w-full border rounded p-2 font-normal"></label>
+                        <label class="text-sm font-bold">負責人聯絡電話（僅管理員）<input type="tel" id="edit-contact-person-phone" maxlength="50" class="mt-1 w-full border rounded p-2 font-normal"></label>
                         <label class="text-sm font-bold">WeChat<input type="text" id="edit-wechat" class="mt-1 w-full border rounded p-2 font-normal"></label>
                         <label class="text-sm font-bold">IG／FB<input type="text" id="edit-social-handle" class="mt-1 w-full border rounded p-2 font-normal"></label>
                     </div>

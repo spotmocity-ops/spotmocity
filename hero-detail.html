@@ -36,8 +36,28 @@
         .rich-content .rich-table tr:last-child > .rich-table-cell { border-bottom: 0; }
         .rich-content th.rich-table-cell { background: #f1f5f9; font-weight: 700; }
         #hero-detail[data-theme="warm"] > header, #hero-detail[data-theme="warm"] > section:not(#team-section) { background-color: #fffbeb; }
+        #hero-detail[data-theme="blue"] > header, #hero-detail[data-theme="blue"] > section:not(#team-section) { background-color: #eff6ff; }
+        #hero-detail[data-theme="green"] > header, #hero-detail[data-theme="green"] > section:not(#team-section) { background-color: #ecfdf5; }
         #hero-detail[data-theme="dark"] > header, #hero-detail[data-theme="dark"] > section { background-color: #172033; color: #f8fafc; border-color: #334155; }
         #hero-detail[data-theme="dark"] h1, #hero-detail[data-theme="dark"] h2, #hero-detail[data-theme="dark"] h3, #hero-detail[data-theme="dark"] p { color: #f8fafc; }
+        #hero-detail[data-theme="dark"] #highlight-grid article, #hero-detail[data-theme="dark"] #team-grid article, #hero-detail[data-theme="dark"] #countdown-wrap { background-color: #273449; border-color: #475569; }
+        #hero-detail[data-theme="dark"] .countdown span { background-color: #fff; color: #172033; }
+        #hero-detail[data-order="details-first"] #details-section { order: 2; }
+        #hero-detail[data-order="details-first"] #highlight-grid { order: 3; }
+        #hero-detail[data-order="details-first"] #team-section { order: 4; }
+        #hero-detail[data-order="people-first"] #team-section { order: 2; }
+        #hero-detail[data-order="people-first"] #highlight-grid { order: 3; }
+        #hero-detail[data-order="people-first"] #details-section { order: 4; }
+        #hero-detail[data-order="details-first"], #hero-detail[data-order="people-first"] { display: flex; flex-direction: column; }
+        #hero-detail[data-order="details-first"] .hero-media, #hero-detail[data-order="people-first"] .hero-media { order: 0; }
+        #hero-detail[data-order="details-first"] > header, #hero-detail[data-order="people-first"] > header { order: 1; }
+        #hero-detail[data-order="details-first"] #contact-section, #hero-detail[data-order="people-first"] #contact-section { order: 5; }
+        @media (min-width: 768px) {
+            #hero-detail[data-layout="split"] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+            #hero-detail[data-layout="split"] > * { grid-column: 1 / -1; margin-top: 0; }
+            #hero-detail[data-layout="split"] .hero-media { grid-column: 1; }
+            #hero-detail[data-layout="split"] > header { grid-column: 2; }
+        }
         @media (max-width: 640px) {
             .site-header-inner { padding: 0.4rem 0.75rem; }
             main { padding: 0.75rem 0.75rem 2rem; }
@@ -86,7 +106,7 @@
                 <a id="hero-cta" class="hidden mt-6 inline-flex rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white shadow hover:bg-blue-800"></a>
             </header>
             <section id="highlight-grid" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"></section>
-            <section class="rounded-2xl bg-white p-5 shadow-sm sm:p-8">
+            <section id="details-section" class="rounded-2xl bg-white p-5 shadow-sm sm:p-8">
                 <div id="detail-tabs" role="tablist" aria-label="活動詳細內容" class="mb-5 flex flex-wrap gap-2"></div>
                 <div id="detail-panels"></div>
             </section>
@@ -106,6 +126,7 @@
             'sb_publishable_4kBnCjtv4c7j-sb8l3BrUw_j63egBDR'
         );
         const isEmbedded = new URLSearchParams(location.search).get('embed') === '1';
+        const isPreview = new URLSearchParams(location.search).get('preview') === '1';
         if (isEmbedded) {
             document.documentElement.classList.add('embedded');
             window.addEventListener('keydown', event => {
@@ -432,30 +453,15 @@
             window.setInterval(update, 1000);
         }
 
-        async function loadDetail() {
-            const requestedId = new URLSearchParams(location.search).get('id');
+        function renderDetail(item) {
             const status = document.getElementById('page-status');
-            if (!requestedId) {
-                status.textContent = '未指定置頂內容。';
-                return;
-            }
-            const { data, error } = await supabaseClient.from('site_settings').select('value').eq('key', 'home_hero_items').maybeSingle();
-            if (error) {
-                status.textContent = '內容載入失敗，請稍後再試。';
-                console.error('Featured detail load failed:', error.message);
-                return;
-            }
-            const item = parseArray(data?.value).find((entry, index) =>
-                String(entry.pageId || `hero-${entry.order || index + 1}`) === requestedId
-            );
-            if (!item) {
-                status.textContent = '找不到此置頂內容，可能已下架。';
-                return;
-            }
             const details = item.details && typeof item.details === 'object' ? item.details : {};
             const title = item.headline || item.title || '置頂內容';
             document.title = `${title}｜SpotMoCity 澳聚光`;
-            document.getElementById('hero-detail').dataset.theme = item.template === 'custom' && ['warm', 'dark'].includes(item.customTheme) ? item.customTheme : 'light';
+            const detail = document.getElementById('hero-detail');
+            detail.dataset.theme = item.template === 'custom' && ['warm', 'dark', 'blue', 'green'].includes(item.customTheme) ? item.customTheme : 'light';
+            detail.dataset.layout = item.template === 'custom' && item.customLayout === 'split' ? 'split' : 'classic';
+            detail.dataset.order = item.template === 'custom' && ['details-first', 'people-first'].includes(item.customOrder) ? item.customOrder : 'standard';
             const backgroundUrl = safeHttpsUrl(item.pageBackgroundUrl);
             if (backgroundUrl) {
                 const scale = Math.min(160, Math.max(100, Number(item.pageBackgroundScale) || 100));
@@ -483,11 +489,44 @@
                 cta.rel = 'noopener noreferrer';
                 cta.classList.remove('hidden');
             }
-            document.getElementById('hero-detail').classList.remove('hidden');
+            detail.classList.remove('hidden');
             status.classList.add('hidden');
         }
 
-        loadDetail();
+        async function loadDetail() {
+            const requestedId = new URLSearchParams(location.search).get('id');
+            const status = document.getElementById('page-status');
+            if (!requestedId) {
+                status.textContent = '未指定置頂內容。';
+                return;
+            }
+            const { data, error } = await supabaseClient.from('site_settings').select('value').eq('key', 'home_hero_items').maybeSingle();
+            if (error) {
+                status.textContent = '內容載入失敗，請稍後再試。';
+                console.error('Featured detail load failed:', error.message);
+                return;
+            }
+            const item = parseArray(data?.value).find((entry, index) =>
+                String(entry.pageId || `hero-${entry.order || index + 1}`) === requestedId
+            );
+            if (!item) {
+                status.textContent = '找不到此置頂內容，可能已下架。';
+                return;
+            }
+            renderDetail(item);
+        }
+
+        if (isPreview) {
+            let previewRendered = false;
+            window.addEventListener('message', event => {
+                const trustedOrigin = event.origin === location.origin || (location.protocol === 'file:' && event.origin === 'null');
+                if (previewRendered || event.source !== window.parent || !trustedOrigin || event.data?.type !== 'featured-design-preview' || !event.data.item || typeof event.data.item !== 'object') return;
+                previewRendered = true;
+                renderDetail(event.data.item);
+            });
+        } else {
+            loadDetail();
+        }
     </script>
 </body>
 </html>
