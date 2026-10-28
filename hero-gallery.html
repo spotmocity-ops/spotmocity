@@ -22,8 +22,20 @@
         .polaroid-link { display: block; min-width: 0; color: inherit; text-decoration: none; }
         .polaroid { position: relative; min-width: 0; margin: 0; padding: 0.55rem 0.55rem 1.15rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.2rem; box-shadow: 0 5px 14px rgb(15 23 42 / 16%); transform: rotate(var(--polaroid-tilt)); animation: polaroid-breeze 5.5s ease-in-out var(--breeze-delay) infinite; }
         .polaroid img { display: block; width: 100%; aspect-ratio: 3 / 1; object-fit: cover; background: #f1f5f9; }
-        .polaroid .polaroid-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
-        .polaroid figcaption { padding: 0.65rem 0.15rem 0; text-align: center; line-height: 1.35; font-size: 0.875rem; }
+        .polaroid.has-custom-frame { padding: 0; overflow: hidden; aspect-ratio: 440 / 215; background: #f1f5f9; }
+        .photo-window { position: absolute; inset: 0; overflow: hidden; }
+        .photo-window picture, .photo-window img { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .photo-window .photo-layer { z-index: 1; inset: 2.3256% auto auto 1.7045%; width: 96.5909%; height: 65.1163%; }
+        .photo-window .photo-layer img { display: block; object-fit: cover; }
+        .photo-window .frame-layer { z-index: 0; pointer-events: none; }
+        .photo-window .frame-layer img { display: block; object-fit: fill; }
+        .polaroid figcaption { margin: 0.65rem; padding: 0.7rem 0.9rem; text-align: center; line-height: 1.35; font-size: 0.875rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.75rem; box-shadow: 0 1px 3px rgb(15 23 42 / 10%); }
+        .polaroid.has-custom-frame .photo-window figcaption { position: absolute; z-index: 2; inset: 69.7674% 3.9773% 3.2558%; display: flex; flex-direction: column; justify-content: center; overflow: hidden; margin: 0; padding: 0.1rem 0.3rem; color: #374151; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.75rem; box-shadow: 0 1px 3px rgb(15 23 42 / 10%); }
+        .polaroid.has-custom-frame .photo-window figcaption strong, .polaroid.has-custom-frame .photo-window figcaption p { display: block; overflow: hidden; text-overflow: ellipsis; }
+        #hero-detail-dialog { width: min(96vw, 72rem); max-width: none; height: min(94dvh, 58rem); max-height: none; padding: 0; border: 0; border-radius: 1rem; overflow: hidden; box-shadow: 0 24px 70px rgb(15 23 42 / 35%); }
+        #hero-detail-dialog::backdrop { background: rgb(15 23 42 / 70%); }
+        #hero-detail-dialog .hero-dialog-header { height: 3.25rem; display: flex; align-items: center; justify-content: flex-end; padding: 0 0.75rem; background: #fff; border-bottom: 1px solid #e5e7eb; }
+        #hero-detail-dialog iframe { display: block; width: 100%; height: calc(100% - 3.25rem); border: 0; background: #f8fafc; }
         .polaroid-link:nth-child(8n + 1) .polaroid { --polaroid-tilt: -3deg; --breeze-delay: -1s; }
         .polaroid-link:nth-child(8n + 2) .polaroid { --polaroid-tilt: 2deg; --breeze-delay: -3.2s; }
         .polaroid-link:nth-child(8n + 3) .polaroid { --polaroid-tilt: -1.5deg; --breeze-delay: -2.1s; }
@@ -39,12 +51,17 @@
         #gallery-status { color: #64748b; padding: 2rem 0; }
         #gallery-status.hidden { display: none; }
         @media (min-width: 640px) { #gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; } }
-        @media (max-width: 767px) { .polaroid img { aspect-ratio: 2 / 1; } }
+        @media (max-width: 767px) {
+            .polaroid img { aspect-ratio: 2 / 1; }
+        }
         @media (max-width: 480px) {
             .site-header-inner { align-items: flex-start; }
             .site-logo { width: 80px; height: 48px; }
             .site-nav { gap: 0.35rem 0.65rem; font-size: 0.75rem; }
             main { padding-top: 1.5rem; }
+            #hero-detail-dialog { width: 100vw; height: 100dvh; max-height: none; border-radius: 0; }
+            #hero-detail-dialog .hero-dialog-header { height: 2.75rem; }
+            #hero-detail-dialog iframe { height: calc(100% - 2.75rem); }
         }
     </style>
 </head>
@@ -67,6 +84,10 @@
         <p id="gallery-status" role="status" aria-live="polite">正在載入圖片⋯</p>
         <div id="gallery"></div>
     </main>
+    <dialog id="hero-detail-dialog" aria-label="置頂內容詳細資訊">
+        <div class="hero-dialog-header"><button id="close-hero-detail-dialog" type="button" aria-label="關閉置頂內容詳細視窗">&times;</button></div>
+        <iframe title="置頂內容詳細資訊" loading="lazy"></iframe>
+    </dialog>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const supabaseClient = window.supabase.createClient(
@@ -113,38 +134,11 @@
 
             for (const [index, item] of validItems.entries()) {
                 const figure = document.createElement('figure');
-                figure.className = 'polaroid';
+                figure.className = `polaroid${safeImageUrl(item.frameUrl) ? ' has-custom-frame' : ''}`;
                 const link = document.createElement('a');
                 link.className = 'polaroid-link';
                 link.href = `hero-detail.html?id=${encodeURIComponent(item.pageId || `hero-${item.order}`)}`;
-                const picture = document.createElement('picture');
-                const mobileSource = document.createElement('source');
-                mobileSource.media = '(max-width: 767px)';
-                mobileSource.srcset = safeImageUrl(item.mobileImageUrl) || item.image;
-                const image = document.createElement('img');
-                image.src = item.image;
-                image.alt = item.title || `置頂內容 ${index + 1}`;
-                image.loading = 'lazy';
-                picture.append(mobileSource, image);
-                figure.append(picture);
-
                 const frameUrl = safeImageUrl(item.frameUrl);
-                if (frameUrl) {
-                    const framePicture = document.createElement('picture');
-                    const mobileFrameUrl = safeImageUrl(item.mobileFrameUrl) || frameUrl;
-                    const mobileFrame = document.createElement('source');
-                    mobileFrame.media = '(max-width: 767px)';
-                    mobileFrame.srcset = mobileFrameUrl;
-                    const frame = document.createElement('img');
-                    frame.className = 'polaroid-frame';
-                    frame.src = frameUrl;
-                    frame.alt = '';
-                    frame.setAttribute('aria-hidden', 'true');
-                    frame.loading = 'lazy';
-                    framePicture.append(mobileFrame, frame);
-                    figure.append(framePicture);
-                }
-
                 const caption = document.createElement('figcaption');
                 const title = document.createElement('strong');
                 title.textContent = item.title || `置頂內容 ${index + 1}`;
@@ -154,12 +148,70 @@
                     description.textContent = item.description;
                     caption.append(description);
                 }
-                figure.append(caption);
+                const picture = document.createElement('picture');
+                picture.className = 'photo-layer';
+                const mobileSource = document.createElement('source');
+                mobileSource.media = '(max-width: 767px)';
+                mobileSource.srcset = safeImageUrl(item.mobileImageUrl) || item.image;
+                const image = document.createElement('img');
+                image.src = item.image;
+                image.alt = item.title || `置頂內容 ${index + 1}`;
+                image.loading = 'lazy';
+                picture.append(mobileSource, image);
+                if (frameUrl) {
+                    const photoWindow = document.createElement('div');
+                    photoWindow.className = 'photo-window';
+                    const framePicture = document.createElement('picture');
+                    framePicture.className = 'frame-layer';
+                    const mobileFrameUrl = safeImageUrl(item.mobileFrameUrl) || frameUrl;
+                    const mobileFrame = document.createElement('source');
+                    mobileFrame.media = '(max-width: 767px)';
+                    mobileFrame.srcset = mobileFrameUrl;
+                    const frame = document.createElement('img');
+                    frame.src = frameUrl;
+                    frame.alt = '';
+                    frame.setAttribute('aria-hidden', 'true');
+                    frame.loading = 'lazy';
+                    framePicture.append(mobileFrame, frame);
+                    photoWindow.append(framePicture, picture, caption);
+                    figure.append(photoWindow);
+                } else {
+                    figure.append(picture, caption);
+                }
                 link.append(figure);
                 gallery.append(link);
             }
             status.classList.add('hidden');
         }
+
+        const heroDetailDialog = document.getElementById('hero-detail-dialog');
+        const heroDetailFrame = heroDetailDialog.querySelector('iframe');
+        document.getElementById('gallery').addEventListener('click', event => {
+            const link = event.target.closest('a[href^="hero-detail.html"]');
+            if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target === '_blank') return;
+            event.preventDefault();
+            const detailUrl = new URL(link.href);
+            detailUrl.searchParams.set('embed', '1');
+            heroDetailFrame.src = detailUrl.href;
+            heroDetailDialog.showModal();
+            document.getElementById('close-hero-detail-dialog').focus();
+        });
+        const closeHeroDetailDialog = () => {
+            heroDetailDialog.close();
+            heroDetailFrame.removeAttribute('src');
+        };
+        document.getElementById('close-hero-detail-dialog').addEventListener('click', closeHeroDetailDialog);
+        window.addEventListener('message', event => {
+            if (event.origin === window.location.origin &&
+                event.source === heroDetailFrame.contentWindow &&
+                event.data?.type === 'close-featured-detail') {
+                closeHeroDetailDialog();
+            }
+        });
+        heroDetailDialog.addEventListener('click', event => {
+            if (event.target === heroDetailDialog) closeHeroDetailDialog();
+        });
+        heroDetailDialog.addEventListener('close', () => heroDetailFrame.removeAttribute('src'));
 
         async function loadGallery() {
             const { data, error } = await supabaseClient

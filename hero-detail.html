@@ -9,6 +9,9 @@
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; min-height: 100vh; color: #1f2937; background: #f8fafc; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+        html.embedded, html.embedded body { min-height: 100%; }
+        html.embedded .site-header, html.embedded [data-embedded-back] { display: none; }
+        html.embedded main { padding: 0.75rem; }
         .site-header { background: rgb(255 255 255 / 95%); box-shadow: 0 1px 4px #0f172a1a; }
         .site-header-inner { max-width: 72rem; margin: 0 auto; padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
         .site-logo { width: 100px; height: 60px; object-fit: contain; }
@@ -27,6 +30,11 @@
         .rich-content a { color: #1d4ed8; text-decoration: underline; }
         .rich-content blockquote { margin: 0.75rem 0; border-left: 3px solid #93c5fd; padding-left: 0.75rem; color: #475569; }
         .rich-content img { display: block; margin: 0.75rem 0; max-width: 100%; height: auto; border-radius: 0.75rem; }
+        .rich-content .rich-table { width: 100%; margin: 0.75rem 0; border: 1px solid #cbd5e1; border-collapse: separate; border-spacing: 0; border-radius: 0.75rem; overflow: hidden; table-layout: fixed; }
+        .rich-content .rich-table-cell { min-width: 4rem; height: 3rem; border: 0; border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; padding: 0.5rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+        .rich-content .rich-table tr > :last-child { border-right: 0; }
+        .rich-content .rich-table tr:last-child > .rich-table-cell { border-bottom: 0; }
+        .rich-content th.rich-table-cell { background: #f1f5f9; font-weight: 700; }
         #hero-detail[data-theme="warm"] > header, #hero-detail[data-theme="warm"] > section:not(#team-section) { background-color: #fffbeb; }
         #hero-detail[data-theme="dark"] > header, #hero-detail[data-theme="dark"] > section { background-color: #172033; color: #f8fafc; border-color: #334155; }
         #hero-detail[data-theme="dark"] h1, #hero-detail[data-theme="dark"] h2, #hero-detail[data-theme="dark"] h3, #hero-detail[data-theme="dark"] p { color: #f8fafc; }
@@ -44,6 +52,10 @@
             #detail-panels { overflow-wrap: anywhere; }
             #team-grid { grid-template-columns: minmax(0, 1fr); }
             .countdown span { min-width: 3.5rem; padding: 0.55rem; }
+            html.embedded main { padding: 0.5rem; }
+            html.embedded #hero-detail { gap: 0.75rem; }
+            html.embedded .hero-media { max-height: 10rem; }
+            html.embedded .hero-media img, html.embedded .hero-media video, html.embedded .hero-media iframe { height: clamp(6rem, 34vw, 10rem); }
         }
         @media (max-width: 380px) {
             #highlight-grid { grid-template-columns: minmax(0, 1fr); }
@@ -60,7 +72,7 @@
         </div>
     </header>
     <main>
-        <a href="hero-gallery.html" class="inline-flex mb-4 text-sm font-medium text-blue-700 hover:underline">← 返回置頂內容</a>
+        <a href="hero-gallery.html" data-embedded-back class="inline-flex mb-4 text-sm font-medium text-blue-700 hover:underline">← 返回置頂內容</a>
         <p id="page-status" role="status" class="py-12 text-center text-gray-500">正在載入內容…</p>
         <article id="hero-detail" class="hidden space-y-8">
             <section class="hero-media" id="hero-media"></section>
@@ -81,6 +93,10 @@
             <section id="team-section" class="hidden">
                 <h2 class="mb-4 text-2xl font-bold">嘉賓／導師／品牌團隊</h2><div id="team-grid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
             </section>
+            <section id="contact-section" class="hidden rounded-2xl bg-white p-5 shadow-sm sm:p-8">
+                <h2 class="mb-4 text-2xl font-bold">聯絡方式與報名資訊</h2>
+                <div id="contact-methods" class="grid gap-3 sm:grid-cols-2"></div>
+            </section>
         </article>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -89,6 +105,15 @@
             'https://owvsfvunlqudrhdsuqvk.supabase.co',
             'sb_publishable_4kBnCjtv4c7j-sb8l3BrUw_j63egBDR'
         );
+        const isEmbedded = new URLSearchParams(location.search).get('embed') === '1';
+        if (isEmbedded) {
+            document.documentElement.classList.add('embedded');
+            window.addEventListener('keydown', event => {
+                if (event.key !== 'Escape') return;
+                event.preventDefault();
+                window.parent.postMessage({ type: 'close-featured-detail' }, location.origin);
+            });
+        }
 
         function safeHttpsUrl(value) {
             try {
@@ -247,7 +272,7 @@
         function sanitizeRichContent(value) {
             const template = document.createElement('template');
             template.innerHTML = String(value || '');
-            const allowedTags = new Set(['P', 'BR', 'H2', 'H3', 'UL', 'OL', 'LI', 'STRONG', 'B', 'EM', 'I', 'U', 'BLOCKQUOTE', 'A', 'IMG', 'SPAN']);
+            const allowedTags = new Set(['P', 'BR', 'H2', 'H3', 'UL', 'OL', 'LI', 'STRONG', 'B', 'EM', 'I', 'U', 'BLOCKQUOTE', 'A', 'IMG', 'SPAN', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD']);
             const cleanNode = node => {
                 if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.textContent || '');
                 if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
@@ -257,6 +282,12 @@
                     return fragment;
                 }
                 const element = document.createElement(node.tagName.toLowerCase());
+                if (node.tagName === 'TABLE') element.className = 'rich-table';
+                if (node.tagName === 'TH' || node.tagName === 'TD') element.className = 'rich-table-cell';
+                if (node.tagName === 'TH' || node.tagName === 'TD') {
+                    if (['left', 'center', 'right'].includes(node.style.textAlign)) element.style.textAlign = node.style.textAlign;
+                    if (['top', 'middle', 'bottom'].includes(node.style.verticalAlign)) element.style.verticalAlign = node.style.verticalAlign;
+                }
                 if (node.tagName === 'A') {
                     const href = safeHttpsUrl(node.getAttribute('href'));
                     if (!href) {
@@ -274,6 +305,8 @@
                     element.alt = (node.getAttribute('alt') || '').slice(0, 200);
                     element.loading = 'lazy';
                     element.className = 'my-3 max-h-[32rem] max-w-full rounded-lg object-contain';
+                    const imageWidth = node.style.width;
+                    if (/^(?:\d{1,4}(?:\.\d+)?px|(?:100|[1-9]?\d)%)$/.test(imageWidth)) element.style.width = imageWidth;
                 } else if (node.tagName === 'SPAN') {
                     const fontFamily = node.style.fontFamily;
                     const allowedFamilies = [
@@ -307,16 +340,21 @@
             const grid = document.getElementById('team-grid');
             grid.innerHTML = members.filter(member => member && typeof member === 'object').map(member => {
                 const card = document.createElement('article');
-                card.className = 'rounded-xl border bg-white p-5 shadow-sm';
+                card.className = 'flex items-start gap-4 rounded-xl border bg-white p-4 shadow-sm sm:gap-5 sm:p-5';
                 const imageUrl = safeHttpsUrl(member.imageUrl);
                 if (imageUrl) {
                     const image = document.createElement('img');
                     image.src = imageUrl;
                     image.alt = '';
                     image.loading = 'lazy';
-                    image.className = 'mb-4 h-20 w-20 rounded-full object-cover';
+                    image.className = 'h-20 w-20 shrink-0 rounded-xl object-cover sm:h-24 sm:w-24';
                     card.append(image);
                 }
+                const content = document.createElement('div');
+                content.className = 'min-w-0 flex-1';
+                const memberType = document.createElement('p');
+                memberType.className = 'mb-1 text-xs font-semibold uppercase tracking-wide text-blue-700';
+                memberType.textContent = ['嘉賓', '導師', '品牌團隊'].includes(member.memberType) ? member.memberType : '嘉賓';
                 const name = document.createElement('h3');
                 name.className = 'font-bold text-gray-900';
                 name.textContent = typeof member.name === 'string' ? member.name : '';
@@ -326,9 +364,50 @@
                 const bio = document.createElement('p');
                 bio.className = 'mt-3 whitespace-pre-line text-sm leading-6 text-gray-600';
                 bio.textContent = typeof member.bio === 'string' ? member.bio : '';
-                card.append(name, role, bio);
+                content.append(memberType, name, role, bio);
+                card.append(content);
                 return card.outerHTML;
             }).join('');
+            section.classList.remove('hidden');
+        }
+
+        function renderContact(item) {
+            const section = document.getElementById('contact-section');
+            const methods = document.getElementById('contact-methods');
+            const entries = [];
+            const addEntry = (label, value, href) => {
+                if (!value) return;
+                const card = document.createElement('div');
+                card.className = 'rounded-xl border p-4';
+                const heading = document.createElement('h3');
+                heading.className = 'text-sm font-semibold text-gray-500';
+                heading.textContent = label;
+                const content = href ? document.createElement('a') : document.createElement('p');
+                content.className = 'mt-1 whitespace-pre-line font-medium text-blue-700 break-words';
+                content.textContent = value;
+                if (href) {
+                    content.href = href;
+                    if (href.startsWith('https://')) {
+                        content.target = '_blank';
+                        content.rel = 'noopener noreferrer';
+                    }
+                }
+                card.append(heading, content);
+                entries.push(card);
+            };
+            const email = String(item.contactEmail || '').trim();
+            if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) addEntry('Email', email, `mailto:${email}`);
+            const phone = String(item.contactPhone || '').trim();
+            const phoneHref = phone.replace(/[^\d+]/g, '');
+            if (/\d/.test(phoneHref)) addEntry('電話', phone, `tel:${phoneHref}`);
+            const facebook = safeHttpsUrl(item.facebookUrl);
+            if (facebook) addEntry('Facebook', '前往 Facebook 專頁', facebook);
+            const instagram = safeHttpsUrl(item.instagramUrl);
+            if (instagram) addEntry('Instagram', '前往 Instagram 專頁', instagram);
+            const registrationMethod = String(item.registrationMethod || '').trim();
+            if (registrationMethod) addEntry('報名方式', registrationMethod, '');
+            if (!entries.length) return;
+            methods.replaceChildren(...entries);
             section.classList.remove('hidden');
         }
 
@@ -393,6 +472,7 @@
             renderHighlights(details.highlights || {});
             renderTabs(details.tabs || {});
             renderTeam(Array.isArray(details.members) ? details.members : []);
+            renderContact(item);
             if (item.countdownEnabled) renderCountdown(item.countdownTarget);
             const ctaUrl = safeHttpsUrl(item.ctaUrl);
             if (ctaUrl && item.ctaLabel) {

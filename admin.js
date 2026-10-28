@@ -36,6 +36,7 @@ let homeServiceCategories = normalizeHomeServiceCategories([]);
 let heroImageCropper = null;
 let heroImageCropUrl = '';
 let heroImageCropInput = null;
+let heroRichImageCropContext = null;
 const heroRichEditorSelections = new Map();
 const heroRichFontFamilies = {
     sans: 'Arial, "Noto Sans TC", sans-serif',
@@ -1015,8 +1016,12 @@ function renderHeroRichEditor(name, label, value = '', placeholder = '') {
             <label class="flex items-center gap-1 text-xs">大小<select data-rich-style="fontSize" data-editor="${editorId}" class="rounded border bg-white px-2 py-1"><option value="">字體大小</option>${[12, 14, 16, 18, 20, 24, 28, 32, 36].map(size => `<option value="${size}px">${size}px</option>`).join('')}</select></label>
             <button type="button" data-rich-link data-editor="${editorId}" class="rounded border bg-white px-2 py-1 text-xs">插入連結</button>
             <button type="button" data-rich-image data-editor="${editorId}" class="rounded border bg-white px-2 py-1 text-xs">插入圖片</button>
+            <button type="button" data-rich-table data-editor="${editorId}" class="rounded border bg-white px-2 py-1 text-xs">插入表格</button>
+            <label class="flex items-center gap-1 text-xs">水平<select data-rich-cell-style="textAlign" data-editor="${editorId}" class="rounded border bg-white px-2 py-1"><option value="">水平對齊</option><option value="left">靠左</option><option value="center">置中</option><option value="right">靠右</option></select></label>
+            <label class="flex items-center gap-1 text-xs">垂直<select data-rich-cell-style="verticalAlign" data-editor="${editorId}" class="rounded border bg-white px-2 py-1"><option value="">垂直對齊</option><option value="top">靠上</option><option value="middle">置中</option><option value="bottom">靠下</option></select></label>
         </div>
         <div id="${editorId}" data-rich-editor contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="${escapeHtml(placeholder)}" class="min-h-36 rounded-b-lg border bg-white p-3 text-sm leading-6 focus:outline-none focus:ring-2 focus:ring-blue-200">${sanitizeHeroRichHtml(value)}</div>
+        <p class="text-xs text-gray-500">表格對齊前，先將游標放在儲存格，再設定水平／垂直位置。圖片可由工具列上傳、拖放至編輯器，或貼上截圖；上傳前可裁剪，插入後可拖曳圖片右下角調整寬度。</p>
         <textarea data-content-field="${name}" data-rich-value hidden>${escapeHtml(value)}</textarea>
     </div>`;
 }
@@ -1037,6 +1042,147 @@ function restoreHeroRichEditorSelection(editor) {
     selection.removeAllRanges();
     selection.addRange(range);
     return true;
+}
+
+function openHeroRichInsertDialog(editor, type) {
+    if (!editor) return;
+    saveHeroRichEditorSelection(editor);
+    if (!restoreHeroRichEditorSelection(editor)) {
+        alert('請先在圖文編輯器中點選插入位置。');
+        return;
+    }
+    const dialog = document.getElementById('hero-rich-insert-dialog');
+    const isImage = type === 'image';
+    const isTable = type === 'table';
+    dialog.dataset.insertType = type;
+    dialog.dataset.editorId = editor.id;
+    document.getElementById('hero-rich-insert-title').textContent = isTable ? '插入表格' : isImage ? '插入圖片' : '插入連結';
+    document.getElementById('hero-rich-insert-url-row').classList.toggle('hidden', isTable);
+    document.getElementById('hero-rich-insert-url').required = !isTable && !isImage;
+    document.getElementById('hero-rich-insert-text-row').classList.toggle('hidden', isImage || isTable);
+    document.getElementById('hero-rich-insert-alt-row').classList.toggle('hidden', !isImage);
+    document.getElementById('hero-rich-insert-file-row').classList.toggle('hidden', !isImage);
+    document.getElementById('hero-rich-insert-table-row').classList.toggle('hidden', !isTable);
+    document.getElementById('hero-rich-insert-url').value = '';
+    document.getElementById('hero-rich-insert-text').value = '';
+    document.getElementById('hero-rich-insert-alt').value = '';
+    document.getElementById('hero-rich-insert-file').value = '';
+    document.getElementById('hero-rich-insert-rows').value = '3';
+    document.getElementById('hero-rich-insert-columns').value = '3';
+    dialog.showModal();
+    document.getElementById(isTable ? 'hero-rich-insert-rows' : 'hero-rich-insert-url').focus();
+}
+
+function insertHeroRichContent(editor, type, url, text, alt) {
+    editor.focus();
+    if (!restoreHeroRichEditorSelection(editor)) {
+        alert('找不到編輯位置，請重新選取插入位置後再試。');
+        return false;
+    }
+    const selection = window.getSelection();
+    const range = selection.getRangeAt(0);
+    let inserted;
+    if (type === 'image') {
+        inserted = document.createElement('img');
+        inserted.src = url;
+        inserted.alt = alt;
+        inserted.loading = 'lazy';
+        inserted.className = 'rich-editor-image';
+        range.deleteContents();
+        range.insertNode(inserted);
+    } else {
+        inserted = document.createElement('a');
+        inserted.href = url;
+        inserted.rel = 'noopener noreferrer';
+        const selectedContent = range.extractContents();
+        if (selectedContent.textContent.trim()) inserted.append(selectedContent);
+        else inserted.textContent = text || url;
+        range.insertNode(inserted);
+    }
+    const nextRange = document.createRange();
+    if (type === 'image') nextRange.setStartAfter(inserted);
+    else nextRange.selectNodeContents(inserted);
+    nextRange.collapse(type === 'image');
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+    saveHeroRichEditorSelection(editor);
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+}
+
+async function uploadHeroRichImage(file) {
+    const allowedTypes = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp'
+    };
+    if (!allowedTypes[file.type]) throw new Error('圖片只接受 JPG、PNG 或 WebP 格式。');
+    if (file.size > 10 * 1024 * 1024) throw new Error('圖片大小不可超過 10 MB。');
+    if (file.size === 0) throw new Error('圖片檔案是空的，請重新選擇。');
+    const bucket = supabaseClient.storage.from('homepage-content');
+    const path = `${createHomepageUploadId()}/hero-image.${allowedTypes[file.type]}`;
+    const { error } = await bucket.upload(path, file, {
+        cacheControl: '3600',
+        contentType: file.type,
+        upsert: false
+    });
+    if (error) throw new Error(`圖片上傳失敗：${error.message}`);
+    return { bucket, path, url: bucket.getPublicUrl(path).data.publicUrl };
+}
+
+function insertHeroRichTable(editor, rowCount, columnCount) {
+    editor.focus();
+    if (!restoreHeroRichEditorSelection(editor)) {
+        alert('找不到編輯位置，請重新選取插入位置後再試。');
+        return false;
+    }
+    const selection = window.getSelection();
+    const range = selection.getRangeAt(0);
+    const table = document.createElement('table');
+    table.className = 'rich-table';
+    const body = document.createElement('tbody');
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        const row = document.createElement('tr');
+        for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+            const cell = document.createElement(rowIndex === 0 ? 'th' : 'td');
+            cell.className = 'rich-table-cell';
+            cell.append(document.createElement('br'));
+            row.append(cell);
+        }
+        body.append(row);
+    }
+    table.append(body);
+    range.deleteContents();
+    range.insertNode(table);
+    const firstCell = table.querySelector('th, td');
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(firstCell);
+    nextRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+    saveHeroRichEditorSelection(editor);
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+}
+
+function applyHeroRichCellAlignment(editor, property, value) {
+    const allowedValues = property === 'textAlign' ? ['left', 'center', 'right'] : ['top', 'middle', 'bottom'];
+    if (!allowedValues.includes(value)) return;
+    editor.focus();
+    if (!restoreHeroRichEditorSelection(editor)) {
+        alert('請先將游標放在要調整的表格儲存格內。');
+        return;
+    }
+    const selection = window.getSelection();
+    const anchor = selection?.anchorNode;
+    const element = anchor?.nodeType === Node.ELEMENT_NODE ? anchor : anchor?.parentElement;
+    const cell = element?.closest('th, td');
+    if (!cell || !editor.contains(cell)) {
+        alert('請先將游標放在要調整的表格儲存格內。');
+        return;
+    }
+    cell.style[property] = value;
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 function applyHeroRichStyle(editor, property, value) {
@@ -1074,7 +1220,7 @@ function applyHeroRichStyle(editor, property, value) {
 function sanitizeHeroRichHtml(value) {
     const template = document.createElement('template');
     template.innerHTML = String(value || '');
-    const allowedTags = new Set(['P', 'BR', 'H2', 'H3', 'UL', 'OL', 'LI', 'STRONG', 'B', 'EM', 'I', 'U', 'BLOCKQUOTE', 'A', 'IMG', 'SPAN']);
+    const allowedTags = new Set(['P', 'BR', 'H2', 'H3', 'UL', 'OL', 'LI', 'STRONG', 'B', 'EM', 'I', 'U', 'BLOCKQUOTE', 'A', 'IMG', 'SPAN', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD']);
     const cleanNode = node => {
         if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.textContent || '');
         if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
@@ -1084,6 +1230,12 @@ function sanitizeHeroRichHtml(value) {
             return fragment;
         }
         const element = document.createElement(node.tagName.toLowerCase());
+        if (node.tagName === 'TABLE') element.className = 'rich-table';
+        if (node.tagName === 'TH' || node.tagName === 'TD') element.className = 'rich-table-cell';
+        if (node.tagName === 'TH' || node.tagName === 'TD') {
+            if (['left', 'center', 'right'].includes(node.style.textAlign)) element.style.textAlign = node.style.textAlign;
+            if (['top', 'middle', 'bottom'].includes(node.style.verticalAlign)) element.style.verticalAlign = node.style.verticalAlign;
+        }
         if (node.tagName === 'A') {
             const href = safeImageUrl(node.getAttribute('href') || '');
             if (!href) {
@@ -1099,7 +1251,9 @@ function sanitizeHeroRichHtml(value) {
             element.src = src;
             element.alt = (node.getAttribute('alt') || '').slice(0, 200);
             element.loading = 'lazy';
-            element.className = 'my-3 max-h-[32rem] max-w-full rounded-lg object-contain';
+            element.className = 'my-3 max-h-[32rem] max-w-full rounded-lg object-contain rich-editor-image';
+            const imageWidth = node.style.width;
+            if (/^(?:\d{1,4}(?:\.\d+)?px|(?:100|[1-9]?\d)%)$/.test(imageWidth)) element.style.width = imageWidth;
         } else if (node.tagName === 'SPAN') {
             const fontFamily = node.style.fontFamily;
             const fontWeight = node.style.fontWeight;
@@ -1122,7 +1276,7 @@ function sanitizeHeroRichHtml(value) {
 
 function renderHeroImageField(item, name, label, help, crop = null) {
     const url = safeImageUrl(item[name] || '');
-    const variant = name === 'mobileImageUrl' ? '-mobile' : name === 'frameUrl' ? '-frame' : name === 'mobileFrameUrl' ? '-mobile-frame' : '';
+    const variant = name === 'mobileImageUrl' ? 'mobile' : name === 'frameUrl' ? 'frame' : name === 'mobileFrameUrl' ? 'mobile-frame' : '';
     const cropAttributes = crop
         ? `data-hero-image data-crop-ratio="${crop.ratio}" data-crop-width="${crop.width}" data-crop-height="${crop.height}"`
         : '';
@@ -1132,9 +1286,11 @@ function renderHeroImageField(item, name, label, help, crop = null) {
 function renderHeroTeamMember(member = {}, index = 0) {
     const imageUrl = safeImageUrl(member.imageUrl || '');
     const imageField = `teamMemberImage-${index}`;
+    const memberType = ['嘉賓', '導師', '品牌團隊'].includes(member.memberType) ? member.memberType : '嘉賓';
     return `<article data-team-member class="rounded-lg border bg-white p-3 space-y-3">
-        <div class="flex items-center justify-between gap-2"><h4 data-team-member-title class="text-sm font-semibold text-gray-800">嘉賓 ${index + 1}</h4><button type="button" data-remove-team-member class="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50">移除</button></div>
+        <div class="flex items-center justify-between gap-2"><h4 data-team-member-title class="text-sm font-semibold text-gray-800">${memberType} ${index + 1}</h4><button type="button" data-remove-team-member class="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50">移除</button></div>
         <div class="grid gap-3 sm:grid-cols-2">
+            <label class="text-xs font-medium text-gray-700">介紹類別<select data-team-member-field="memberType" class="mt-1 w-full border rounded px-3 py-2 text-sm font-normal">${['嘉賓', '導師', '品牌團隊'].map(type => `<option value="${type}" ${memberType === type ? 'selected' : ''}>${type}</option>`).join('')}</select></label>
             <label class="text-xs font-medium text-gray-700">姓名<input data-team-member-field="name" value="${escapeHtml(member.name || '')}" maxlength="100" class="mt-1 w-full border rounded px-3 py-2 text-sm font-normal"></label>
             <label class="text-xs font-medium text-gray-700">職稱<input data-team-member-field="role" value="${escapeHtml(member.role || '')}" maxlength="100" class="mt-1 w-full border rounded px-3 py-2 text-sm font-normal"></label>
         </div>
@@ -1147,6 +1303,7 @@ function renderHeroTeamMember(member = {}, index = 0) {
 
 function syncHeroTeamMembers(row) {
     const members = Array.from(row.querySelectorAll('[data-team-member]')).map(memberCard => ({
+        memberType: memberCard.querySelector('[data-team-member-field="memberType"]').value,
         name: memberCard.querySelector('[data-team-member-field="name"]').value.trim(),
         role: memberCard.querySelector('[data-team-member-field="role"]').value.trim(),
         bio: memberCard.querySelector('[data-team-member-field="bio"]').value.trim(),
@@ -1160,8 +1317,9 @@ function syncHeroTeamMembers(row) {
 
 function updateHeroTeamMemberIndexes(row) {
     row.querySelectorAll('[data-team-member]').forEach((memberCard, index) => {
-        memberCard.querySelector('[data-team-member-title]').textContent =
-            memberCard.querySelector('[data-team-member-field="name"]').value.trim() || `嘉賓 ${index + 1}`;
+        const memberName = memberCard.querySelector('[data-team-member-field="name"]').value.trim();
+        const memberType = memberCard.querySelector('[data-team-member-field="memberType"]').value;
+        memberCard.querySelector('[data-team-member-title]').textContent = memberName || `${memberType} ${index + 1}`;
         const fileInput = memberCard.querySelector('[data-content-image]');
         const imageField = `teamMemberImage-${index}`;
         fileInput.dataset.imageField = imageField;
@@ -1220,8 +1378,8 @@ function renderHomeHeroEditors() {
                 ${renderHeroTextField('description', '卡片簡介', item.description || '')}
                 ${renderHeroImageField(item, 'imageUrl', '拍立得圖片', '建議 1200 × 400 px（3:1），可上傳後裁剪，JPG／PNG／WebP，最多 10 MB。', { ratio: 3, width: 1200, height: 400 })}
                 ${renderHeroImageField(item, 'mobileImageUrl', '手機版圖片（選填）', '建議 960 × 480 px（2:1），可上傳後裁剪，未設定時使用拍立得圖片。', { ratio: 2, width: 960, height: 480 })}
-                ${renderHeroImageField(item, 'frameUrl', '自訂拍立得邊框（選填）', '建議 1200 × 500 px 透明背景 PNG；透明區域預留給照片。每張可獨立設定。')}
-                ${renderHeroImageField(item, 'mobileFrameUrl', '手機版邊框（選填）', '建議 960 × 580 px 透明背景 PNG；未設定時沿用桌面版邊框。')}
+                ${renderHeroImageField(item, 'frameUrl', '自訂拍立得邊框（選填）', '以 440 × 215 px 邊框為基準：置頂圖片 425 × 140 px，四周留框（上方留 5 px、左右各 7.5 px）；下方白色圓角文字框寬 405 px。不同尺寸會按比例縮放。')}
+                ${renderHeroImageField(item, 'mobileFrameUrl', '手機版邊框（選填）', '手機版邊框沿用相同圖片尺寸與留框比例；未設定時沿用桌面版邊框。')}
             </div>
             <details class="rounded-lg border bg-gray-50 p-3">
                 <summary class="cursor-pointer font-semibold text-sm text-gray-800">編輯詳細內容頁</summary>
@@ -1248,6 +1406,15 @@ function renderHomeHeroEditors() {
                             ${renderHeroTextField('ctaLabel', '行動按鈕文字', item.ctaLabel || '✍️ 立即線上報名')}
                             ${renderHeroTextField('ctaUrl', '行動按鈕網址', item.ctaUrl || '', 'url')}
                         </div>
+                    </fieldset>
+                    <fieldset class="space-y-3"><legend class="font-semibold text-gray-800 mb-2">聯絡方式與報名資訊</legend>
+                        <div class="grid gap-3 md:grid-cols-2">
+                            ${renderHeroTextField('contactEmail', 'Email', item.contactEmail || '', 'email')}
+                            ${renderHeroTextField('contactPhone', '電話', item.contactPhone || '', 'tel')}
+                            ${renderHeroTextField('facebookUrl', 'Facebook 專頁', item.facebookUrl || '', 'url')}
+                            ${renderHeroTextField('instagramUrl', 'Instagram 專頁', item.instagramUrl || '', 'url')}
+                        </div>
+                        ${renderHeroTextarea('registrationMethod', '報名方式', item.registrationMethod || '', '例如：填寫線上表格報名；名額有限，額滿即止。', 3)}
                     </fieldset>
                     <fieldset class="space-y-3"><legend class="font-semibold text-gray-800 mb-2">2. 核心亮點與快訊卡片</legend>
                         <div class="grid gap-3 md:grid-cols-2">
@@ -1531,28 +1698,39 @@ function closeHeroImageCropper(clearInput) {
     }
     if (clearInput && heroImageCropInput) heroImageCropInput.value = '';
     heroImageCropInput = null;
+    heroRichImageCropContext = null;
     const modal = document.getElementById('hero-crop-modal');
     modal.classList.add('hidden');
     modal.classList.remove('flex');
 }
 
-function openHeroImageCropper(input, file) {
+function openHeroImageCropper(input, file, richContext = null) {
+    if (!validHomepageImageTypes.has(file.type) || file.size === 0 || file.size > maxHomepageImageSize) {
+        if (input) input.value = '';
+        alert('圖片請使用 JPG、PNG 或 WebP，且檔案大小需大於 0 並不超過 10 MB。');
+        return;
+    }
     if (!window.Cropper) {
-        input.value = '';
+        if (input) input.value = '';
         alert('圖片裁剪工具載入失敗，請重新整理管理後台後再試。');
         return;
     }
     closeHeroImageCropper(true);
     heroImageCropInput = input;
+    heroRichImageCropContext = richContext;
     heroImageCropUrl = URL.createObjectURL(file);
     const image = document.getElementById('hero-crop-image');
     const modal = document.getElementById('hero-crop-modal');
+    document.getElementById('hero-crop-title').textContent = richContext ? '裁剪插入圖片' : '裁剪置頂輪播圖片';
+    document.getElementById('hero-crop-description').textContent = richContext
+        ? '拖曳選取裁剪範圍，並可縮放或移動圖片；完成後會上傳並插入編輯器。'
+        : '拖曳圖片調整位置，使用滑鼠滾輪或觸控縮放；裁剪比例為 3:1。';
     image.src = heroImageCropUrl;
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     image.onload = () => {
         heroImageCropper = new Cropper(image, {
-            aspectRatio: Number(input.dataset.cropRatio),
+            aspectRatio: richContext ? NaN : Number(input.dataset.cropRatio),
             viewMode: 1,
             autoCropArea: 0.9,
             responsive: true,
@@ -1562,13 +1740,12 @@ function openHeroImageCropper(input, file) {
 }
 
 function applyHeroImageCrop() {
-    if (!heroImageCropper || !heroImageCropInput) return;
-    const canvas = heroImageCropper.getCroppedCanvas({
-        width: Number(heroImageCropInput.dataset.cropWidth),
-        height: Number(heroImageCropInput.dataset.cropHeight),
-        imageSmoothingEnabled: true,
-        imageSmoothingQuality: 'high'
-    });
+    if (!heroImageCropper || (!heroImageCropInput && !heroRichImageCropContext)) return;
+    const richContext = heroRichImageCropContext;
+    const canvasOptions = richContext
+        ? { maxWidth: 1600, maxHeight: 1200, imageSmoothingEnabled: true, imageSmoothingQuality: 'high' }
+        : { width: Number(heroImageCropInput.dataset.cropWidth), height: Number(heroImageCropInput.dataset.cropHeight), imageSmoothingEnabled: true, imageSmoothingQuality: 'high' };
+    const canvas = heroImageCropper.getCroppedCanvas(canvasOptions);
     canvas.toBlob(blob => {
         if (!blob) {
             alert('裁剪圖片失敗，請重新選擇圖片再試。');
@@ -1579,6 +1756,11 @@ function applyHeroImageCrop() {
             return;
         }
         const croppedFile = new File([blob], `hero-${Date.now()}.webp`, { type: 'image/webp' });
+        if (richContext) {
+            void uploadAndInsertHeroRichImage(croppedFile, richContext);
+            closeHeroImageCropper(false);
+            return;
+        }
         const transfer = new DataTransfer();
         transfer.items.add(croppedFile);
         heroImageCropInput.files = transfer.files;
@@ -1591,6 +1773,33 @@ function applyHeroImageCrop() {
         preview.classList.remove('hidden');
         closeHeroImageCropper(false);
     }, 'image/webp', 0.9);
+}
+
+async function uploadAndInsertHeroRichImage(file, context) {
+    let uploaded = null;
+    try {
+        uploaded = await uploadHeroRichImage(file);
+        if (!insertHeroRichContent(context.editor, 'image', uploaded.url, '', context.alt || file.name || '內容圖片')) {
+            const { error } = await uploaded.bucket.remove([uploaded.path]);
+            if (error) console.error('Rich image cleanup failed:', error.message);
+        }
+    } catch (error) {
+        if (uploaded) {
+            const { error: cleanupError } = await uploaded.bucket.remove([uploaded.path]);
+            if (cleanupError) console.error('Rich image cleanup failed:', cleanupError.message);
+        }
+        alert(error.message || '圖片上傳或插入失敗。');
+    }
+}
+
+function openHeroRichImageCropper(file, editor, alt = '') {
+    if (!editor) return;
+    saveHeroRichEditorSelection(editor);
+    if (!restoreHeroRichEditorSelection(editor)) {
+        alert('請先在圖文編輯器中點選插入位置。');
+        return;
+    }
+    openHeroImageCropper(null, file, { editor, alt });
 }
 
 function createHomepageUploadId() {
@@ -2919,35 +3128,17 @@ function bindEvents() {
         }
         const richLink = event.target.closest('[data-rich-link]');
         if (richLink) {
-            const url = window.prompt('請輸入 HTTPS 網址：', 'https://');
-            if (!url) return;
-            const safeUrl = safeImageUrl(url.trim());
-            if (!safeUrl || !safeUrl.startsWith('https://')) {
-                alert('連結必須是有效的 HTTPS 網址。');
-                return;
-            }
-            const editor = document.getElementById(richLink.dataset.editor);
-            restoreHeroRichEditorSelection(editor);
-            editor.focus();
-            document.execCommand('createLink', false, safeUrl);
-            saveHeroRichEditorSelection(editor);
-            editor.dispatchEvent(new Event('input', { bubbles: true }));
+            openHeroRichInsertDialog(document.getElementById(richLink.dataset.editor), 'link');
             return;
         }
         const richImage = event.target.closest('[data-rich-image]');
         if (richImage) {
-            const url = window.prompt('請輸入 HTTPS 圖片網址：', 'https://');
-            if (!url) return;
-            const safeUrl = safeImageUrl(url.trim());
-            if (!safeUrl || !safeUrl.startsWith('https://')) {
-                alert('圖片必須是有效的 HTTPS 網址。');
-                return;
-            }
-            const editor = document.getElementById(richImage.dataset.editor);
-            editor.focus();
-            document.execCommand('insertHTML', false, `<img src="${escapeHtml(safeUrl)}" alt="內容圖片">`);
-            saveHeroRichEditorSelection(editor);
-            editor.dispatchEvent(new Event('input', { bubbles: true }));
+            openHeroRichInsertDialog(document.getElementById(richImage.dataset.editor), 'image');
+            return;
+        }
+        const richTable = event.target.closest('[data-rich-table]');
+        if (richTable) {
+            openHeroRichInsertDialog(document.getElementById(richTable.dataset.editor), 'table');
             return;
         }
         const addMemberButton = event.target.closest('[data-add-team-member]');
@@ -3002,18 +3193,143 @@ function bindEvents() {
         if (event.target.matches('[data-team-member-field], [data-team-member-image-url]')) updateHeroTeamMemberIndexes(row);
     });
     document.getElementById('home-hero-editor').addEventListener('mousedown', event => {
-        const toolbarControl = event.target.closest('[data-rich-command], [data-rich-link], [data-rich-image], [data-rich-style]');
+        const toolbarControl = event.target.closest('[data-rich-command], [data-rich-link], [data-rich-image], [data-rich-table], [data-rich-style], [data-rich-cell-style]');
         if (!toolbarControl) return;
         const editor = document.getElementById(toolbarControl.dataset.editor);
         saveHeroRichEditorSelection(editor);
         if (toolbarControl.tagName !== 'SELECT') event.preventDefault();
     });
     document.getElementById('home-hero-editor').addEventListener('change', event => {
+        const row = event.target.closest('[data-home-hero-card]');
+        if (row && event.target.matches('[data-team-member-field="memberType"]')) {
+            updateHeroTeamMemberIndexes(row);
+            return;
+        }
+        const cellControl = event.target.closest('[data-rich-cell-style]');
+        if (cellControl && cellControl.value) {
+            applyHeroRichCellAlignment(
+                document.getElementById(cellControl.dataset.editor),
+                cellControl.dataset.richCellStyle,
+                cellControl.value
+            );
+            cellControl.value = '';
+            return;
+        }
         const control = event.target.closest('[data-rich-style]');
         if (!control || !control.value) return;
         const editor = document.getElementById(control.dataset.editor);
         applyHeroRichStyle(editor, control.dataset.richStyle, control.value);
         control.value = '';
+    });
+    document.getElementById('home-hero-editor').addEventListener('paste', async event => {
+        const editor = event.target.closest('[data-rich-editor]');
+        if (!editor) return;
+        const imageItem = Array.from(event.clipboardData?.items || []).find(item => item.kind === 'file' && item.type.startsWith('image/'));
+        if (!imageItem) return;
+        const file = imageItem.getAsFile();
+        if (!file) return;
+        event.preventDefault();
+        openHeroRichImageCropper(file, editor, file.name || '剪貼簿圖片');
+    });
+    document.getElementById('home-hero-editor').addEventListener('dragover', event => {
+        const editor = event.target.closest('[data-rich-editor]');
+        if (!editor || !Array.from(event.dataTransfer?.types || []).includes('Files')) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+    });
+    document.getElementById('home-hero-editor').addEventListener('drop', event => {
+        const editor = event.target.closest('[data-rich-editor]');
+        if (!editor) return;
+        const files = Array.from(event.dataTransfer?.files || []);
+        if (!files.length) return;
+        event.preventDefault();
+        const file = files.find(item => validHomepageImageTypes.has(item.type));
+        if (!file) {
+            alert('拖放圖片請使用 JPG、PNG 或 WebP 格式。');
+            return;
+        }
+        const pointRange = document.caretRangeFromPoint?.(event.clientX, event.clientY);
+        const caretPosition = document.caretPositionFromPoint?.(event.clientX, event.clientY);
+        const range = pointRange || (caretPosition ? (() => {
+            const result = document.createRange();
+            result.setStart(caretPosition.offsetNode, caretPosition.offset);
+            result.collapse(true);
+            return result;
+        })() : null);
+        if (range && editor.contains(range.startContainer)) {
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            heroRichEditorSelections.set(editor.id, range.cloneRange());
+        } else {
+            saveHeroRichEditorSelection(editor);
+        }
+        openHeroRichImageCropper(file, editor, file.name || '拖放圖片');
+    });
+    document.getElementById('home-hero-editor').addEventListener('pointerup', event => {
+        if (event.target.matches('[data-rich-editor] img.rich-editor-image')) {
+            event.target.closest('[data-rich-editor]').dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    });
+    const heroRichInsertDialog = document.getElementById('hero-rich-insert-dialog');
+    const closeHeroRichInsertDialog = () => heroRichInsertDialog.close();
+    document.getElementById('hero-rich-insert-cancel').addEventListener('click', closeHeroRichInsertDialog);
+    heroRichInsertDialog.querySelector('[data-rich-insert-cancel]').addEventListener('click', closeHeroRichInsertDialog);
+    document.getElementById('hero-rich-insert-form').addEventListener('submit', async event => {
+        event.preventDefault();
+        const insertType = heroRichInsertDialog.dataset.insertType;
+        const editor = document.getElementById(heroRichInsertDialog.dataset.editorId);
+        if (insertType === 'table') {
+            const rows = Number(document.getElementById('hero-rich-insert-rows').value);
+            const columns = Number(document.getElementById('hero-rich-insert-columns').value);
+            if (!Number.isInteger(rows) || rows < 1 || rows > 20 || !Number.isInteger(columns) || columns < 1 || columns > 10) {
+                alert('表格列數請輸入 1 至 20 列、1 至 10 欄。');
+                return;
+            }
+            if (insertHeroRichTable(editor, rows, columns)) heroRichInsertDialog.close();
+            return;
+        }
+        const insertButton = heroRichInsertDialog.querySelector('[type="submit"]');
+        insertButton.disabled = true;
+        let uploaded = null;
+        try {
+            let url = '';
+            if (insertType === 'image') {
+                const file = document.getElementById('hero-rich-insert-file').files[0];
+                const enteredUrl = document.getElementById('hero-rich-insert-url').value.trim();
+                if (file) {
+                    openHeroRichImageCropper(file, editor, document.getElementById('hero-rich-insert-alt').value.trim() || file.name);
+                    heroRichInsertDialog.close();
+                    return;
+                } else {
+                    url = safeImageUrl(enteredUrl);
+                    if (!url || !url.startsWith('https://')) throw new Error('請選擇圖片檔案，或輸入有效的 HTTPS 圖片網址。');
+                }
+            } else {
+                url = safeImageUrl(document.getElementById('hero-rich-insert-url').value.trim());
+                if (!url || !url.startsWith('https://')) throw new Error('網址必須是有效的 HTTPS 網址。');
+            }
+            const inserted = insertHeroRichContent(
+                editor,
+                insertType,
+                url,
+                document.getElementById('hero-rich-insert-text').value.trim(),
+                document.getElementById('hero-rich-insert-alt').value.trim()
+            );
+            if (!inserted && uploaded) {
+                await uploaded.bucket.remove([uploaded.path]);
+                uploaded = null;
+            }
+            if (inserted) heroRichInsertDialog.close();
+        } catch (error) {
+            if (uploaded) {
+                const { error: cleanupError } = await uploaded.bucket.remove([uploaded.path]);
+                if (cleanupError) console.error('Rich image cleanup failed:', cleanupError.message);
+            }
+            alert(error.message || '插入圖片時發生錯誤。');
+        } finally {
+            insertButton.disabled = false;
+        }
     });
     submissionsList.addEventListener('click', toggleSubmissionVisibility);
     document.getElementById('submission-status-filters').addEventListener('click', event => {
