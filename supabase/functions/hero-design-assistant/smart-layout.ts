@@ -23,6 +23,15 @@ export interface SmartLayout {
         color: string;
         font_family: 'serif' | 'sans-serif';
     };
+    page_style?: {
+        section_order: ('highlights' | 'details' | 'team' | 'contact')[];
+        section_gap_px: number;
+        sections: Record<'highlights' | 'details' | 'team' | 'contact', {
+            palette: 'light' | 'warm' | 'dark' | 'blue' | 'green';
+            style: 'rounded' | 'outlined' | 'flat';
+            columns: 1 | 2 | 3;
+        }>;
+    };
 }
 
 const systemPrompt = `你是一位精通現代網頁排版的 AI 視覺總監。請根據輸入的文字、圖片特徵與指令，設計出一套獨一無二的網頁排版樣式。
@@ -50,6 +59,16 @@ const systemPrompt = `你是一位精通現代網頁排版的 AI 視覺總監。
     "text_align": "left" or "center" or "right",
     "color": "Hex Color",
     "font_family": "serif" or "sans-serif"
+  },
+  "page_style": {
+    "section_order": ["highlights", "details", "team", "contact"],
+    "section_gap_px": number,
+    "sections": {
+      "highlights": {"palette": "light" or "warm" or "dark" or "blue" or "green", "style": "rounded" or "outlined" or "flat", "columns": 1 or 2 or 3},
+      "details": {"palette": "light" or "warm" or "dark" or "blue" or "green", "style": "rounded" or "outlined" or "flat", "columns": 1 or 2 or 3},
+      "team": {"palette": "light" or "warm" or "dark" or "blue" or "green", "style": "rounded" or "outlined" or "flat", "columns": 1 or 2 or 3},
+      "contact": {"palette": "light" or "warm" or "dark" or "blue" or "green", "style": "rounded" or "outlined" or "flat", "columns": 1 or 2 or 3}
+    }
   }
 }`;
 
@@ -62,7 +81,16 @@ const standardLayout: SmartLayout = {
         order: 0, border_style: 'none', border_color: '#ffffff',
         border_width_px: 0, border_radius_px: 16, box_shadow: 'none'
     },
-    text_box: { order: 1, text_align: 'left', color: '#1f2937', font_family: 'sans-serif' }
+    text_box: { order: 1, text_align: 'left', color: '#1f2937', font_family: 'sans-serif' },
+    page_style: {
+        section_order: ['highlights', 'details', 'team', 'contact'], section_gap_px: 24,
+        sections: {
+            highlights: { palette: 'light', style: 'rounded', columns: 3 },
+            details: { palette: 'light', style: 'rounded', columns: 1 },
+            team: { palette: 'light', style: 'rounded', columns: 3 },
+            contact: { palette: 'light', style: 'rounded', columns: 2 }
+        }
+    }
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -79,6 +107,17 @@ export function isSmartLayout(value: unknown): value is SmartLayout {
     const color = (item: unknown) => typeof item === 'string' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(item);
     const shadow = (item: unknown) => typeof item === 'string' && (item === 'none' ||
         /^-?\d{1,2}px -?\d{1,2}px \d{1,2}px(?: \d{1,2}px)? #[0-9a-f]{6}$/i.test(item));
+    const page = value.page_style;
+    if (page !== undefined) {
+        if (!isRecord(page) || !Array.isArray(page.section_order) || page.section_order.length !== 4 ||
+            new Set(page.section_order).size !== 4 || !page.section_order.every(name => ['highlights', 'details', 'team', 'contact'].includes(name)) ||
+            !integer(page.section_gap_px, 0, 80) || !isRecord(page.sections)) return false;
+        for (const name of ['highlights', 'details', 'team', 'contact']) {
+            const section = page.sections[name];
+            if (!isRecord(section) || !oneOf(section.palette, ['light', 'warm', 'dark', 'blue', 'green']) ||
+                !oneOf(section.style, ['rounded', 'outlined', 'flat']) || !integer(section.columns, 1, 3)) return false;
+        }
+    }
     return oneOf(layout.display, ['grid', 'flex']) &&
         oneOf(layout.flex_direction, ['column', 'row', 'column-reverse', 'row-reverse']) &&
         oneOf(layout.grid_template_columns, ['1fr', '1fr 1fr', '2fr 1fr']) &&
@@ -109,14 +148,20 @@ export async function generateLayout(
             temperature: 0.85,
             response_format: { type: 'json_object' },
             messages: [
-                { role: 'system', content: `${systemPrompt}\n顏色必須使用 #RGB 或 #RRGGBB。尺寸必須是整數：gap_px、padding_px、border_radius_px 為 0 至 80，border_width_px 為 0 至 12。兩個 order 分別為 0 和 1。box_shadow 只能是 none 或「0px 4px 12px #000000」形式。` },
+                { role: 'system', content: `${systemPrompt}\npage_style 必須包含四個區塊且順序不可重複；details 的 columns 固定為 1。只設計排版，不改寫文字或圖片。顏色必須使用 #RGB 或 #RRGGBB。尺寸必須是整數：gap_px、padding_px、border_radius_px、section_gap_px 為 0 至 80，border_width_px 為 0 至 12。兩個 order 分別為 0 和 1。box_shadow 只能是 none 或「0px 4px 12px #000000」形式。` },
                 { role: 'user', content: JSON.stringify({ text, imageColors, imageRatio, userInstruction }) }
             ]
         });
         const content = result.choices[0]?.message?.content;
         if (!content) throw new Error('AI 沒有回傳排版。');
         const layout: unknown = JSON.parse(content);
-        if (!isSmartLayout(layout)) throw new Error('AI 回傳的排版格式不符合安全限制。');
+        if (!isSmartLayout(layout) || !layout.page_style) {
+            if (isRecord(layout)) {
+                console.error('Smart layout validation field names:', Object.keys(layout),
+                    isRecord(layout.page_style) ? Object.keys(layout.page_style) : 'no page_style');
+            }
+            throw new Error('AI 回傳的完整頁面排版格式不符合安全限制。');
+        }
         return { layout, usedFallback: false };
     } catch (error) {
         console.error('Smart layout generation failed:', error instanceof Error ? error.message : 'unknown error');

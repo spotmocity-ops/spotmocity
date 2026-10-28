@@ -65,11 +65,20 @@ Deno.serve(async request => {
             const ratio = typeof body.imageRatio === 'string' && /^\d{1,5}:\d{1,5}$/.test(body.imageRatio) ? body.imageRatio : '';
             const prior = body.mode === 'refine' && isSmartLayout(body.previousLayout) ? body.previousLayout : null;
             if (body.mode === 'refine' && !prior) return textResponse('請先產生有效的智慧排版，再進行修改。', 400);
+            const rawSections = body.sections && typeof body.sections === 'object' && !Array.isArray(body.sections)
+                ? body.sections as Record<string, unknown> : {};
+            const count = (value: unknown, max: number) =>
+                typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= max ? value : 0;
+            const sections = {
+                highlights: count(rawSections.highlights, 3), tabs: count(rawSections.tabs, 3),
+                photos: count(rawSections.photos, 5), members: count(rawSections.members, 8),
+                contact: rawSections.contact === true
+            };
             const instruction = prior
                 ? `請基於以下現有排版修改，只變更使用者要求的部分：${JSON.stringify(prior)}\n修改要求：${prompt}`
                 : prompt;
             return respond(await generateLayout(
-                JSON.stringify({ title, description, headline: cleanText(current.headline, 160), subtitle: cleanText(current.subtitle, 500) }),
+                JSON.stringify({ title, description, headline: cleanText(current.headline, 160), subtitle: cleanText(current.subtitle, 500), sections }),
                 colors, ratio, instruction
             ));
         }

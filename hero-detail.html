@@ -17,6 +17,10 @@
         .site-logo { width: 100px; height: 60px; object-fit: contain; }
         .site-nav { display: flex; gap: 0.75rem; font-size: 0.875rem; }
         main { max-width: 1100px; margin: 0 auto; padding: 1rem 1rem 3rem; }
+        #hero-detail, #hero-detail > *, #hero-detail header, #hero-detail section,
+        #hero-detail article, #hero-detail [role="tabpanel"] { min-width: 0; overflow-wrap: anywhere; }
+        #hero-detail h1, #hero-detail h2, #hero-detail h3, #hero-detail p,
+        #hero-detail a, #hero-detail .rich-content { overflow-wrap: anywhere; }
         .hero-media { overflow: hidden; min-height: 8rem; max-height: 22rem; background: #e2e8f0; border-radius: 1.25rem; }
         .hero-media img, .hero-media video, .hero-media iframe { width: 100%; height: clamp(8rem, 30vw, 22rem); display: block; object-fit: cover; border: 0; }
         .hero-media iframe { height: clamp(8rem, 30vw, 22rem); }
@@ -38,10 +42,10 @@
         #hero-detail[data-theme="warm"] > header, #hero-detail[data-theme="warm"] > section:not(#team-section) { background-color: #fffbeb; }
         #hero-detail[data-theme="blue"] > header, #hero-detail[data-theme="blue"] > section:not(#team-section) { background-color: #eff6ff; }
         #hero-detail[data-theme="green"] > header, #hero-detail[data-theme="green"] > section:not(#team-section) { background-color: #ecfdf5; }
-        #hero-detail[data-theme="dark"] > header, #hero-detail[data-theme="dark"] > section { background-color: #172033; color: #f8fafc; border-color: #334155; }
-        #hero-detail[data-theme="dark"] h1, #hero-detail[data-theme="dark"] h2, #hero-detail[data-theme="dark"] h3, #hero-detail[data-theme="dark"] p { color: #f8fafc; }
-        #hero-detail[data-theme="dark"] #highlight-grid article, #hero-detail[data-theme="dark"] #team-grid article, #hero-detail[data-theme="dark"] #countdown-wrap { background-color: #273449; border-color: #475569; }
-        #hero-detail[data-theme="dark"] .countdown span { background-color: #fff; color: #172033; }
+        #hero-detail[data-theme="dark"]:not([data-smart-page="true"]) > header, #hero-detail[data-theme="dark"]:not([data-smart-page="true"]) > section { background-color: #172033; color: #f8fafc; border-color: #334155; }
+        #hero-detail[data-theme="dark"]:not([data-smart-page="true"]) h1, #hero-detail[data-theme="dark"]:not([data-smart-page="true"]) h2, #hero-detail[data-theme="dark"]:not([data-smart-page="true"]) h3, #hero-detail[data-theme="dark"]:not([data-smart-page="true"]) p { color: #f8fafc; }
+        #hero-detail[data-theme="dark"]:not([data-smart-page="true"]) #highlight-grid article, #hero-detail[data-theme="dark"]:not([data-smart-page="true"]) #team-grid article, #hero-detail[data-theme="dark"]:not([data-smart-page="true"]) #countdown-wrap { background-color: #273449; border-color: #475569; }
+        #hero-detail[data-theme="dark"]:not([data-smart-page="true"]) .countdown span { background-color: #fff; color: #172033; }
         #hero-detail[data-order="details-first"] #details-section { order: 2; }
         #hero-detail[data-order="details-first"] #highlight-grid { order: 3; }
         #hero-detail[data-order="details-first"] #team-section { order: 4; }
@@ -62,6 +66,29 @@
         #hero-detail[data-theme="dark"][data-smart-layout="true"] #hero-title,
         #hero-detail[data-theme="dark"][data-smart-layout="true"] #hero-subtitle,
         #hero-detail[data-theme="dark"][data-smart-layout="true"] #hero-kicker { color: inherit; }
+        #hero-detail[data-smart-page="true"] [data-smart-section] { color: var(--section-text); }
+        #hero-detail[data-smart-page="true"] [data-smart-section="highlights"] { background: transparent; }
+        #hero-detail[data-smart-page="true"] [data-smart-section]:not([data-smart-section="highlights"]),
+        #hero-detail[data-smart-page="true"] [data-smart-section] article,
+        #hero-detail[data-smart-page="true"] #contact-methods > div {
+            background: var(--section-bg); border: 1px solid var(--section-border);
+            border-radius: var(--section-radius); box-shadow: var(--section-shadow);
+        }
+        #hero-detail[data-smart-page="true"] #team-section { padding: 1.25rem; }
+        #hero-detail[data-smart-page="true"] [data-smart-section] h2,
+        #hero-detail[data-smart-page="true"] [data-smart-section] h3,
+        #hero-detail[data-smart-page="true"] [data-smart-section] p,
+        #hero-detail[data-smart-page="true"] [data-smart-section] [role="tabpanel"] { color: var(--section-text); }
+        #hero-detail[data-smart-page="true"] [data-smart-section] a { color: var(--section-link); }
+        #hero-detail[data-smart-page="true"] .tab-button { color: var(--section-text); border-color: var(--section-border); }
+        #hero-detail[data-smart-page="true"] .tab-button[aria-selected="true"] { color: var(--section-bg); background: var(--section-text); }
+        #hero-detail[data-smart-page="true"] .rich-table-cell { border-color: var(--section-border); }
+        #hero-detail[data-smart-page="true"] th.rich-table-cell { background: transparent; }
+        @media (min-width: 768px) {
+            #hero-detail[data-smart-page="true"] #highlight-grid,
+            #hero-detail[data-smart-page="true"] #team-grid,
+            #hero-detail[data-smart-page="true"] #contact-methods { grid-template-columns: repeat(var(--section-columns), minmax(0, 1fr)); }
+        }
         @media (min-width: 768px) {
             .smart-hero { display: var(--smart-display); flex-direction: var(--smart-direction); grid-template-columns: var(--smart-columns); }
         }
@@ -132,7 +159,7 @@
             </section>
         </article>
     </main>
-    <script src="smart-layout.js?v=20261029"></script>
+    <script src="smart-layout.js?v=20261029-page"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const supabaseClient = window.supabase.createClient(
@@ -165,6 +192,22 @@
                 return Array.isArray(parsed) ? parsed : [];
             } catch {
                 return [];
+            }
+
+            function readableTextColor(foreground, background) {
+                const luminance = color => {
+                    const hex = color.slice(1);
+                    const expanded = hex.length === 3 ? [...hex].map(char => char + char).join('') : hex;
+                    const channels = [0, 2, 4].map(index => parseInt(expanded.slice(index, index + 2), 16) / 255)
+                        .map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+                    return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+                };
+                const bg = luminance(background);
+                const contrast = color => {
+                    const fg = luminance(color);
+                    return (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05);
+                };
+                return contrast(foreground) >= 4.5 ? foreground : contrast('#000000') >= contrast('#ffffff') ? '#000000' : '#ffffff';
             }
         }
 
@@ -499,9 +542,42 @@
                 media.style.boxShadow = layout.image_box.box_shadow;
                 header.style.order = String(layout.text_box.order);
                 header.style.textAlign = layout.text_box.text_align;
-                header.style.color = layout.text_box.color;
+                header.style.color = readableTextColor(layout.text_box.color, layout.layout_style.background_color);
                 header.style.fontFamily = layout.text_box.font_family;
                 header.style.backgroundColor = layout.layout_style.background_color;
+                if (layout.page_style) {
+                    detail.dataset.smartPage = 'true';
+                    detail.style.gap = `${layout.page_style.section_gap_px}px`;
+                    const palettes = {
+                        light: ['#ffffff', '#1f2937', '#cbd5e1', '#1d4ed8'],
+                        warm: ['#fffbeb', '#713f12', '#d6b77a', '#92400e'],
+                        dark: ['#172033', '#f8fafc', '#64748b', '#93c5fd'],
+                        blue: ['#eff6ff', '#1e3a5f', '#93b4dc', '#1d4ed8'],
+                        green: ['#ecfdf5', '#14532d', '#86c9a0', '#166534']
+                    };
+                    const styles = {
+                        rounded: ['1rem', '0 1px 5px #0f172a18'],
+                        outlined: ['0.5rem', 'none'],
+                        flat: ['0', 'none']
+                    };
+                    const sectionIds = { highlights: 'highlight-grid', details: 'details-section', team: 'team-section', contact: 'contact-section' };
+                    layout.page_style.section_order.forEach((name, index) => {
+                        const section = document.getElementById(sectionIds[name]);
+                        const options = layout.page_style.sections[name];
+                        const [background, text, border, link] = palettes[options.palette];
+                        const [radius, shadow] = styles[options.style];
+                        section.dataset.smartSection = name;
+                        section.style.order = String(index + 1);
+                        detail.append(section);
+                        section.style.setProperty('--section-bg', background);
+                        section.style.setProperty('--section-text', text);
+                        section.style.setProperty('--section-border', border);
+                        section.style.setProperty('--section-link', link);
+                        section.style.setProperty('--section-radius', radius);
+                        section.style.setProperty('--section-shadow', shadow);
+                        section.style.setProperty('--section-columns', String(options.columns));
+                    });
+                }
             } else if (layout) {
                 console.error('Invalid smart layout; using the standard featured layout.');
             }

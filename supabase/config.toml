@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.hero-design-assistant]
 verify_jwt = false
+
+[functions.hero-image-assistant]
+verify_jwt = false

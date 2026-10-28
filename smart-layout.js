@@ -10,6 +10,17 @@
         const color = item => typeof item === 'string' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(item);
         const shadow = item => typeof item === 'string' && (item === 'none' ||
             /^-?\d{1,2}px -?\d{1,2}px \d{1,2}px(?: \d{1,2}px)? #[0-9a-f]{6}$/i.test(item));
+        const page = value.page_style;
+        if (page !== undefined) {
+            if (!record(page) || !Array.isArray(page.section_order) || page.section_order.length !== 4 ||
+                new Set(page.section_order).size !== 4 || !page.section_order.every(name => ['highlights', 'details', 'team', 'contact'].includes(name)) ||
+                !integer(page.section_gap_px, 0, 80) || !record(page.sections)) return false;
+            for (const name of ['highlights', 'details', 'team', 'contact']) {
+                const section = page.sections[name];
+                if (!record(section) || !oneOf(section.palette, ['light', 'warm', 'dark', 'blue', 'green']) ||
+                    !oneOf(section.style, ['rounded', 'outlined', 'flat']) || !integer(section.columns, 1, 3)) return false;
+            }
+        }
         return oneOf(layout.display, ['grid', 'flex']) &&
             oneOf(layout.flex_direction, ['column', 'row', 'column-reverse', 'row-reverse']) &&
             oneOf(layout.grid_template_columns, ['1fr', '1fr 1fr', '2fr 1fr']) &&

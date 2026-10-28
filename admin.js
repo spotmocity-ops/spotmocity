@@ -1433,6 +1433,10 @@ function updateHeroTeamMemberIndexes(row) {
 
 function renderHomeHeroEditors() {
     const editor = document.getElementById('home-hero-editor');
+    editor.querySelectorAll('[data-content-row]').forEach(row => {
+        const generated = generatedHeroBackgrounds.get(row);
+        if (generated) URL.revokeObjectURL(generated.url);
+    });
     editor.innerHTML = homeHeroItems.length ? homeHeroItems.map((item, index) => {
         const pageId = item.pageId || `hero-${item.order ?? index + 1}`;
         const template = item.template === 'custom' ? 'custom' : 'basic';
@@ -1492,8 +1496,17 @@ function renderHomeHeroEditors() {
                         </div>
                         ${renderHeroTextarea('customPrompt', '自訂版設計要求', item.customPrompt || '', '例如：藍色、圖片與標題並排、詳細內容優先。', 3)}
                         <label class="flex items-start gap-2 text-sm text-gray-700"><input type="checkbox" data-hero-ai-rewrite><span>允許 AI 建議改寫標題、副標題、按鈕及亮點文字（預設保留原文）</span></label>
-                        <label class="block text-sm font-medium text-gray-700">AI 設計模式<select data-hero-ai-mode class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="smart">智慧排版（圖片與標題區）</option><option value="classic">原有主題及內容順序設計</option></select></label>
-                        <p class="text-xs text-gray-500">智慧排版只調整頂部圖片與標題區，保留文字、詳細分頁及團隊；手機版會自動改為上下排列。不會產生圖片。</p>
+                        <label class="block text-sm font-medium text-gray-700">AI 設計模式<select data-hero-ai-mode class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="smart">智慧排版（整個詳情頁）</option><option value="classic">原有主題及內容順序設計</option></select></label>
+                        <p class="text-xs text-gray-500">智慧排版設計頂部、亮點、詳細內容、團隊及聯絡區的樣式和順序，保留所有原有文字及圖片；手機版會自動調整。背景圖片需另行生成及確認。</p>
+                        <div class="rounded-lg border border-violet-200 p-3">
+                            <p class="text-sm font-semibold">AI 背景圖片</p>
+                            <p class="mt-1 text-xs text-gray-600">根據卡片標題、簡介及設計要求生成一張背景圖；每次生成會使用 Qwen 方案額度。圖片不會自動套用或儲存。</p>
+                            <button type="button" data-generate-hero-background class="mt-2 rounded border border-violet-300 px-3 py-1.5 text-sm text-violet-800">生成背景圖片</button>
+                            <div data-generated-background class="hidden mt-3">
+                                <img alt="AI 生成背景圖片預覽" class="max-h-64 max-w-full rounded border">
+                                <button type="button" data-apply-generated-background class="mt-2 rounded bg-violet-700 px-3 py-1.5 text-sm text-white">使用這張背景圖片</button>
+                            </div>
+                        </div>
                         <button type="button" data-clear-smart-layout class="rounded border px-3 py-1.5 text-sm">移除已套用的智慧排版</button>
                         <div class="flex flex-wrap gap-2"><button type="button" data-hero-ai="${index}" class="rounded border border-violet-300 px-3 py-1.5 text-sm text-violet-800 hover:bg-violet-50">✨ AI 設計助手</button><button type="button" data-show-hero-ai-preview class="hidden rounded border bg-white px-3 py-1.5 text-sm">預覽 AI 設計</button></div>
                         <div data-hero-ai-preview class="hidden rounded-lg border border-violet-200 bg-violet-50 p-3"></div>
@@ -1597,6 +1610,53 @@ function heroPreviewItem(row, design, allowRewrite) {
 }
 
 const heroAiDrafts = new WeakMap();
+const generatedHeroBackgrounds = new WeakMap();
+
+async function generateHeroBackground(row, button) {
+    const title = row.querySelector('[data-content-field="title"]').value.trim();
+    const description = row.querySelector('[data-content-field="description"]').value.trim();
+    const instruction = row.querySelector('[data-content-field="customPrompt"]').value.trim();
+    if (!title && !description && !instruction) {
+        alert('請先填寫卡片標題、簡介或自訂設計要求。');
+        return;
+    }
+    if (!confirm('將把卡片標題、簡介及設計要求傳送至 Qwen 生成一張圖片，可能產生費用。繼續嗎？')) return;
+    const snapshot = snapshotHeroEditor(row);
+    button.disabled = true;
+    button.textContent = '圖片生成中…';
+    try {
+        const { data, error } = await supabaseClient.functions.invoke('hero-image-assistant', {
+            body: { prompt: `活動主題：${title}\n活動簡介：${description}\n設計要求：${instruction}` }
+        });
+        if (error) {
+            const response = await error.context?.json?.().catch(() => null);
+            throw new Error(response?.error || error.message || '圖片生成服務無法使用。');
+        }
+        if (!data || typeof data.imageBase64 !== 'string' || data.imageBase64.length > 9 * 1024 * 1024) {
+            throw new Error('圖片服務回傳格式無效。');
+        }
+        const binary = atob(data.imageBase64);
+        const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+        if (bytes.length < 8 || ![137, 80, 78, 71, 13, 10, 26, 10].every((value, i) => bytes[i] === value)) {
+            throw new Error('圖片服務回傳的圖片格式無效。');
+        }
+        if (!row.isConnected) return;
+        if (snapshotHeroEditor(row) !== snapshot) throw new Error('生成期間內容已修改，請重新生成，避免套用過時圖片。');
+        const old = generatedHeroBackgrounds.get(row);
+        if (old) URL.revokeObjectURL(old.url);
+        const file = new File([bytes], 'ai-background.png', { type: 'image/png' });
+        const url = URL.createObjectURL(file);
+        generatedHeroBackgrounds.set(row, { file, url, snapshot });
+        const preview = row.querySelector('[data-generated-background]');
+        preview.querySelector('img').src = url;
+        preview.classList.remove('hidden');
+    } catch (error) {
+        alert(`AI 背景生成失敗：${error?.message || '請稍後再試。'}`);
+    } finally {
+        button.disabled = false;
+        button.textContent = '生成背景圖片';
+    }
+}
 
 async function getHeroImageFeatures(row) {
     const input = row.querySelector('[data-content-image][data-image-field="imageUrl"]');
@@ -1679,10 +1739,21 @@ async function requestHeroAiDesign(index, mode = 'new') {
     row.querySelectorAll('[data-hero-ai-action]').forEach(control => { control.disabled = true; });
     try {
         const features = smart ? await getHeroImageFeatures(row) : null;
+        const sections = smart ? {
+            highlights: ['highlightTicket', 'highlightAudience', 'highlightVenue'].filter(name =>
+                row.querySelector(`[data-content-field="${name}"]`).value.trim()).length,
+            tabs: ['tabHighlights', 'tabSchedule', 'tabFaq'].filter(name =>
+                row.querySelector(`[data-content-field="${name}"]`).value.trim()).length,
+            photos: Array.from({ length: 5 }, (_, i) =>
+                row.querySelector(`[data-content-field="tabHighlightsImageUrl${i + 1}"]`).value.trim()).filter(Boolean).length,
+            members: row.querySelectorAll('[data-team-member]').length,
+            contact: ['contactEmail', 'contactPhone', 'facebookUrl', 'instagramUrl', 'registrationMethod'].some(name =>
+                row.querySelector(`[data-content-field="${name}"]`).value.trim())
+        } : null;
         const { data, error } = await supabaseClient.functions.invoke('hero-design-assistant', {
             body: { title, description, prompt, current, allowRewrite, mode,
                 ...(smart ? { action: 'smart-layout', imageColors: features.colors, imageRatio: features.ratio,
-                    previousLayout: mode === 'refine' ? previous.item.smartLayout : null } : {}) }
+                    sections, previousLayout: mode === 'refine' ? previous.item.smartLayout : null } : {}) }
         });
         if (error) {
             const responseMessage = await error.context?.text?.().catch(() => '');
@@ -1720,7 +1791,7 @@ async function requestHeroAiDesign(index, mode = 'new') {
         const preview = row.querySelector('[data-hero-ai-preview]');
         const hasPendingFiles = Array.from(row.querySelectorAll('[data-content-image], [data-content-media]')).some(input => input.files.length);
         preview.innerHTML = `<h4 class="font-semibold text-violet-900">AI 設計預覽</h4>
-            <p class="mt-1 text-sm text-gray-700">預覽尚未套用或儲存。${!smart && allowRewrite ? '已允許 AI 建議改寫標題、副標題、按鈕及亮點，請核對內容。' : '所有原有文字保持不變。'}詳細分頁和團隊保持不變。</p>
+            <p class="mt-1 text-sm text-gray-700">預覽尚未套用或儲存。${!smart && allowRewrite ? '已允許 AI 建議改寫標題、副標題、按鈕及亮點，請核對內容。' : '所有原有文字保持不變。'}詳細分頁和團隊的內容保持不變。</p>
             <p data-hero-ai-explanation class="mt-1 whitespace-pre-line text-sm text-violet-900"></p>
             ${hasPendingFiles ? '<p class="mt-1 text-sm text-amber-800">尚未上傳的圖片或影片不會出現在預覽，儲存後才會顯示。</p>' : ''}
             <div class="mt-3 flex gap-2"><button type="button" data-hero-preview-size="desktop" aria-pressed="true" class="rounded border bg-white px-3 py-1 text-sm">電腦版</button><button type="button" data-hero-preview-size="mobile" aria-pressed="false" class="rounded border bg-white px-3 py-1 text-sm">手機版</button></div>
@@ -3447,6 +3518,30 @@ function bindEvents() {
             if (memberCards.length >= 8) return;
             row.querySelector('[data-team-members]').insertAdjacentHTML('beforeend', renderHeroTeamMember({}, memberCards.length));
             updateHeroTeamMemberIndexes(row);
+            return;
+        }
+        const generateBackground = event.target.closest('[data-generate-hero-background]');
+        if (generateBackground) {
+            void generateHeroBackground(generateBackground.closest('[data-content-row]'), generateBackground);
+            return;
+        }
+        const applyBackground = event.target.closest('[data-apply-generated-background]');
+        if (applyBackground) {
+            const row = applyBackground.closest('[data-content-row]');
+            const generated = generatedHeroBackgrounds.get(row);
+            if (!generated || generated.snapshot !== snapshotHeroEditor(row)) {
+                alert('編輯器內容已變動，請重新生成背景圖片。');
+                return;
+            }
+            const input = row.querySelector('[data-content-image][data-image-field="pageBackgroundUrl"]');
+            const transfer = new DataTransfer();
+            transfer.items.add(generated.file);
+            input.files = transfer.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            URL.revokeObjectURL(generated.url);
+            generatedHeroBackgrounds.delete(row);
+            row.querySelector('[data-generated-background]').classList.add('hidden');
+            alert('已選用背景圖片；請按「儲存此內容」或「儲存全部置頂內容」才會更新網站。');
             return;
         }
         const clearSmartLayout = event.target.closest('[data-clear-smart-layout]');
