@@ -21,8 +21,8 @@
         .hero-photo-window .hero-frame-layer { z-index: 0; pointer-events: none; }
         .hero-photo-window .hero-frame-layer img { display: block; object-fit: fill; }
         .hero-polaroid figcaption { margin: 0.5rem; padding: 0.55rem 0.75rem; color: #374151; font-size: 0.75rem; line-height: 1.35; text-align: center; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.75rem; box-shadow: 0 1px 3px rgb(15 23 42 / 10%); }
-        .hero-polaroid.has-custom-frame .hero-photo-window figcaption { position: absolute; z-index: 2; inset: 69.7674% 3.9773% 3.2558%; display: flex; flex-direction: column; justify-content: center; overflow: hidden; margin: 0; padding: 0.1rem 0.3rem; color: #374151; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.75rem; box-shadow: 0 1px 3px rgb(15 23 42 / 10%); }
-        .hero-polaroid.has-custom-frame .hero-photo-window figcaption strong, .hero-polaroid.has-custom-frame .hero-photo-window figcaption span { display: block; overflow: hidden; text-overflow: ellipsis; }
+        .hero-polaroid.has-custom-frame .hero-photo-window figcaption, body.site-mode-desktop .hero-polaroid:not(.has-custom-frame) figcaption { position: absolute; z-index: 2; inset: 69.7674% 3.9773% 3.2558%; display: flex; flex-direction: column; justify-content: center; overflow: hidden; margin: 0; padding: 0.1rem 0.3rem; color: #374151; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.75rem; box-shadow: 0 1px 3px rgb(15 23 42 / 10%); }
+        .hero-polaroid.has-custom-frame .hero-photo-window figcaption strong, .hero-polaroid.has-custom-frame .hero-photo-window figcaption span, body.site-mode-desktop .hero-polaroid:not(.has-custom-frame) figcaption strong, body.site-mode-desktop .hero-polaroid:not(.has-custom-frame) figcaption span { display: block; overflow: hidden; text-overflow: ellipsis; }
         #hero-detail-dialog { width: min(96vw, 72rem); max-width: none; height: min(94dvh, 58rem); max-height: none; padding: 0; border: 0; border-radius: 1rem; overflow: hidden; box-shadow: 0 24px 70px rgb(15 23 42 / 35%); }
         #hero-detail-dialog::backdrop { background: rgb(15 23 42 / 70%); }
         #hero-detail-dialog .hero-dialog-header { height: 3.25rem; display: flex; align-items: center; justify-content: flex-end; padding: 0 0.75rem; background: #fff; border-bottom: 1px solid #e5e7eb; }
@@ -61,6 +61,11 @@
         body.site-mode-mobile #homepage-info-panel { order: 2; margin-top: 1rem; }
         body.site-mode-mobile #homepage-service-panel { order: 3; margin-top: 1rem; }
         body.site-mode-desktop { min-width: 1024px; }
+        body.site-mode-desktop .hero-polaroid { container-type: inline-size; }
+        body.site-mode-desktop .hero-polaroid:not(.has-custom-frame) { padding: 0; overflow: hidden; aspect-ratio: 440 / 215; }
+        body.site-mode-desktop .hero-polaroid:not(.has-custom-frame) > picture { position: absolute; inset: 2.3256% auto auto 1.7045%; width: 96.5909%; height: 65.1163%; margin: 0; }
+        body.site-mode-desktop .hero-polaroid:not(.has-custom-frame) > picture img { height: 100%; }
+        body.site-mode-desktop .hero-polaroid figcaption { padding-block: 0; font-size: clamp(0.5rem, 7cqw, 0.75rem); line-height: 1.1; }
         body.site-mode-desktop [role="group"][aria-label="版面模式"] { position: fixed; top: 0.5rem; right: 0.5rem; z-index: 60; }
         body.site-mode-desktop #homepage-hero-layout { display: grid; grid-template-columns: 18rem minmax(0, 1fr) 18rem; }
         body.site-mode-desktop #middle-background > div { display: grid; grid-template-columns: minmax(0, 1fr) 14rem; }
