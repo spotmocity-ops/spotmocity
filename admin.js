@@ -1373,13 +1373,13 @@ function sanitizeHeroRichHtml(value) {
     }).join('');
 }
 
-function renderHeroImageField(item, name, label, help, crop = null) {
+function renderHeroImageField(item, name, label, help, crop = null, removable = false) {
     const url = safeImageUrl(item[name] || '');
     const variant = name === 'mobileImageUrl' ? 'mobile' : name === 'frameUrl' ? 'frame' : name === 'mobileFrameUrl' ? 'mobile-frame' : '';
     const cropAttributes = crop
         ? `data-hero-image data-crop-ratio="${crop.ratio}" data-crop-width="${crop.width}" data-crop-height="${crop.height}"`
         : '';
-    return `<div><label class="block text-sm font-medium text-gray-700">${label}<input data-content-field="${name}" type="url" value="${escapeHtml(item[name] || '')}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal" placeholder="https://..."></label><label class="block mt-2 text-xs font-medium text-gray-600">上傳圖片<input type="file" data-content-image data-image-field="${name}" data-image-variant="${variant}" ${cropAttributes} accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full text-xs"></label><p class="mt-1 text-xs text-gray-500">${help}</p><img data-content-preview="${name}" src="${escapeHtml(url)}" alt="${escapeHtml(label)}預覽" class="${url ? '' : 'hidden'} mt-2 max-h-32 rounded border object-contain"></div>`;
+    return `<div data-hero-image-field><label class="block text-sm font-medium text-gray-700">${label}<input data-content-field="${name}" type="url" value="${escapeHtml(item[name] || '')}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal" placeholder="https://..."></label><label class="block mt-2 text-xs font-medium text-gray-600">上傳圖片<input type="file" data-content-image data-image-field="${name}" data-image-variant="${variant}" ${cropAttributes} accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full text-xs"></label>${removable ? '<button type="button" data-remove-hero-image class="mt-2 rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50">刪除圖片</button>' : ''}<p class="mt-1 text-xs text-gray-500">${help}</p><img data-content-preview="${name}" src="${escapeHtml(url)}" alt="${escapeHtml(label)}預覽" class="${url ? '' : 'hidden'} mt-2 max-h-32 rounded border object-contain"></div>`;
 }
 
 function renderHeroTeamMember(member = {}, index = 0) {
@@ -1396,6 +1396,7 @@ function renderHeroTeamMember(member = {}, index = 0) {
         <label class="block text-xs font-medium text-gray-700">簡介<textarea data-team-member-field="bio" rows="2" maxlength="500" class="mt-1 w-full border rounded px-3 py-2 text-sm font-normal">${escapeHtml(member.bio || '')}</textarea></label>
         <label class="block text-xs font-medium text-gray-700">圖片網址（選填）<input data-team-member-image-url type="url" value="${escapeHtml(imageUrl)}" placeholder="https://..." class="mt-1 w-full border rounded px-3 py-2 text-sm font-normal"></label>
         <label class="block text-xs font-medium text-gray-700">上傳嘉賓圖片<input type="file" data-content-image data-image-field="${imageField}" data-team-image-index="${index}" accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full"></label>
+        <button type="button" data-remove-hero-image class="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50">刪除圖片</button>
         <img data-content-preview="${imageField}" src="${escapeHtml(imageUrl)}" alt="嘉賓 ${index + 1} 圖片預覽" class="${imageUrl ? '' : 'hidden'} h-20 w-20 rounded-full border object-cover">
     </article>`;
 }
@@ -1483,6 +1484,7 @@ function renderHomeHeroEditors() {
                 <div class="mt-4 space-y-4">
                     <label class="block text-sm font-medium text-gray-700">詳情頁版本<select data-content-field="template" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="basic" ${template === 'basic' ? 'selected' : ''}>基本版（一般排版）</option><option value="custom" ${template === 'custom' ? 'selected' : ''}>自訂版（可使用 AI 設計）</option></select></label>
                     <div data-hero-custom-options class="${template === 'custom' ? '' : 'hidden'} space-y-3 rounded-lg border border-violet-200 bg-white p-3">
+                        <input type="hidden" data-content-field="smartLayoutJson" value="${escapeHtml(item.smartLayout ? JSON.stringify(item.smartLayout) : '')}">
                         <div class="grid gap-3 md:grid-cols-2">
                             <label class="block text-sm font-medium text-gray-700">自訂版風格<select data-content-field="customTheme" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal">${[['light', '清新明亮'], ['warm', '溫暖活力'], ['dark', '沉浸深色'], ['blue', '清爽藍色'], ['green', '自然綠色']].map(([value, label]) => `<option value="${value}" ${(item.customTheme || 'light') === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
                             <label class="block text-sm font-medium text-gray-700">自訂版排版<select data-content-field="customLayout" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="classic" ${item.customLayout !== 'split' ? 'selected' : ''}>上下排列</option><option value="split" ${item.customLayout === 'split' ? 'selected' : ''}>圖片與標題並排（電腦版）</option></select></label>
@@ -1490,14 +1492,16 @@ function renderHomeHeroEditors() {
                         </div>
                         ${renderHeroTextarea('customPrompt', '自訂版設計要求', item.customPrompt || '', '例如：藍色、圖片與標題並排、詳細內容優先。', 3)}
                         <label class="flex items-start gap-2 text-sm text-gray-700"><input type="checkbox" data-hero-ai-rewrite><span>允許 AI 建議改寫標題、副標題、按鈕及亮點文字（預設保留原文）</span></label>
-                        <p class="text-xs text-gray-500">AI 可選五種配色、兩種排版及三種內容順序；不會產生圖片或改寫詳細分頁及團隊。</p>
+                        <label class="block text-sm font-medium text-gray-700">AI 設計模式<select data-hero-ai-mode class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="smart">智慧排版（圖片與標題區）</option><option value="classic">原有主題及內容順序設計</option></select></label>
+                        <p class="text-xs text-gray-500">智慧排版只調整頂部圖片與標題區，保留文字、詳細分頁及團隊；手機版會自動改為上下排列。不會產生圖片。</p>
+                        <button type="button" data-clear-smart-layout class="rounded border px-3 py-1.5 text-sm">移除已套用的智慧排版</button>
                         <div class="flex flex-wrap gap-2"><button type="button" data-hero-ai="${index}" class="rounded border border-violet-300 px-3 py-1.5 text-sm text-violet-800 hover:bg-violet-50">✨ AI 設計助手</button><button type="button" data-show-hero-ai-preview class="hidden rounded border bg-white px-3 py-1.5 text-sm">預覽 AI 設計</button></div>
                         <div data-hero-ai-preview class="hidden rounded-lg border border-violet-200 bg-violet-50 p-3"></div>
                     </div>
                     <fieldset class="space-y-3"><legend class="font-semibold text-gray-800 mb-2">1. 頂部視覺與核心行動區</legend>
                         <div class="rounded-lg border bg-white p-3">
                             <p class="text-sm font-semibold text-gray-800">詳情頁背景圖片</p>
-                            ${renderHeroImageField(item, 'pageBackgroundUrl', '背景圖片網址（選填）', '建議使用橫向大圖；圖片會以背景方式顯示在詳情頁。', null)}
+                            ${renderHeroImageField(item, 'pageBackgroundUrl', '背景圖片網址（選填）', '建議使用橫向大圖；圖片會以背景方式顯示在詳情頁。', null, true)}
                             <div class="mt-3 grid gap-3 sm:grid-cols-2">
                                 <label class="block text-xs font-medium text-gray-700">背景放大：<output data-hero-range-output="pageBackgroundScale">${Math.min(160, Math.max(100, Number(item.pageBackgroundScale) || 100))}%</output><input data-content-field="pageBackgroundScale" type="range" min="100" max="160" step="5" value="${Math.min(160, Math.max(100, Number(item.pageBackgroundScale) || 100))}" class="mt-2 w-full"></label>
                                 <label class="block text-xs font-medium text-gray-700">背景上下位置：<output data-hero-range-output="pageBackgroundPosition">${Math.min(100, Math.max(0, Number(item.pageBackgroundPosition ?? 50)))}%</output><input data-content-field="pageBackgroundPosition" type="range" min="0" max="100" step="5" value="${Math.min(100, Math.max(0, Number(item.pageBackgroundPosition ?? 50)))}" class="mt-2 w-full"></label>
@@ -1535,7 +1539,7 @@ function renderHomeHeroEditors() {
                     </fieldset>
                     <fieldset class="space-y-3"><legend class="font-semibold text-gray-800 mb-2">3. 深度內容與分頁</legend>
                         ${renderHeroRichEditor('tabHighlights', '標籤 A｜活動／品牌亮點', tabs.highlights || '', '輸入文字，使用工具列設定格式或插入圖片。')}
-                        <div><p class="text-sm font-medium text-gray-700 mb-2">標籤 A｜現場／產品相片（最多 5 張）</p><div class="grid gap-3 sm:grid-cols-2">${highlightImageUrls.map((url, imageIndex) => renderHeroImageField({ [`tabHighlightsImageUrl${imageIndex + 1}`]: url }, `tabHighlightsImageUrl${imageIndex + 1}`, `相片 ${imageIndex + 1}`, '建議 1200 × 800 px；每張可上傳 JPG／PNG／WebP，最多 10 MB。', { ratio: 3 / 2, width: 1200, height: 800 })).join('')}</div></div>
+                        <div><p class="text-sm font-medium text-gray-700 mb-2">標籤 A｜現場／產品相片（最多 5 張）</p><div class="grid gap-3 sm:grid-cols-2">${highlightImageUrls.map((url, imageIndex) => renderHeroImageField({ [`tabHighlightsImageUrl${imageIndex + 1}`]: url }, `tabHighlightsImageUrl${imageIndex + 1}`, `相片 ${imageIndex + 1}`, '建議 1200 × 800 px；每張可上傳 JPG／PNG／WebP，最多 10 MB。', { ratio: 3 / 2, width: 1200, height: 800 }, true)).join('')}</div></div>
                         ${renderHeroRichEditor('tabSchedule', '標籤 B｜詳細內容', tabs.schedule || '', '輸入活動詳細內容，可設定標題、清單或插入圖片。')}
                         ${renderHeroRichEditor('tabFaq', '標籤 C｜常見問題 FAQ', tabs.faq || '', '輸入問題與答案，可使用標題、清單、連結或圖片。')}
                     </fieldset>
@@ -1566,8 +1570,14 @@ function heroPreviewItem(row, design, allowRewrite) {
     ]));
     const members = JSON.parse(item.teamJson || '[]');
     const value = (name, suggestion) => allowRewrite && typeof suggestion === 'string' && suggestion.trim() ? suggestion : item[name];
+    let smartLayout = null;
+    if (Object.hasOwn(design, 'smartLayout')) smartLayout = design.smartLayout;
+    else if (item.smartLayoutJson) {
+        try { smartLayout = JSON.parse(item.smartLayoutJson); } catch { console.error('Invalid saved smart layout JSON'); }
+    }
     return {
         ...item, template: 'custom',
+        smartLayout,
         customTheme: design.customTheme, customLayout: design.customLayout, customOrder: design.customOrder,
         headline: value('headline', design.headline), subtitle: value('subtitle', design.subtitle),
         ctaLabel: value('ctaLabel', design.ctaLabel),
@@ -1588,6 +1598,43 @@ function heroPreviewItem(row, design, allowRewrite) {
 
 const heroAiDrafts = new WeakMap();
 
+async function getHeroImageFeatures(row) {
+    const input = row.querySelector('[data-content-image][data-image-field="imageUrl"]');
+    const file = input.files[0];
+    const url = file ? URL.createObjectURL(file) : safeImageUrl(row.querySelector('[data-content-field="imageUrl"]').value.trim());
+    if (!url) return { colors: [], ratio: '', unavailable: true };
+    try {
+        const image = new Image();
+        if (!file) image.crossOrigin = 'anonymous';
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('image timeout')), 8000);
+            image.onload = () => { clearTimeout(timeout); resolve(); };
+            image.onerror = () => { clearTimeout(timeout); reject(new Error('image load failed')); };
+            image.src = url;
+        });
+        const ratio = `${image.naturalWidth}:${image.naturalHeight}`;
+        const canvas = document.createElement('canvas');
+        canvas.width = 16;
+        canvas.height = 16;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('canvas unavailable');
+        context.drawImage(image, 0, 0, 16, 16);
+        const pixels = context.getImageData(0, 0, 16, 16).data;
+        const counts = new Map();
+        for (let i = 0; i < pixels.length; i += 4) {
+            if (pixels[i + 3] < 128) continue;
+            const color = `#${[pixels[i], pixels[i + 1], pixels[i + 2]].map(value => Math.min(255, Math.round(value / 32) * 32).toString(16).padStart(2, '0')).join('')}`;
+            counts.set(color, (counts.get(color) || 0) + 1);
+        }
+        return { colors: [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(entry => entry[0]), ratio, unavailable: false };
+    } catch (error) {
+        console.warn('Could not inspect featured image:', error);
+        return { colors: [], ratio: '', unavailable: true };
+    } finally {
+        if (file) URL.revokeObjectURL(url);
+    }
+}
+
 async function requestHeroAiDesign(index, mode = 'new') {
     const row = document.querySelector(`#home-hero-editor [data-home-hero-card="${index}"]`);
     if (!row) return;
@@ -1607,6 +1654,7 @@ async function requestHeroAiDesign(index, mode = 'new') {
     const title = row.querySelector('[data-content-field="title"]').value.trim();
     const description = row.querySelector('[data-content-field="description"]').value.trim();
     const allowRewrite = row.querySelector('[data-hero-ai-rewrite]').checked;
+    const smart = row.querySelector('[data-hero-ai-mode]').value === 'smart';
     const snapshot = snapshotHeroEditor(row);
     const current = Object.fromEntries(['headline', 'subtitle', 'ctaLabel', 'highlightTicket', 'highlightAudience', 'highlightVenue', 'customTheme', 'customLayout', 'customOrder'].map(name =>
         [name, row.querySelector(`[data-content-field="${name}"]`).value.trim()]
@@ -1614,6 +1662,10 @@ async function requestHeroAiDesign(index, mode = 'new') {
     const button = row.querySelector('[data-hero-ai]');
     if (button.disabled) return;
     if (mode === 'refine') {
+        if (smart !== previous.smart) {
+            alert('設計模式已變更，請先重新生成預覽。');
+            return;
+        }
         Object.assign(current, {
             headline: previous.item.headline, subtitle: previous.item.subtitle, ctaLabel: previous.item.ctaLabel,
             highlightTicket: previous.item.details.highlights.ticket,
@@ -1626,15 +1678,26 @@ async function requestHeroAiDesign(index, mode = 'new') {
     button.textContent = 'AI 設計中…';
     row.querySelectorAll('[data-hero-ai-action]').forEach(control => { control.disabled = true; });
     try {
+        const features = smart ? await getHeroImageFeatures(row) : null;
         const { data, error } = await supabaseClient.functions.invoke('hero-design-assistant', {
-            body: { title, description, prompt, current, allowRewrite, mode }
+            body: { title, description, prompt, current, allowRewrite, mode,
+                ...(smart ? { action: 'smart-layout', imageColors: features.colors, imageRatio: features.ratio,
+                    previousLayout: mode === 'refine' ? previous.item.smartLayout : null } : {}) }
         });
         if (error) {
             const responseMessage = await error.context?.text?.().catch(() => '');
             throw new Error(responseMessage || error.message || 'AI 設計服務無法使用');
         }
-        if (!data?.design) throw new Error(data?.error || 'AI 沒有回傳可用設計');
-        const design = data.design;
+        if (smart && (!window.isSmartLayout(data?.layout) || typeof data.usedFallback !== 'boolean')) {
+            throw new Error('智慧排版回傳格式無效，請確認已部署最新設計服務後重試。');
+        }
+        if (!smart && !data?.design) throw new Error(data?.error || 'AI 沒有回傳可用設計');
+        const design = smart ? {
+            smartLayout: data.layout, customTheme: current.customTheme, customLayout: current.customLayout,
+            customOrder: current.customOrder, headline: '', subtitle: '', ctaLabel: '',
+            highlights: { ticket: '', audience: '', venue: '' },
+            explanation: `${data.usedFallback ? 'AI 未能產生有效排版，以下為預設標準排版。' : '智慧排版已產生，可預覽後再決定是否套用。'}${features.unavailable ? ' 未能讀取圖片顏色或比例，本次未使用圖片特徵。' : ''}`
+        } : { ...data.design, smartLayout: null };
         if (!['light', 'warm', 'dark', 'blue', 'green'].includes(design.customTheme) ||
             !['classic', 'split'].includes(design.customLayout) ||
             !['standard', 'details-first', 'people-first'].includes(design.customOrder) ||
@@ -1644,8 +1707,8 @@ async function requestHeroAiDesign(index, mode = 'new') {
         }
         if (!row.isConnected) return;
         if (snapshotHeroEditor(row) !== snapshot) throw new Error('設計期間內容已修改，請重新產生預覽。');
-        const item = heroPreviewItem(row, design, allowRewrite);
-        if (mode === 'refine' && allowRewrite) {
+        const item = heroPreviewItem(row, design, smart ? false : allowRewrite);
+        if (mode === 'refine' && allowRewrite && !smart) {
             for (const name of ['headline', 'subtitle', 'ctaLabel']) {
                 if (!design[name].trim()) item[name] = previous.item[name];
             }
@@ -1653,11 +1716,11 @@ async function requestHeroAiDesign(index, mode = 'new') {
                 if (!design.highlights[name].trim()) item.details.highlights[name] = previous.item.details.highlights[name];
             }
         }
-        heroAiDrafts.set(row, { item, design, snapshot, allowRewrite });
+        heroAiDrafts.set(row, { item, design, snapshot, allowRewrite, smart });
         const preview = row.querySelector('[data-hero-ai-preview]');
         const hasPendingFiles = Array.from(row.querySelectorAll('[data-content-image], [data-content-media]')).some(input => input.files.length);
         preview.innerHTML = `<h4 class="font-semibold text-violet-900">AI 設計預覽</h4>
-            <p class="mt-1 text-sm text-gray-700">預覽尚未套用或儲存。${allowRewrite ? '已允許 AI 建議改寫標題、副標題、按鈕及亮點，請核對內容。' : '所有原有文字保持不變，只建議調整配色、排版及順序。'}詳細分頁和團隊保持不變。</p>
+            <p class="mt-1 text-sm text-gray-700">預覽尚未套用或儲存。${!smart && allowRewrite ? '已允許 AI 建議改寫標題、副標題、按鈕及亮點，請核對內容。' : '所有原有文字保持不變。'}詳細分頁和團隊保持不變。</p>
             <p data-hero-ai-explanation class="mt-1 whitespace-pre-line text-sm text-violet-900"></p>
             ${hasPendingFiles ? '<p class="mt-1 text-sm text-amber-800">尚未上傳的圖片或影片不會出現在預覽，儲存後才會顯示。</p>' : ''}
             <div class="mt-3 flex gap-2"><button type="button" data-hero-preview-size="desktop" aria-pressed="true" class="rounded border bg-white px-3 py-1 text-sm">電腦版</button><button type="button" data-hero-preview-size="mobile" aria-pressed="false" class="rounded border bg-white px-3 py-1 text-sm">手機版</button></div>
@@ -1683,6 +1746,7 @@ async function requestHeroAiDesign(index, mode = 'new') {
             }
             const fields = {
                 template: item.template, customTheme: item.customTheme, customLayout: item.customLayout,
+                smartLayoutJson: item.smartLayout ? JSON.stringify(item.smartLayout) : '',
                 customOrder: item.customOrder, headline: item.headline, subtitle: item.subtitle, ctaLabel: item.ctaLabel,
                 highlightTicket: item.details.highlights.ticket, highlightAudience: item.details.highlights.audience,
                 highlightVenue: item.details.highlights.venue
@@ -2055,6 +2119,17 @@ async function saveHomepageItems(containerId, settingKey, label, folder, onlyRow
             alert('首頁置頂內容最多設定 9 張。');
             return false;
         }
+        for (const row of heroRows) {
+            const value = row.querySelector('[data-content-field="smartLayoutJson"]').value;
+            if (value) {
+                let layout;
+                try { layout = JSON.parse(value); } catch { layout = null; }
+                if (!window.isSmartLayout(layout)) {
+                    alert('智慧排版資料格式無效，請移除智慧排版或重新生成後再儲存。');
+                    return false;
+                }
+            }
+        }
         if (heroRows.some(row => {
             try {
                 const members = JSON.parse(row.querySelector('[data-content-field="teamJson"]').value || '[]');
@@ -2075,18 +2150,23 @@ async function saveHomepageItems(containerId, settingKey, label, folder, onlyRow
             alert('請為每張置頂圖片選擇電腦版圖片或輸入圖片網址。');
             return false;
         }
-        if (heroRows.some(row => {
-            const urlFields = Array.from(row.querySelectorAll('[data-content-field][type="url"]'));
-            if (urlFields.some(input => input.value.trim() && !safeImageUrl(input.value.trim()))) return true;
-            try {
-                const members = JSON.parse(row.querySelector('[data-content-field="teamJson"]').value || '[]');
-                return members.some(member => member.imageUrl && !safeImageUrl(member.imageUrl));
-            } catch {
-                return true;
+        for (const row of heroRows) {
+            const invalidUrl = Array.from(row.querySelectorAll('[data-content-field][type="url"]'))
+                .find(input => input.value.trim() && !safeImageUrl(input.value.trim()));
+            const members = JSON.parse(row.querySelector('[data-content-field="teamJson"]').value || '[]');
+            const invalidMemberIndex = members.findIndex(member => member.imageUrl && !safeImageUrl(member.imageUrl));
+            if (invalidUrl || invalidMemberIndex !== -1) {
+                const field = invalidUrl || row.querySelectorAll('[data-team-member-image-url]')[invalidMemberIndex];
+                const name = invalidUrl
+                    ? invalidUrl.closest('label')?.firstChild?.textContent.trim() || '網址'
+                    : `團隊成員 ${invalidMemberIndex + 1} 的圖片網址`;
+                const card = row.querySelector('[data-content-field="order"]').value.trim();
+                const details = field?.closest('details');
+                if (details) details.open = true;
+                alert(`置頂內容 ${card} 的「${name}」格式不正確。請輸入完整的 HTTP 或 HTTPS 網址；不需要的欄位可留空。`);
+                field?.focus();
+                return false;
             }
-        })) {
-            alert('置頂內容、團隊及相片網址必須是有效的 HTTP 或 HTTPS 網址。');
-            return false;
         }
     }
 
@@ -2152,6 +2232,8 @@ async function saveHomepageItems(containerId, settingKey, label, folder, onlyRow
                 row.querySelector('[data-content-field="heroMediaUrl"]').value = item.heroMediaUrl;
             }
             if (settingKey === 'home_hero_items') {
+                if (item.smartLayoutJson) item.smartLayout = JSON.parse(item.smartLayoutJson);
+                delete item.smartLayoutJson;
                 const members = JSON.parse(item.teamJson || '[]').map((member, memberIndex) => ({
                     ...member,
                     imageUrl: item[`teamMemberImage-${memberIndex}`] || member.imageUrl || ''
@@ -3365,6 +3447,30 @@ function bindEvents() {
             if (memberCards.length >= 8) return;
             row.querySelector('[data-team-members]').insertAdjacentHTML('beforeend', renderHeroTeamMember({}, memberCards.length));
             updateHeroTeamMemberIndexes(row);
+            return;
+        }
+        const clearSmartLayout = event.target.closest('[data-clear-smart-layout]');
+        if (clearSmartLayout) {
+            const row = clearSmartLayout.closest('[data-content-row]');
+            row.querySelector('[data-content-field="smartLayoutJson"]').value = '';
+            alert('已移除智慧排版草稿；請儲存此內容以更新網站。');
+            return;
+        }
+        const removeImageButton = event.target.closest('[data-remove-hero-image]');
+        if (removeImageButton) {
+            const container = removeImageButton.closest('[data-hero-image-field], [data-team-member]');
+            const urlInput = container.querySelector('[data-content-field][type="url"], [data-team-member-image-url]');
+            const fileInput = container.querySelector('[data-content-image]');
+            const preview = container.querySelector('[data-content-preview]');
+            urlInput.value = '';
+            fileInput.value = '';
+            if (preview.dataset.objectUrl) {
+                URL.revokeObjectURL(preview.dataset.objectUrl);
+                delete preview.dataset.objectUrl;
+            }
+            preview.removeAttribute('src');
+            preview.classList.add('hidden');
+            urlInput.dispatchEvent(new Event('input', { bubbles: true }));
             return;
         }
         const removeMemberButton = event.target.closest('[data-remove-team-member]');

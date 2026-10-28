@@ -52,11 +52,24 @@
         #hero-detail[data-order="details-first"] .hero-media, #hero-detail[data-order="people-first"] .hero-media { order: 0; }
         #hero-detail[data-order="details-first"] > header, #hero-detail[data-order="people-first"] > header { order: 1; }
         #hero-detail[data-order="details-first"] #contact-section, #hero-detail[data-order="people-first"] #contact-section { order: 5; }
+        .smart-hero { display: flex; flex-direction: column; min-width: 0; }
+        .smart-hero > * { min-width: 0; margin: 0; }
+        #hero-detail[data-order="details-first"] .smart-hero, #hero-detail[data-order="people-first"] .smart-hero { order: 0; }
+        #hero-detail[data-smart-layout="true"] { display: flex; flex-direction: column; }
+        #hero-detail[data-smart-layout="true"] > * { margin-top: 0; }
+        #hero-detail[data-smart-layout="true"] #hero-title, #hero-detail[data-smart-layout="true"] #hero-subtitle,
+        #hero-detail[data-smart-layout="true"] #hero-kicker { color: inherit; }
+        #hero-detail[data-theme="dark"][data-smart-layout="true"] #hero-title,
+        #hero-detail[data-theme="dark"][data-smart-layout="true"] #hero-subtitle,
+        #hero-detail[data-theme="dark"][data-smart-layout="true"] #hero-kicker { color: inherit; }
         @media (min-width: 768px) {
-            #hero-detail[data-layout="split"] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
-            #hero-detail[data-layout="split"] > * { grid-column: 1 / -1; margin-top: 0; }
-            #hero-detail[data-layout="split"] .hero-media { grid-column: 1; }
-            #hero-detail[data-layout="split"] > header { grid-column: 2; }
+            .smart-hero { display: var(--smart-display); flex-direction: var(--smart-direction); grid-template-columns: var(--smart-columns); }
+        }
+        @media (min-width: 768px) {
+            #hero-detail[data-layout="split"]:not([data-smart-layout="true"]) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+            #hero-detail[data-layout="split"]:not([data-smart-layout="true"]) > * { grid-column: 1 / -1; margin-top: 0; }
+            #hero-detail[data-layout="split"]:not([data-smart-layout="true"]) .hero-media { grid-column: 1; }
+            #hero-detail[data-layout="split"]:not([data-smart-layout="true"]) > header { grid-column: 2; }
         }
         @media (max-width: 640px) {
             .site-header-inner { padding: 0.4rem 0.75rem; }
@@ -119,6 +132,7 @@
             </section>
         </article>
     </main>
+    <script src="smart-layout.js?v=20261029"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const supabaseClient = window.supabase.createClient(
@@ -462,6 +476,35 @@
             detail.dataset.theme = item.template === 'custom' && ['warm', 'dark', 'blue', 'green'].includes(item.customTheme) ? item.customTheme : 'light';
             detail.dataset.layout = item.template === 'custom' && item.customLayout === 'split' ? 'split' : 'classic';
             detail.dataset.order = item.template === 'custom' && ['details-first', 'people-first'].includes(item.customOrder) ? item.customOrder : 'standard';
+            const layout = item.template === 'custom' ? item.smartLayout : null;
+            if (layout && window.isSmartLayout(layout)) {
+                detail.dataset.smartLayout = 'true';
+                const container = document.createElement('div');
+                container.className = 'smart-hero';
+                const media = document.getElementById('hero-media');
+                const header = detail.querySelector(':scope > header');
+                detail.insertBefore(container, media);
+                container.append(media, header);
+                container.style.setProperty('--smart-display', layout.layout_style.display);
+                container.style.setProperty('--smart-direction', layout.layout_style.flex_direction);
+                container.style.setProperty('--smart-columns', layout.layout_style.grid_template_columns);
+                container.style.gap = `${layout.layout_style.gap_px}px`;
+                container.style.padding = `${layout.layout_style.padding_px}px`;
+                container.style.backgroundColor = layout.layout_style.background_color;
+                media.style.order = String(layout.image_box.order);
+                media.style.borderStyle = layout.image_box.border_style;
+                media.style.borderColor = layout.image_box.border_color;
+                media.style.borderWidth = `${layout.image_box.border_width_px}px`;
+                media.style.borderRadius = `${layout.image_box.border_radius_px}px`;
+                media.style.boxShadow = layout.image_box.box_shadow;
+                header.style.order = String(layout.text_box.order);
+                header.style.textAlign = layout.text_box.text_align;
+                header.style.color = layout.text_box.color;
+                header.style.fontFamily = layout.text_box.font_family;
+                header.style.backgroundColor = layout.layout_style.background_color;
+            } else if (layout) {
+                console.error('Invalid smart layout; using the standard featured layout.');
+            }
             const backgroundUrl = safeHttpsUrl(item.pageBackgroundUrl);
             if (backgroundUrl) {
                 const scale = Math.min(160, Math.max(100, Number(item.pageBackgroundScale) || 100));

@@ -1,3 +1,5 @@
+import { generateLayout, isSmartLayout } from './smart-layout.ts';
+
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
@@ -47,8 +49,6 @@ Deno.serve(async request => {
         }
         if (isAdmin !== true) return textResponse('Forbidden', 403);
 
-        const apiKey = Deno.env.get('OPENAI_API_KEY');
-        if (!apiKey) return textResponse('AI 設計服務尚未設定 OPENAI_API_KEY。', 503);
         const body = await request.json().catch(() => null);
         if (!body || typeof body !== 'object') return textResponse('請提供有效的設計內容。', 400);
         const title = cleanText(body.title, 160);
@@ -58,6 +58,24 @@ Deno.serve(async request => {
             ? body.current as Record<string, unknown> : {};
         if (!title && !description && !prompt) return textResponse('請先填寫標題、簡介或自訂設計要求。', 400);
 
+        if (body.action === 'smart-layout') {
+            const colors = Array.isArray(body.imageColors)
+                ? body.imageColors.filter((value: unknown) => typeof value === 'string' && /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(value)).slice(0, 5)
+                : [];
+            const ratio = typeof body.imageRatio === 'string' && /^\d{1,5}:\d{1,5}$/.test(body.imageRatio) ? body.imageRatio : '';
+            const prior = body.mode === 'refine' && isSmartLayout(body.previousLayout) ? body.previousLayout : null;
+            if (body.mode === 'refine' && !prior) return textResponse('請先產生有效的智慧排版，再進行修改。', 400);
+            const instruction = prior
+                ? `請基於以下現有排版修改，只變更使用者要求的部分：${JSON.stringify(prior)}\n修改要求：${prompt}`
+                : prompt;
+            return respond(await generateLayout(
+                JSON.stringify({ title, description, headline: cleanText(current.headline, 160), subtitle: cleanText(current.subtitle, 500) }),
+                colors, ratio, instruction
+            ));
+        }
+
+        const apiKey = Deno.env.get('OPENAI_API_KEY');
+        if (!apiKey) return textResponse('AI 設計服務尚未設定 OPENAI_API_KEY。', 503);
         const openAiResponse = await fetch(`${getOpenAiBaseUrl()}/chat/completions`, {
             method: 'POST',
             headers: {
