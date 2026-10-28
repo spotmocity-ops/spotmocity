@@ -1497,7 +1497,7 @@ function renderHomeHeroEditors() {
                         ${renderHeroTextarea('customPrompt', '自訂版設計要求', item.customPrompt || '', '例如：藍色、圖片與標題並排、詳細內容優先。', 3)}
                         <label class="flex items-start gap-2 text-sm text-gray-700"><input type="checkbox" data-hero-ai-rewrite><span>允許 AI 建議改寫標題、副標題、按鈕及亮點文字（預設保留原文）</span></label>
                         <label class="block text-sm font-medium text-gray-700">AI 設計模式<select data-hero-ai-mode class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="smart">智慧排版（整個詳情頁）</option><option value="classic">原有主題及內容順序設計</option></select></label>
-                        <p class="text-xs text-gray-500">智慧排版設計頂部、亮點、詳細內容、團隊及聯絡區的樣式和順序，保留所有原有文字及圖片；手機版會自動調整。背景圖片需另行生成及確認。</p>
+                        <p class="text-xs text-gray-500">智慧排版設計頂部、亮點、詳細內容、團隊及聯絡區的樣式和順序，保留所有原有文字及圖片；手機版會自動調整。若回傳格式無效，會自動再試一次，可能消耗額外 AI 額度。背景圖片需另行生成及確認。</p>
                         <div class="rounded-lg border border-violet-200 p-3">
                             <p class="text-sm font-semibold">AI 背景圖片</p>
                             <p class="mt-1 text-xs text-gray-600">根據卡片標題、簡介及設計要求生成一張背景圖；每次生成會使用 Qwen 方案額度。圖片不會自動套用或儲存。</p>
@@ -1767,7 +1767,11 @@ async function requestHeroAiDesign(index, mode = 'new') {
             smartLayout: data.layout, customTheme: current.customTheme, customLayout: current.customLayout,
             customOrder: current.customOrder, headline: '', subtitle: '', ctaLabel: '',
             highlights: { ticket: '', audience: '', venue: '' },
-            explanation: `${data.usedFallback ? 'AI 未能產生有效排版，以下為預設標準排版。' : '智慧排版已產生，可預覽後再決定是否套用。'}${features.unavailable ? ' 未能讀取圖片顏色或比例，本次未使用圖片特徵。' : ''}`
+            explanation: `${data.usedFallback ? ({
+                configuration: 'AI 服務設定不完整，以下為預設標準排版。請檢查後端 AI 設定。',
+                provider: 'AI 服務連線或回應失敗，以下為預設標準排版。請稍後重試。',
+                invalid_output: 'AI 兩次回傳的排版格式均無效，以下為預設標準排版。請調整要求後重試。'
+            }[data.fallbackReason] || 'AI 未能產生有效排版，以下為預設標準排版。') : '智慧排版已產生，可預覽後再決定是否套用。'}${features.unavailable ? ' 未能讀取圖片顏色或比例，本次未使用圖片特徵。' : ''}`
         } : { ...data.design, smartLayout: null };
         if (!['light', 'warm', 'dark', 'blue', 'green'].includes(design.customTheme) ||
             !['classic', 'split'].includes(design.customLayout) ||

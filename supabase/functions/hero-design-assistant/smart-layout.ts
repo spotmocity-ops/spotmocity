@@ -135,7 +135,8 @@ export async function generateLayout(
     imageColors: string[],
     imageRatio: string,
     userInstruction: string
-): Promise<{ layout: SmartLayout; usedFallback: boolean }> {
+): Promise<{ layout: SmartLayout; usedFallback: boolean; fallbackReason?: 'configuration' | 'provider' | 'invalid_output' }> {
+    let fallbackReason: 'configuration' | 'provider' | 'invalid_output' = 'configuration';
     try {
         const apiKey = Deno.env.get('OPENAI_API_KEY')?.trim();
         const model = Deno.env.get('OPENAI_MODEL')?.trim();
@@ -143,28 +144,34 @@ export async function generateLayout(
         const baseURL = (Deno.env.get('OPENAI_BASE_URL')?.trim() || 'https://api.openai.com/v1')
             .replace(/\/+$/, '').replace(/\/chat\/completions$/, '');
         const client = new OpenAI({ apiKey, baseURL, timeout: 30000, maxRetries: 0 });
-        const result = await client.chat.completions.create({
-            model,
-            temperature: 0.85,
-            response_format: { type: 'json_object' },
-            messages: [
-                { role: 'system', content: `${systemPrompt}\npage_style 必須包含四個區塊且順序不可重複；details 的 columns 固定為 1。只設計排版，不改寫文字或圖片。顏色必須使用 #RGB 或 #RRGGBB。尺寸必須是整數：gap_px、padding_px、border_radius_px、section_gap_px 為 0 至 80，border_width_px 為 0 至 12。兩個 order 分別為 0 和 1。box_shadow 只能是 none 或「0px 4px 12px #000000」形式。` },
-                { role: 'user', content: JSON.stringify({ text, imageColors, imageRatio, userInstruction }) }
-            ]
-        });
-        const content = result.choices[0]?.message?.content;
-        if (!content) throw new Error('AI 沒有回傳排版。');
-        const layout: unknown = JSON.parse(content);
-        if (!isSmartLayout(layout) || !layout.page_style) {
-            if (isRecord(layout)) {
-                console.error('Smart layout validation field names:', Object.keys(layout),
-                    isRecord(layout.page_style) ? Object.keys(layout.page_style) : 'no page_style');
+        const prompt = `${systemPrompt}\npage_style 必須包含四個區塊且順序不可重複；details 的 columns 固定為 1。只設計排版，不改寫文字或圖片。顏色必須使用 #RGB 或 #RRGGBB。尺寸必須是整數：gap_px、padding_px、border_radius_px、section_gap_px 為 0 至 80，border_width_px 為 0 至 12。兩個 order 分別為 0 和 1。box_shadow 只能是 none 或「0px 4px 12px #000000」形式。`;
+        for (let attempt = 0; attempt < 2; attempt++) {
+            fallbackReason = 'provider';
+            const result = await client.chat.completions.create({
+                model,
+                temperature: 0.85,
+                response_format: { type: 'json_object' },
+                messages: [
+                    { role: 'system', content: prompt },
+                    { role: 'user', content: JSON.stringify({ text, imageColors, imageRatio, userInstruction }) },
+                    ...(attempt ? [{ role: 'user' as const, content: '上一次輸出格式無效。請重新生成完整 JSON，逐一檢查欄位、數值範圍及可選值；不要加入其他格式。' }] : [])
+                ]
+            });
+            fallbackReason = 'invalid_output';
+            const content = result.choices[0]?.message?.content;
+            let layout: unknown;
+            try {
+                layout = content ? JSON.parse(content) : null;
+            } catch {
+                console.warn('Smart layout response was not valid JSON, attempt:', attempt + 1);
+                continue;
             }
-            throw new Error('AI 回傳的完整頁面排版格式不符合安全限制。');
+            if (isSmartLayout(layout) && layout.page_style) return { layout, usedFallback: false };
+            console.warn('Smart layout response failed validation, attempt:', attempt + 1);
         }
-        return { layout, usedFallback: false };
+        console.error('Smart layout response failed validation after retry.');
     } catch (error) {
-        console.error('Smart layout generation failed:', error instanceof Error ? error.message : 'unknown error');
-        return { layout: structuredClone(standardLayout), usedFallback: true };
+        console.error('Smart layout generation failed:', fallbackReason, error instanceof Error ? error.name : 'unknown error');
     }
+    return { layout: structuredClone(standardLayout), usedFallback: true, fallbackReason };
 }
