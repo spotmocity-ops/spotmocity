@@ -261,6 +261,12 @@ function toDateTimeLocalValue(value) {
     return String(value).replace(' ', 'T').slice(0, 16);
 }
 
+function formatAdminEventDateTime(value) {
+    const text = String(value || '').trim();
+    return toDateTimeLocalValue(text).replace('T', ' ') ||
+        text.replace('T', ' ').replace(/(\d{2}:\d{2}):\d{2}(?:\.\d+)?/g, '$1');
+}
+
 function isCuratedDraftExpired(item) {
     const endValue = item.event_end_time ||
         (item.event_end_date ? `${item.event_end_date} 23:59` : '') ||
@@ -273,6 +279,7 @@ function renderCuratedActivityDrafts() {
     list.querySelectorAll('[data-poster-preview]').forEach(preview => {
         if (preview.dataset.objectUrl) URL.revokeObjectURL(preview.dataset.objectUrl);
     });
+    list.querySelectorAll('[data-life-service-promotion-preview]').forEach(revokeEventImagePreview);
     const publishedDrafts = curatedActivityDrafts.filter(item => item.status === 'published');
     const unpublishedDrafts = curatedActivityDrafts.filter(item => item.status !== 'published');
     const pastDrafts = curatedActivityDrafts.filter(isCuratedDraftExpired);
@@ -301,15 +308,26 @@ function renderCuratedActivityDrafts() {
     const serviceCategoryOptions = serviceCategories.map(category =>
         `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`
     ).join('');
-    list.innerHTML = filteredDrafts.map(item => {
+    const curatedCardColors = [
+        'bg-blue-50 border-blue-200',
+        'bg-emerald-50 border-emerald-200',
+        'bg-amber-50 border-amber-200',
+        'bg-violet-50 border-violet-200',
+        'bg-rose-50 border-rose-200',
+        'bg-cyan-50 border-cyan-200'
+    ];
+    list.innerHTML = filteredDrafts.map((item, index) => {
         const subcategoryOptions = categoryGroups
             .find(category => category.value === item.category)?.subcategories || [];
+        const promotionImages = Array.isArray(item.promotion_image_urls)
+            ? item.promotion_image_urls.map(safeImageUrl).filter(Boolean)
+            : [];
         const isExpired = isCuratedDraftExpired(item);
         const imageCandidates = Array.isArray(item.candidate_image_urls)
             ? item.candidate_image_urls.filter(url => /^https:\/\//i.test(url))
             : [];
         const sourceUrl = /^https:\/\//i.test(item.source_url || '') ? item.source_url : '';
-        return `<article class="bg-white border rounded-xl shadow-sm p-4 md:p-5" data-curated-draft="${escapeHtml(item.id)}">
+        return `<article class="${curatedCardColors[index % curatedCardColors.length]} rounded-xl shadow-sm p-4 md:p-5" data-curated-draft="${escapeHtml(item.id)}">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
                 <div>
                     <span class="text-xs font-semibold px-2 py-1 rounded ${isExpired ? 'bg-gray-100 text-gray-700' : item.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}">${isExpired ? '已過期（自動下架）' : item.status === 'published' ? '已上架' : '待編輯草稿'}</span>
@@ -328,11 +346,17 @@ function renderCuratedActivityDrafts() {
                         <label class="text-sm font-semibold">資源主分類<select data-field="life_service_category" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="">請選擇資源主分類</option>${serviceCategoryOptions}</select></label>
                         <label class="text-sm font-semibold">資源子分類<select data-field="life_service_subcategory" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="">請選擇資源子分類</option>${(serviceCategories.find(category => category.id === item.life_service_category)?.subcategories || []).map(option => `<option value="${escapeHtml(option.id)}">${escapeHtml(option.name)}</option>`).join('')}</select></label>
                     </div>
+                    <div data-life-service-promotion-fields class="${item.is_life_service ? '' : 'hidden'} mt-3 border-t border-emerald-200 pt-3">
+                        <label class="text-sm font-semibold">生活服務宣傳圖片<input data-life-service-promotion-files type="file" accept="image/jpeg,image/png,image/webp" multiple class="mt-1 block w-full text-sm font-normal"></label>
+                        <p class="mt-1 text-xs text-gray-600">最多 2 張 JPG／PNG／WebP，每張不超過 10 MB。上傳新圖片會取代現有宣傳圖片；圖片只會在主頁展開詳細內容時顯示。</p>
+                        <label class="mt-2 inline-flex items-center gap-2 text-xs text-gray-700"><input data-clear-life-service-promotion type="checkbox">移除現有宣傳圖片</label>
+                        <div data-life-service-promotion-preview class="mt-2 flex flex-wrap gap-2">${promotionImages.map((url, imageIndex) => `<img src="${escapeHtml(url)}" alt="現有宣傳圖片 ${imageIndex + 1}" loading="lazy" class="h-16 w-16 rounded border object-cover">`).join('')}</div>
+                    </div>
                 </fieldset>
                 <label class="text-sm font-semibold">活動形式<select data-field="event_format" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="offline">線下</option><option value="online">線上</option></select></label>
                 <label class="text-sm font-semibold">適合年齡<input data-field="age_range" maxlength="80" value="${escapeHtml(item.age_range || '不限')}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
-                <label class="text-sm font-semibold">活動開始<input data-field="event_time" type="datetime-local" value="${escapeHtml(toDateTimeLocalValue(item.event_time))}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
-                <label class="text-sm font-semibold">活動結束<input data-field="event_end_time" type="datetime-local" value="${escapeHtml(toDateTimeLocalValue(item.event_end_time || (item.event_end_date ? `${item.event_end_date}T23:59` : '')))}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
+                <label class="text-sm font-semibold">活動開始<input data-field="event_time" type="datetime-local" step="60" value="${escapeHtml(toDateTimeLocalValue(item.event_time))}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
+                <label class="text-sm font-semibold">活動結束<input data-field="event_end_time" type="datetime-local" step="60" value="${escapeHtml(toDateTimeLocalValue(item.event_end_time || (item.event_end_date ? `${item.event_end_date}T23:59` : '')))}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
                 <label class="text-sm font-semibold">活動地址<input data-field="location" maxlength="240" value="${escapeHtml(item.location || '')}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
                 <label class="text-sm font-semibold">費用<input data-field="fee" maxlength="120" value="${escapeHtml(item.fee || '')}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
                 <label class="text-sm font-semibold md:col-span-2">活動簡介<textarea data-field="description" rows="4" maxlength="1600" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal">${escapeHtml(item.description || '')}</textarea></label>
@@ -490,8 +514,22 @@ async function runCuratedActivitySearch() {
 async function saveCuratedActivityDraft(card, status) {
     const read = field => card.querySelector(`[data-field="${field}"]`).value.trim();
     const posterFile = card.querySelector('[data-poster-file]').files[0];
+    const promotionFiles = Array.from(card.querySelector('[data-life-service-promotion-files]').files);
+    const clearPromotionImages = card.querySelector('[data-clear-life-service-promotion]').checked;
     if (posterFile && !isValidEventImage(posterFile)) {
         alert('海報請使用 JPG、PNG 或 WebP，且不可超過 10 MB。');
+        return;
+    }
+    if (promotionFiles.length > 2 || promotionFiles.some(file => !isValidEventImage(file))) {
+        alert('宣傳圖片最多 2 張，請使用 JPG、PNG 或 WebP，且每張不可超過 10 MB。');
+        return;
+    }
+    if ((promotionFiles.length || clearPromotionImages) && !card.querySelector('[data-field="is_life_service"]').checked) {
+        alert('請先勾選加入生活服務區，再管理生活服務宣傳圖片。');
+        return;
+    }
+    if (clearPromotionImages && promotionFiles.length) {
+        alert('請選擇上傳新宣傳圖片，或移除現有圖片，不能同時選擇兩者。');
         return;
     }
     const endTime = read('event_end_time');
@@ -568,11 +606,19 @@ async function saveCuratedActivityDraft(card, status) {
         alert('上架生活服務與資源對接內容前，請選擇主分類或子分類。');
         return;
     }
-    if (status === 'published' && changes.is_life_service &&
-        !(homeServiceCategories.length ? homeServiceCategories : defaultHomeServiceCategories)
-            .some(category => category.id === changes.life_service_category)) {
-        alert('請選擇生活服務與資源對接區的資源主分類。');
-        return;
+    if (status === 'published' && changes.is_life_service) {
+        const serviceCategories = homeServiceCategories.length ? homeServiceCategories : defaultHomeServiceCategories;
+        const serviceCategory = serviceCategories.find(category => category.id === changes.life_service_category);
+        if (!serviceCategory) {
+            alert('請選擇生活服務與資源對接區的資源主分類。');
+            return;
+        }
+        if (serviceCategory.subcategories.length && !serviceCategory.subcategories.some(
+            subcategory => subcategory.id === changes.life_service_subcategory
+        )) {
+            alert('請選擇與資源主分類相符的子分類。');
+            return;
+        }
     }
     const startTimestamp = changes.event_time ? Date.parse(`${changes.event_time.replace(' ', 'T')}:00+08:00`) : NaN;
     const endTimestamp = changes.event_end_time ? Date.parse(`${changes.event_end_time.replace(' ', 'T')}:00+08:00`) : NaN;
@@ -582,20 +628,45 @@ async function saveCuratedActivityDraft(card, status) {
     }
 
     const imageBucket = supabaseClient.storage.from('event-media');
-    let uploadedPosterPath = '';
-    if (posterFile) {
-        const extension = posterFile.type === 'image/jpeg' ? 'jpg' : posterFile.type === 'image/png' ? 'png' : 'webp';
-        uploadedPosterPath = `${createHomepageUploadId()}/poster.${extension}`;
-        const { error: uploadError } = await imageBucket.upload(uploadedPosterPath, posterFile, {
-            cacheControl: '3600',
-            contentType: posterFile.type,
-            upsert: false
-        });
-        if (uploadError) {
-            alert('海報上傳失敗：' + uploadError.message);
-            return;
+    const uploadedPaths = [];
+    try {
+        if (posterFile) {
+            const extension = posterFile.type === 'image/jpeg' ? 'jpg' : posterFile.type === 'image/png' ? 'png' : 'webp';
+            const path = `${createHomepageUploadId()}/poster.${extension}`;
+            const { error: uploadError } = await imageBucket.upload(path, posterFile, {
+                cacheControl: '3600',
+                contentType: posterFile.type,
+                upsert: false
+            });
+            if (uploadError) throw uploadError;
+            uploadedPaths.push(path);
+            changes.poster_url = imageBucket.getPublicUrl(path).data.publicUrl;
         }
-        changes.poster_url = imageBucket.getPublicUrl(uploadedPosterPath).data.publicUrl;
+        if (changes.is_life_service && promotionFiles.length) {
+            const imageUrls = [];
+            for (const [index, file] of promotionFiles.entries()) {
+                const extension = file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp';
+                const path = `${createHomepageUploadId()}/promo-${index + 1}.${extension}`;
+                const { error: uploadError } = await imageBucket.upload(path, file, {
+                    cacheControl: '3600',
+                    contentType: file.type,
+                    upsert: false
+                });
+                if (uploadError) throw uploadError;
+                uploadedPaths.push(path);
+                imageUrls.push(imageBucket.getPublicUrl(path).data.publicUrl);
+            }
+            changes.promotion_image_urls = imageUrls;
+        } else if (changes.is_life_service && clearPromotionImages) {
+            changes.promotion_image_urls = [];
+        }
+    } catch (error) {
+        if (uploadedPaths.length) {
+            const { error: cleanupError } = await imageBucket.remove(uploadedPaths);
+            if (cleanupError) alert('圖片上傳失敗，且清理未完成的圖片也失敗：' + cleanupError.message);
+        }
+        alert('活動圖片上傳失敗：' + (error?.message || '請檢查 event-media bucket 和 Storage policy。'));
+        return;
     }
     if (changes.is_life_service) changes.life_service_thumbnail_url = changes.poster_url;
 
@@ -603,20 +674,23 @@ async function saveCuratedActivityDraft(card, status) {
         .update(changes)
         .eq('id', card.dataset.curatedDraft);
     if (error) {
-        if (uploadedPosterPath) {
-            const { error: cleanupError } = await imageBucket.remove([uploadedPosterPath]);
+        if (uploadedPaths.length) {
+            const { error: cleanupError } = await imageBucket.remove(uploadedPaths);
             if (cleanupError) alert('草稿儲存失敗，且清理新海報也失敗：' + cleanupError.message);
         }
         alert('活動草稿儲存失敗：' + error.message);
         return;
     }
     const existingDraft = curatedActivityDrafts.find(item => String(item.id) === card.dataset.curatedDraft);
-    if ((uploadedPosterPath || changes.poster_url !== (existingDraft?.poster_url || '')) && existingDraft?.poster_url) {
-        const oldPath = getEventMediaPath(existingDraft.poster_url);
-        if (oldPath) {
-            const { error: cleanupError } = await imageBucket.remove([oldPath]);
-            if (cleanupError) alert('活動已儲存，但舊海報清理失敗：' + cleanupError.message);
-        }
+    const replacedImageUrls = [];
+    if (posterFile && existingDraft?.poster_url) replacedImageUrls.push(existingDraft.poster_url);
+    if ((promotionFiles.length || clearPromotionImages) && Array.isArray(existingDraft?.promotion_image_urls)) {
+        replacedImageUrls.push(...existingDraft.promotion_image_urls);
+    }
+    const oldPaths = replacedImageUrls.map(getEventMediaPath).filter(Boolean);
+    if (oldPaths.length) {
+        const { error: cleanupError } = await imageBucket.remove(oldPaths);
+        if (cleanupError) alert('活動已儲存，但舊圖片清理失敗：' + cleanupError.message);
     }
     alert(status === 'published' ? '活動內容已儲存並上架。' : status === 'draft' ? '活動內容已儲存並下架。' : '活動內容已儲存。');
     await fetchCuratedActivityDrafts();
@@ -749,14 +823,12 @@ async function deleteCuratedActivityDraft(card) {
         return;
     }
 
-    if (item.poster_url) {
-        const imagePath = getEventMediaPath(item.poster_url);
-        if (imagePath) {
-            const { error: imageError } = await supabaseClient.storage.from('event-media').remove([imagePath]);
-            if (imageError) {
-                alert('活動已刪除，但海報檔案清理失敗：' + imageError.message);
-            }
-        }
+    const imagePaths = [item.poster_url, ...(Array.isArray(item.promotion_image_urls) ? item.promotion_image_urls : [])]
+        .map(getEventMediaPath)
+        .filter(Boolean);
+    if (imagePaths.length) {
+        const { error: imageError } = await supabaseClient.storage.from('event-media').remove(imagePaths);
+        if (imageError) alert('活動已刪除，但圖片檔案清理失敗：' + imageError.message);
     }
     await fetchCuratedActivityDrafts();
 }
@@ -777,6 +849,41 @@ function updateCuratedSubcategoryOptions(event) {
     const optionLabel = categorySelect ? option => option.label : option => option.name;
     subcategorySelect.innerHTML = `<option value="">請選擇子分類</option>${subcategories.map(option => `<option value="${escapeHtml(optionValue(option))}">${escapeHtml(optionLabel(option))}</option>`).join('')}`;
     if (subcategories.some(option => optionValue(option) === currentValue)) subcategorySelect.value = currentValue;
+}
+
+function previewCuratedLifeServicePromotionImages(event) {
+    const fileInput = event.target.closest('[data-life-service-promotion-files]');
+    const clearInput = event.target.closest('[data-clear-life-service-promotion]');
+    if (!fileInput && !clearInput) return;
+    const card = event.target.closest('[data-curated-draft]');
+    const preview = card.querySelector('[data-life-service-promotion-preview]');
+    const item = curatedActivityDrafts.find(draft => String(draft.id) === card.dataset.curatedDraft);
+    const files = Array.from(card.querySelector('[data-life-service-promotion-files]').files);
+    if (files.length > 2 || files.some(file => !isValidEventImage(file))) {
+        card.querySelector('[data-life-service-promotion-files]').value = '';
+        alert('宣傳圖片最多 2 張，請使用 JPG、PNG 或 WebP，且每張不可超過 10 MB。');
+    }
+    const validFiles = Array.from(card.querySelector('[data-life-service-promotion-files]').files);
+    const clearImages = card.querySelector('[data-clear-life-service-promotion]').checked;
+    if (validFiles.length) card.querySelector('[data-clear-life-service-promotion]').checked = false;
+    if (clearImages && event.target.matches('[data-clear-life-service-promotion]')) {
+        card.querySelector('[data-life-service-promotion-files]').value = '';
+        renderEventImagePreview(preview, []);
+        return;
+    }
+    if (!validFiles.length && !clearImages && event.target.matches('[data-clear-life-service-promotion]')) {
+        renderEventImagePreview(preview, Array.isArray(item?.promotion_image_urls) ? item.promotion_image_urls : []);
+        return;
+    }
+    const storedImages = validFiles.length || clearImages ? [] : Array.isArray(item?.promotion_image_urls) ? item.promotion_image_urls : [];
+    renderEventImagePreview(preview, storedImages, validFiles);
+}
+
+function updateCuratedLifeServicePromotionVisibility(event) {
+    const checkbox = event.target.closest('[data-field="is_life_service"]');
+    if (!checkbox) return;
+    checkbox.closest('[data-curated-draft]').querySelector('[data-life-service-promotion-fields]')
+        .classList.toggle('hidden', !checkbox.checked);
 }
 
 function previewCuratedPoster(event) {
@@ -1095,6 +1202,72 @@ function renderHomeContentEditors() {
 
 function renderHeroTextField(name, label, value = '', type = 'text', options = '') {
     return `<label class="block text-sm font-medium text-gray-700">${label}<input data-content-field="${name}" type="${type}" value="${escapeHtml(value)}" ${options} class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>`;
+}
+
+function getFeaturedActivityEndTimestamp(value) {
+    const text = String(value || '').trim();
+    if (!text) return NaN;
+    const normalized = toDateTimeLocalValue(text).replace('T', ' ');
+    return Date.parse(`${normalized}:00+08:00`);
+}
+
+function renderFeaturedActivityReportButton(item, pageId) {
+    const endTimestamp = getFeaturedActivityEndTimestamp(item.eventEndAt);
+    const isEnded = Number.isFinite(endTimestamp) && endTimestamp <= Date.now();
+    const message = !item.eventEndAt
+        ? '設定活動結束時間後，活動結束即可下載報告。'
+        : isEnded
+            ? '活動已結束，可下載簡易數據報告。'
+            : '活動結束後即可下載簡易數據報告。';
+    return `<div data-featured-report class="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-blue-100 bg-blue-50 p-3">
+        <button type="button" data-download-featured-report="${escapeHtml(pageId)}" data-report-title="${escapeHtml(item.title || '置頂活動')}" data-report-end="${escapeHtml(item.eventEndAt || '')}" ${isEnded ? '' : 'disabled'} class="rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white enabled:hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50">下載活動數據報告 CSV</button>
+        <span class="text-xs text-gray-600">${message}</span>
+    </div>`;
+}
+
+async function downloadFeaturedActivityReport(button) {
+    const endTimestamp = getFeaturedActivityEndTimestamp(button.dataset.reportEnd);
+    if (!Number.isFinite(endTimestamp) || endTimestamp > Date.now()) {
+        alert('請先設定並儲存已結束的活動時間，再下載報告。');
+        return;
+    }
+
+    button.disabled = true;
+    try {
+        const { data, error } = await supabaseClient.rpc('get_featured_activity_report', {
+            p_page_id: button.dataset.downloadFeaturedReport,
+            p_ended_at: new Date(endTimestamp).toISOString()
+        });
+        if (error) throw error;
+
+        const counts = Object.fromEntries((data || []).map(row => [row.event_type, Number(row.event_count) || 0]));
+        const rows = [
+            ['項目', '數據'],
+            ['置頂活動', button.dataset.reportTitle || '置頂活動'],
+            ['活動結束時間', formatAdminEventDateTime(button.dataset.reportEnd)],
+            ['報告產生時間', new Date().toLocaleString('zh-Hant-MO', { timeZone: 'Asia/Macau' })],
+            ['統計說明', '由統計功能啟用後開始收集，計至活動結束時間；為點擊總次數，非不重複人數；不含個人資料'],
+            ['置頂詳情頁瀏覽次數', counts.detail_view || 0],
+            ['首頁／置頂列表點入次數', counts.gallery_click || 0],
+            ['Email、電話及社交聯絡點擊次數', counts.contact_click || 0]
+        ];
+        const escapeCsv = value => {
+            const text = String(value ?? '');
+            const safeText = /^[\s]*[=+\-@]/.test(text) ? `'${text}` : text;
+            return `"${safeText.replace(/"/g, '""')}"`;
+        };
+        const csv = `\uFEFF${rows.map(row => row.map(escapeCsv).join(',')).join('\r\n')}`;
+        const blobUrl = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `featured-activity-report-${button.dataset.downloadFeaturedReport.replace(/[^a-zA-Z0-9_-]/g, '-')}.csv`;
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch (error) {
+        alert(`活動數據報告下載失敗：${error?.message || '請稍後再試。'}\n請確認已執行 Supabase 的 featured-activity-analytics.sql。`);
+    } finally {
+        button.disabled = false;
+    }
 }
 
 function renderHeroTextarea(name, label, value = '', placeholder = '', rows = 3) {
@@ -1474,6 +1647,7 @@ function renderHomeHeroEditors() {
                 <h3 class="font-semibold text-gray-800">置頂內容 ${index + 1}</h3>
                 <div class="flex flex-wrap gap-2"><button type="button" data-save-hero="${index}" class="rounded bg-green-700 px-3 py-1.5 text-sm text-white hover:bg-green-800">儲存此內容</button><button type="button" data-remove-hero="${index}" class="rounded border border-red-200 px-3 py-1.5 text-sm text-red-700 hover:bg-red-50">移除此內容</button></div>
             </div>
+            ${renderFeaturedActivityReportButton(item, pageId)}
             <div class="grid gap-3 md:grid-cols-2">
                 ${renderHeroTextField('order', '顯示次序', item.order ?? index + 1, 'number', 'min="1" step="1" required')}
                 ${renderHeroTextField('title', '卡片標題', item.title || '')}
@@ -1530,9 +1704,11 @@ function renderHomeHeroEditors() {
                         <div class="grid gap-3 md:grid-cols-2">
                             <label class="flex items-center gap-2 text-sm"><input data-content-field="countdownEnabled" type="checkbox" ${item.countdownEnabled ? 'checked' : ''}>顯示倒數模組</label>
                             ${renderHeroTextField('countdownTarget', '報名截止／活動開始時間', item.countdownTarget || '', 'datetime-local')}
+                            ${renderHeroTextField('eventEndAt', '活動結束時間（報告下載基準）', toDateTimeLocalValue(item.eventEndAt || ''), 'datetime-local', 'step="60"')}
                             ${renderHeroTextField('ctaLabel', '行動按鈕文字', item.ctaLabel || '✍️ 立即線上報名')}
                             ${renderHeroTextField('ctaUrl', '行動按鈕網址', item.ctaUrl || '', 'url')}
                         </div>
+                        <p class="text-xs text-gray-500">簡易報告包含詳情頁瀏覽、首頁／置頂列表點入及聯絡方式點擊。數據由統計功能啟用後開始累積，屬點擊總次數而非不重複人數，不記錄個人資料；活動結束時間儲存後，才可在此下載 CSV 報告。</p>
                     </fieldset>
                     <fieldset class="space-y-3"><legend class="font-semibold text-gray-800 mb-2">聯絡方式與報名資訊</legend>
                         <div class="grid gap-3 md:grid-cols-2">
@@ -1844,24 +2020,50 @@ async function requestHeroAiDesign(index, mode = 'new') {
 
 function normalizeHomeServiceCategories(value) {
     const savedCategories = Array.isArray(value) ? value : [];
-    return defaultHomeServiceCategories.map(category => {
+    const normalizeCategory = category => {
         const saved = savedCategories.find(item => item?.id === category.id);
-        const subcategories = Array.isArray(saved?.subcategories) ? saved.subcategories : category.subcategories;
+        const subcategories = Array.isArray(saved?.subcategories)
+            ? saved.subcategories
+            : category.subcategories || [];
         return {
             ...category,
+            icon: typeof saved?.icon === 'string' ? saved.icon : category.icon || '🧩',
             name: typeof saved?.name === 'string' && saved.name.trim() ? saved.name.trim() : category.name,
             pinText: typeof saved?.pinText === 'string' ? saved.pinText.trim() : '',
             subcategories: subcategories
                 .filter(item => item && typeof item.id === 'string' && typeof item.name === 'string' && item.id.trim() && item.name.trim())
                 .map(item => ({ id: item.id.trim(), name: item.name.trim() }))
         };
-    });
+    };
+    const defaultIds = new Set(defaultHomeServiceCategories.map(category => category.id));
+    const defaults = defaultHomeServiceCategories.map(category => normalizeCategory(category));
+    const added = savedCategories
+        .filter(category => category && typeof category.id === 'string' && category.id.trim() &&
+            typeof category.name === 'string' && category.name.trim() && !defaultIds.has(category.id))
+        .map(category => normalizeCategory(category));
+    const categories = [...defaults, ...added];
+    const savedOrder = new Map(savedCategories.map((category, index) => [category?.id, index]));
+    return categories
+        .map((category, index) => ({ category, index }))
+        .sort((first, second) =>
+            (savedOrder.get(first.category.id) ?? Number.MAX_SAFE_INTEGER) -
+                (savedOrder.get(second.category.id) ?? Number.MAX_SAFE_INTEGER) ||
+            first.index - second.index
+        )
+        .map(item => item.category);
 }
 
 function renderHomeServiceCategoryEditor() {
     const editor = document.getElementById('home-service-category-editor');
     editor.innerHTML = homeServiceCategories.map((category, categoryIndex) => `
         <article data-service-category-editor="${categoryIndex}" class="rounded-lg border bg-white p-4 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+                <span class="text-sm font-bold text-gray-700">主分類 ${categoryIndex + 1}</span>
+                <div class="flex gap-1">
+                    <button type="button" data-move-service-category="${categoryIndex}:up" aria-label="將${escapeHtml(category.name || '新分類')}上移" ${categoryIndex === 0 ? 'disabled' : ''} class="rounded border px-2 py-1 text-sm enabled:hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">↑</button>
+                    <button type="button" data-move-service-category="${categoryIndex}:down" aria-label="將${escapeHtml(category.name || '新分類')}下移" ${categoryIndex === homeServiceCategories.length - 1 ? 'disabled' : ''} class="rounded border px-2 py-1 text-sm enabled:hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40">↓</button>
+                </div>
+            </div>
             <label class="block text-sm font-semibold text-gray-800">${escapeHtml(category.icon)} 主分類名稱
                 <input type="text" data-service-category-name maxlength="60" value="${escapeHtml(category.name)}" class="mt-1 w-full rounded border px-3 py-2 font-normal">
             </label>
@@ -1891,6 +2093,30 @@ function collectHomeServiceCategories() {
         });
         return { ...category, name, pinText, subcategories };
     });
+}
+
+function moveHomeServiceCategory(button) {
+    homeServiceCategories = collectHomeServiceCategories();
+    const [categoryIndex, direction] = button.dataset.moveServiceCategory.split(':');
+    const currentIndex = Number(categoryIndex);
+    const targetIndex = currentIndex + (direction === 'up' ? -1 : 1);
+    if (!homeServiceCategories[currentIndex] || !homeServiceCategories[targetIndex]) return;
+    [homeServiceCategories[currentIndex], homeServiceCategories[targetIndex]] =
+        [homeServiceCategories[targetIndex], homeServiceCategories[currentIndex]];
+    renderHomeServiceCategoryEditor();
+}
+
+function addHomeServiceCategory() {
+    homeServiceCategories = collectHomeServiceCategories();
+    homeServiceCategories.push({
+        id: `service-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: '',
+        icon: '🧩',
+        pinText: '',
+        subcategories: []
+    });
+    renderHomeServiceCategoryEditor();
+    document.querySelector(`[data-service-category-editor="${homeServiceCategories.length - 1}"] [data-service-category-name]`)?.focus();
 }
 
 async function saveHomeServiceCategories() {
@@ -2393,6 +2619,13 @@ async function saveHomepageItems(containerId, settingKey, label, folder, onlyRow
         if (settingKey === 'home_blog_items') homeBlogItems = items;
         if (settingKey === 'home_ad_items') homeAdItems = items;
         if (settingKey === 'home_hero_items') homeHeroItems = items;
+        if (onlyRow && settingKey === 'home_hero_items') {
+            const savedHero = items.find(item => item.pageId === onlyRow.querySelector('[data-content-field="pageId"]').value);
+            if (savedHero) {
+                onlyRow.querySelector('[data-featured-report]').outerHTML =
+                    renderFeaturedActivityReportButton(savedHero, savedHero.pageId);
+            }
+        }
         if (!onlyRow) renderHomeContentEditors();
     }
     return saved;
@@ -2609,10 +2842,10 @@ function renderCalendarEditList() {
             <p class="text-sm text-gray-500">${escapeHtml(item.org_name)} · ${escapeHtml(getSubmissionStatusLabel(item))} · ${escapeHtml(getAdminCategoryLabel(item.category))} / ${escapeHtml(getAdminSubcategoryLabel(item.category, item.subcategory))}</p>
         </div>
         <label class="text-sm text-gray-600">開始日期及時間
-            <input type="datetime-local" data-admin-event-time class="mt-1 w-full border rounded-lg px-3 py-2 text-gray-800" value="${escapeHtml(getDateTimeInputValue(item.event_time))}">
+            <input type="datetime-local" data-admin-event-time step="60" class="mt-1 w-full border rounded-lg px-3 py-2 text-gray-800" value="${escapeHtml(getDateTimeInputValue(item.event_time))}">
         </label>
         <label class="text-sm text-gray-600">結束日期及時間
-            <input type="datetime-local" data-admin-end-date class="mt-1 w-full border rounded-lg px-3 py-2 text-gray-800" value="${escapeHtml(getDateTimeInputValue(getEventEndDateTime(item)))}" required>
+            <input type="datetime-local" data-admin-end-date step="60" class="mt-1 w-full border rounded-lg px-3 py-2 text-gray-800" value="${escapeHtml(getDateTimeInputValue(getEventEndDateTime(item)))}" required>
         </label>
         ${renderVisibilityButton(item)}
         <button type="button" data-save-calendar-event="${escapeHtml(item.id)}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg">儲存日期</button>
@@ -2703,7 +2936,7 @@ async function fetchSubmissions() {
                     <p class="text-sm text-gray-600">主辦：${escapeHtml(item.org_name)} (${escapeHtml(item.identity_type)}) | 費用：${escapeHtml(item.fee || (Number(item.total_amount) > 0 ? `MOP ${item.total_amount}` : '免費'))}</p>
                     ${['club', 'org'].includes(item.identity_type) ? `<p class="text-sm text-gray-500 mt-1">負責人姓名：${escapeHtml(item.contact_person || '未提供')}</p>` : ''}
                     ${['club', 'org'].includes(item.identity_type) ? `<p class="text-sm text-gray-500 mt-1">負責人電話（僅管理員）：${escapeHtml(item.contact_person_phone || '未提供')}</p>` : ''}
-                    <p class="text-sm text-gray-500 mt-1">日期：${escapeHtml(item.event_time || '待安排')} 至 ${escapeHtml(getEventEndDateTime(item).replace('T', ' ') || '未設定')} | 年齡：${escapeHtml(item.age_range)}</p>
+                    <p class="text-sm text-gray-500 mt-1">日期：${escapeHtml(formatAdminEventDateTime(item.event_time) || '待安排')} 至 ${escapeHtml(formatAdminEventDateTime(getEventEndDateTime(item)) || '未設定')} | 年齡：${escapeHtml(item.age_range)}</p>
                     ${renderSubmissionCategoryBadges(item)}
                     <p class="text-sm text-gray-500 mt-1">${item.event_format === 'online' ? '線上平台／參加方式' : '活動地址'}：${escapeHtml(item.location || '未提供')}</p>
                     ${item.description ? `<p class="text-sm text-gray-600 mt-2">${escapeHtml(item.description)}</p>` : ''}
@@ -3351,6 +3584,8 @@ function bindEvents() {
     document.getElementById('run-curated-search-btn').addEventListener('click', runCuratedActivitySearch);
     document.getElementById('curated-drafts-list').addEventListener('click', handleCuratedDraftActions);
     document.getElementById('curated-drafts-list').addEventListener('change', updateCuratedSubcategoryOptions);
+    document.getElementById('curated-drafts-list').addEventListener('change', previewCuratedLifeServicePromotionImages);
+    document.getElementById('curated-drafts-list').addEventListener('change', updateCuratedLifeServicePromotionVisibility);
     document.getElementById('curated-drafts-list').addEventListener('change', previewCuratedPoster);
     document.getElementById('curated-drafts-list').addEventListener('input', previewCuratedPoster);
     document.getElementById('edit-category').addEventListener('change', () => {
@@ -3373,7 +3608,13 @@ function bindEvents() {
         saveSetting('home_warm_info_content', 'home-warm-info-content', '首頁溫馨資訊')
     );
     document.getElementById('save-home-service-categories-btn').addEventListener('click', saveHomeServiceCategories);
+    document.querySelector('[data-add-service-category]').addEventListener('click', addHomeServiceCategory);
     document.getElementById('home-service-category-editor').addEventListener('click', event => {
+        const moveButton = event.target.closest('[data-move-service-category]');
+        if (moveButton) {
+            moveHomeServiceCategory(moveButton);
+            return;
+        }
         const addButton = event.target.closest('[data-add-service-subcategory]');
         if (addButton) {
             homeServiceCategories = collectHomeServiceCategories();
@@ -3488,6 +3729,11 @@ function bindEvents() {
         if (event.target.id === 'hero-crop-modal') closeHeroImageCropper(true);
     });
     document.getElementById('home-hero-editor').addEventListener('click', event => {
+        const reportButton = event.target.closest('[data-download-featured-report]');
+        if (reportButton) {
+            void downloadFeaturedActivityReport(reportButton);
+            return;
+        }
         const richStyle = event.target.closest('[data-rich-style]');
         if (richStyle) return;
         const richCommand = event.target.closest('[data-rich-command]');

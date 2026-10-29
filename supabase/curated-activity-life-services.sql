@@ -8,6 +8,7 @@ alter table public.submissions
     add column if not exists life_service_pin_text text;
 
 alter table public.curated_activity_drafts
+    add column if not exists promotion_image_urls text[] not null default '{}',
     add column if not exists is_life_service boolean not null default false,
     add column if not exists life_service_category text,
     add column if not exists life_service_subcategory text,
@@ -87,7 +88,7 @@ as
         event_end_date,
         subcategory,
         description,
-        '{}'::text[] as promotion_image_urls,
+        promotion_image_urls,
         null::text as video_url,
         null::text as contact_email,
         null::text as social_handle,

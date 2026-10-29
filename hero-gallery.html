@@ -95,6 +95,18 @@
             'sb_publishable_4kBnCjtv4c7j-sb8l3BrUw_j63egBDR'
         );
 
+        async function trackFeaturedActivityEvent(pageId, eventType) {
+            try {
+                const { error } = await supabaseClient.rpc('track_featured_activity_event', {
+                    p_page_id: pageId,
+                    p_event_type: eventType
+                });
+                if (error) console.warn('Featured activity analytics unavailable:', error.message);
+            } catch (error) {
+                console.warn('Featured activity analytics unavailable:', error?.message || error);
+            }
+        }
+
         function safeImageUrl(value) {
             try {
                 const url = new URL(value);
@@ -191,6 +203,7 @@
             if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target === '_blank') return;
             event.preventDefault();
             const detailUrl = new URL(link.href);
+            void trackFeaturedActivityEvent(detailUrl.searchParams.get('id'), 'gallery_click');
             detailUrl.searchParams.set('embed', '1');
             heroDetailFrame.src = detailUrl.href;
             heroDetailDialog.showModal();

@@ -188,6 +188,7 @@ create table if not exists public.curated_activity_drafts (
     poster_display_scale integer not null default 100 check (poster_display_scale between 100 and 200),
     poster_display_position integer not null default 50 check (poster_display_position between 0 and 100),
     candidate_image_urls text[] not null default '{}',
+    promotion_image_urls text[] not null default '{}',
     related_links jsonb not null default '[]'::jsonb,
     is_life_service boolean not null default false,
     life_service_category text,
@@ -215,6 +216,9 @@ alter table public.curated_activity_drafts
 
 alter table public.curated_activity_drafts
     add column if not exists poster_display_position integer not null default 50 check (poster_display_position between 0 and 100);
+
+alter table public.curated_activity_drafts
+    add column if not exists promotion_image_urls text[] not null default '{}';
 
 alter table public.curated_activity_drafts
     add column if not exists is_life_service boolean not null default false,
@@ -420,7 +424,7 @@ as
         event_end_date,
         subcategory,
         description,
-        '{}'::text[] as promotion_image_urls,
+        promotion_image_urls,
         null::text as video_url,
         null::text as contact_email,
         null::text as social_handle,

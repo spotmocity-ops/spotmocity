@@ -168,6 +168,19 @@
         );
         const isEmbedded = new URLSearchParams(location.search).get('embed') === '1';
         const isPreview = new URLSearchParams(location.search).get('preview') === '1';
+        let currentFeaturedPageId = '';
+        async function trackFeaturedActivityEvent(pageId, eventType) {
+            try {
+                const { error } = await supabaseClient.rpc('track_featured_activity_event', {
+                    p_page_id: pageId,
+                    p_event_type: eventType
+                });
+                if (error) console.warn('Featured activity analytics unavailable:', error.message);
+            } catch (error) {
+                console.warn('Featured activity analytics unavailable:', error?.message || error);
+            }
+        }
+
         if (isEmbedded) {
             document.documentElement.classList.add('embedded');
             window.addEventListener('keydown', event => {
@@ -465,6 +478,7 @@
                 content.textContent = value;
                 if (href) {
                     content.href = href;
+                    content.dataset.analyticsEvent = 'contact_click';
                     if (href.startsWith('https://')) {
                         content.target = '_blank';
                         content.rel = 'noopener noreferrer';
@@ -488,6 +502,13 @@
             methods.replaceChildren(...entries);
             section.classList.remove('hidden');
         }
+
+        document.getElementById('contact-methods').addEventListener('click', event => {
+            const link = event.target.closest('a[data-analytics-event="contact_click"]');
+            if (link && currentFeaturedPageId) {
+                void trackFeaturedActivityEvent(currentFeaturedPageId, 'contact_click');
+            }
+        });
 
         function renderCountdown(target) {
             const wrap = document.getElementById('countdown-wrap');
@@ -632,7 +653,9 @@
                 status.textContent = '找不到此置頂內容，可能已下架。';
                 return;
             }
+            currentFeaturedPageId = requestedId;
             renderDetail(item);
+            void trackFeaturedActivityEvent(requestedId, 'detail_view');
         }
 
         if (isPreview) {

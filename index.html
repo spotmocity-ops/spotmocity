@@ -91,7 +91,7 @@
                     <span id="weather-icon" aria-hidden="true">☀</span>
                     <span id="macau-weather">載入天氣...</span>
                     <span class="text-gray-300" aria-hidden="true">|</span>
-                    <time id="macau-time" class="font-semibold tabular-nums">--:--:--</time>
+                    <time id="macau-time" class="font-semibold tabular-nums">--:--</time>
                     <span class="text-gray-500">澳門</span>
                 </div>
                 <nav class="flex flex-wrap justify-end gap-x-3 gap-y-1 text-xs md:text-sm font-medium">
@@ -335,7 +335,7 @@
         let homepageServiceEntries = [];
         let serviceCategoryModalEntries = [];
         let expandedServiceCategoryEntry = -1;
-        let homepageServiceCategories = [
+        const defaultHomepageServiceCategories = [
             { id: 'space', name: '空間/場地租借', icon: '🏢', subcategories: [] },
             { id: 'business', name: '法律/會計/商業', icon: '⚖️', subcategories: [] },
             { id: 'health', name: '健康/身心/診所', icon: '🏥', subcategories: [] },
@@ -352,6 +352,7 @@
                 ]
             }
         ];
+        let homepageServiceCategories = defaultHomepageServiceCategories;
         let activeServiceCategory = 'space';
         let activeServiceSubcategory = 'all';
         let activeCategory = 'all';
@@ -399,6 +400,18 @@
             return String(value ?? '').replace(/[&<>"']/g, character => ({
                 '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
             })[character]);
+        }
+
+        async function trackFeaturedActivityEvent(pageId, eventType) {
+            try {
+                const { error } = await supabaseClient.rpc('track_featured_activity_event', {
+                    p_page_id: pageId,
+                    p_event_type: eventType
+                });
+                if (error) console.warn('Featured activity analytics unavailable:', error.message);
+            } catch (error) {
+                console.warn('Featured activity analytics unavailable:', error?.message || error);
+            }
         }
 
         function setLayoutMode(mode) {
@@ -495,6 +508,7 @@
                     lifeServiceSummary: item.life_service_summary || '',
                     lifeServiceDetails: item.life_service_details || '',
                     lifeServiceThumbnailUrl: item.life_service_thumbnail_url || '',
+                    promotionImages: Array.isArray(item.promotion_image_urls) ? item.promotion_image_urls : [],
                     posterDisplayScale: Number.isFinite(Number(item.poster_display_scale))
                         ? Math.min(200, Math.max(100, Math.round(Number(item.poster_display_scale) / 10) * 10))
                         : 100,
@@ -581,20 +595,38 @@
 
         function renderHomepageServiceCategories(categories) {
             if (Array.isArray(categories)) {
-                homepageServiceCategories = homepageServiceCategories.map(defaultCategory => {
-                    const savedCategory = categories.find(category => category?.id === defaultCategory.id);
+                const normalizeCategory = (category, savedCategory) => {
                     const savedSubcategories = Array.isArray(savedCategory?.subcategories)
                         ? savedCategory.subcategories
-                        : defaultCategory.subcategories;
+                        : category.subcategories || [];
                     return {
-                        ...defaultCategory,
-                        name: typeof savedCategory?.name === 'string' && savedCategory.name.trim() ? savedCategory.name.trim() : defaultCategory.name,
+                        ...category,
+                        icon: typeof savedCategory?.icon === 'string' ? savedCategory.icon : category.icon || '🧩',
+                        name: typeof savedCategory?.name === 'string' && savedCategory.name.trim() ? savedCategory.name.trim() : category.name,
                         pinText: typeof savedCategory?.pinText === 'string' ? savedCategory.pinText.trim() : '',
                         subcategories: savedSubcategories
                             .filter(item => item && typeof item.id === 'string' && typeof item.name === 'string' && item.id.trim() && item.name.trim())
                             .map(item => ({ id: item.id.trim(), name: item.name.trim() }))
                     };
-                });
+                };
+                const defaultIds = new Set(defaultHomepageServiceCategories.map(category => category.id));
+                const defaults = defaultHomepageServiceCategories.map(category =>
+                    normalizeCategory(category, categories.find(saved => saved?.id === category.id))
+                );
+                const added = categories
+                    .filter(category => category && typeof category.id === 'string' && category.id.trim() &&
+                        typeof category.name === 'string' && category.name.trim() && !defaultIds.has(category.id))
+                    .map(category => normalizeCategory(category, category));
+                const allCategories = [...defaults, ...added];
+                const savedOrder = new Map(categories.map((category, index) => [category?.id, index]));
+                homepageServiceCategories = allCategories
+                    .map((category, index) => ({ category, index }))
+                    .sort((first, second) =>
+                        (savedOrder.get(first.category.id) ?? Number.MAX_SAFE_INTEGER) -
+                            (savedOrder.get(second.category.id) ?? Number.MAX_SAFE_INTEGER) ||
+                        first.index - second.index
+                    )
+                    .map(item => item.category);
             }
             if (!homepageServiceCategories.length) return;
             if (!homepageServiceCategories.some(category => category.id === activeServiceCategory)) {
@@ -622,6 +654,9 @@
         function renderServiceDetailsMarkup(service) {
             const summary = getServiceSummary(service);
             const details = service.lifeServiceDetails || (service.description !== summary ? service.description : '');
+            const promotionImages = (Array.isArray(service.promotionImages) ? service.promotionImages : [])
+                .map(safeExternalUrl)
+                .filter(Boolean);
             const detailRows = [
                 ['活動時間', service.time],
                 ['活動地址', service.loc],
@@ -637,6 +672,7 @@
             return `<div class="space-y-3">
                 ${details ? `<section><h4 class="text-sm font-semibold text-gray-800 mb-1">活動詳情</h4><p class="whitespace-pre-line text-sm leading-6 text-gray-700">${escapeHtml(details)}</p></section>` : ''}
                 ${detailRows.length ? `<dl class="grid gap-2 sm:grid-cols-2">${detailRows.map(([label, value]) => `<div class="rounded-lg bg-gray-50 p-3"><dt class="text-xs text-gray-500">${escapeHtml(label)}</dt><dd class="mt-1 text-sm text-gray-800">${escapeHtml(value)}</dd></div>`).join('')}</dl>` : ''}
+                ${promotionImages.length ? `<section><h4 class="text-sm font-semibold text-gray-800 mb-2">宣傳圖片</h4><div class="grid grid-cols-2 gap-3">${promotionImages.map((url, index) => `<button type="button" data-full-image="${escapeHtml(url)}" data-full-image-alt="宣傳圖片 ${index + 1}" aria-label="放大查看宣傳圖片 ${index + 1}" class="block w-full cursor-zoom-in"><img src="${escapeHtml(url)}" alt="宣傳圖片 ${index + 1}（點擊查看完整圖片）" loading="lazy" class="w-full max-h-56 rounded-lg border object-contain bg-gray-50"></button>`).join('')}</div></section>` : ''}
                 <div class="flex flex-wrap gap-4 text-sm">
                     ${mapUrl ? `<a class="text-blue-700 underline" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener noreferrer">查看地圖</a>` : ''}
                     ${signupUrl ? `<a class="text-blue-700 underline" href="${escapeHtml(signupUrl)}" target="_blank" rel="noopener noreferrer">前往報名／聯絡</a>` : ''}
@@ -669,7 +705,7 @@
                                 <h3 class="font-semibold text-gray-800">${escapeHtml(service.org || service.title || '生活服務')}</h3>
                                 ${service.title && service.title !== service.org ? `<p class="mt-1 text-sm text-gray-700">${escapeHtml(service.title)}</p>` : ''}
                             </div>
-                            ${safeExternalUrl(service.lifeServiceThumbnailUrl) || safeExternalUrl(service.img) ? `<img src="${escapeHtml(safeExternalUrl(service.lifeServiceThumbnailUrl) || safeExternalUrl(service.img))}" alt="${escapeHtml(service.title || service.org || '活動縮圖')}" loading="lazy" class="h-20 w-20 shrink-0 rounded-lg object-cover sm:h-24 sm:w-24">` : ''}
+                            ${safeExternalUrl(service.lifeServiceThumbnailUrl) || safeExternalUrl(service.img) ? `<button type="button" data-full-image="${escapeHtml(safeExternalUrl(service.lifeServiceThumbnailUrl) || safeExternalUrl(service.img))}" data-full-image-alt="${escapeHtml(service.title || service.org || '生活服務圖片')}" aria-label="放大查看${escapeHtml(service.title || service.org || '生活服務')}圖片" class="shrink-0 cursor-zoom-in rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"><img src="${escapeHtml(safeExternalUrl(service.lifeServiceThumbnailUrl) || safeExternalUrl(service.img))}" alt="${escapeHtml(service.title || service.org || '活動縮圖')}（點擊查看完整圖片）" loading="lazy" class="h-20 w-20 rounded-lg object-cover sm:h-24 sm:w-24"></button>` : ''}
                         </div>
                         <p class="px-4 pb-3 whitespace-pre-line text-sm leading-6 text-gray-700">${escapeHtml(getServiceSummary(service))}</p>
                         <div class="px-4 pb-4">
@@ -923,7 +959,7 @@
 
         function updateMacauClock() {
             document.getElementById('macau-time').textContent = new Intl.DateTimeFormat('zh-Hant-MO', {
-                timeZone: 'Asia/Macau', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+                timeZone: 'Asia/Macau', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
             }).format(new Date());
         }
 
@@ -954,6 +990,31 @@
             const parsed = new Date(text);
             if (Number.isNaN(parsed.getTime())) return '';
             return dateKey(parsed.getFullYear(), parsed.getMonth() + 1, parsed.getDate());
+        }
+
+        function parseActivityDateTime(value) {
+            const text = String(value || '').trim();
+            const match = text.match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{1,2}:\d{2})(?::\d{2}(?:\.\d+)?)?)?/);
+            return match ? { date: match[1], time: match[2] || '' } : null;
+        }
+
+        function formatActivityDateTime(value) {
+            const text = String(value || '').trim();
+            const parts = parseActivityDateTime(text);
+            if (parts) return parts.time ? `${parts.date} ${parts.time}` : parts.date;
+            return text.replace('T', ' ').replace(/(\d{2}:\d{2}):\d{2}(?:\.\d+)?/g, '$1');
+        }
+
+        function formatActivityPeriod(startValue, endValue) {
+            const start = parseActivityDateTime(startValue);
+            const end = parseActivityDateTime(endValue);
+            if (!endValue) return formatActivityDateTime(startValue);
+            if (!start || !end || start.date !== end.date) {
+                return `${formatActivityDateTime(startValue)} 至 ${formatActivityDateTime(endValue)}`;
+            }
+            if (start.time && end.time) return `${start.date} ${start.time}–${end.time}`;
+            if (start.time || end.time) return `${start.date} ${start.time || end.time}`;
+            return start.date;
         }
 
         function renderCalendar() {
@@ -1118,6 +1179,7 @@
             }
 
             filtered.forEach(act => {
+                const serviceCategoryLabel = getLifeServiceCategoryLabel(act);
                 list.innerHTML += `
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition" onclick="openModal(${act.id})">
                         <img src="${escapeHtml(act.img)}" alt="${escapeHtml(act.title)}" class="w-full h-48 object-cover" style="object-position:center ${act.posterDisplayPosition}%;transform:scale(${act.posterDisplayScale / 100});">
@@ -1127,17 +1189,25 @@
                                 <span class="shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${act.eventFormat === 'online' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'}">${act.eventFormat === 'online' ? '線上' : '線下'}</span>
                             </div>
                             <p class="text-sm text-gray-500 mt-1">${escapeHtml(act.org)}</p>
-                            <p class="text-sm text-gray-500 mt-1">${escapeHtml(act.time.split(' ')[0])}${act.endTime ? ` 至 ${escapeHtml(act.endTime.replace('T', ' '))}` : ''}</p>
+                            <p class="text-sm text-gray-500 mt-1">${escapeHtml(formatActivityPeriod(act.time, act.endTime))}</p>
                             <p class="text-xs text-gray-500 mt-1">${escapeHtml(act.cats.map(value => categoryNames[value] || value).join('、'))}${act.subcats.length ? ` · ${escapeHtml(act.subcats.map(value => subcategoryNames[value] || value).join('、'))}` : ''}</p>
                             <p class="text-sm text-gray-600 mt-2 line-clamp-2">${escapeHtml(act.description || '活動免費參加')}</p>
                             <div class="flex flex-wrap gap-2 mt-3">
-                                ${act.isLifeService ? '<span class="inline-block text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded font-medium">生活服務</span>' : ''}
+                                ${act.isLifeService ? `<span class="inline-block text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded font-medium">${escapeHtml(serviceCategoryLabel || '生活服務')}</span>` : ''}
                                 <span class="inline-block text-xs ${act.fee === '免費' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'} px-2 py-1 rounded font-medium">${escapeHtml(act.fee)}</span>
                                 <span class="inline-block text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded font-medium">年齡︰${act.age}</span>
                             </div>
                         </div>
                     </div>`;
             });
+        }
+
+        function getLifeServiceCategoryLabel(activity) {
+            if (!activity.isLifeService) return '';
+            const category = homepageServiceCategories.find(item => item.id === activity.lifeServiceCategory);
+            if (!category) return '生活服務';
+            const subcategory = category.subcategories.find(item => item.id === activity.lifeServiceSubcategory);
+            return `生活服務：${category.name}${subcategory ? ` · ${subcategory.name}` : ''}`;
         }
 
         function filterCategory(cat) {
@@ -1211,6 +1281,11 @@
             renderServiceCategoryModal();
         });
         document.getElementById('service-category-modal-results').addEventListener('click', event => {
+            const imageButton = event.target.closest('[data-full-image]');
+            if (imageButton) {
+                openImageLightbox(imageButton.dataset.fullImage, imageButton.dataset.fullImageAlt || '');
+                return;
+            }
             const button = event.target.closest('[data-expand-service-details]');
             if (!button) return;
             const index = Number(button.dataset.expandServiceDetails);
@@ -1249,6 +1324,7 @@
             if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target === '_blank') return;
             event.preventDefault();
             const detailUrl = new URL(link.href);
+            void trackFeaturedActivityEvent(detailUrl.searchParams.get('id'), 'gallery_click');
             detailUrl.searchParams.set('embed', '1');
             heroDetailFrame.src = detailUrl.href;
             heroDetailDialog.showModal();
@@ -1371,7 +1447,7 @@
                     <span class="text-xs ${act.eventFormat === 'online' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'} px-2 py-1 rounded-full font-semibold">${act.eventFormat === 'online' ? '線上' : '線下'}</span>
                 </div>
                 <p class="text-sm text-gray-600 mb-2">主辦單位：${escapeHtml(act.org)}</p>
-                <p class="text-sm text-gray-600 mb-4">分類：${escapeHtml(act.cats.map(value => categoryNames[value] || value).join('、'))}${act.subcats.length ? ` · ${escapeHtml(act.subcats.map(value => subcategoryNames[value] || value).join('、'))}` : ''}</p>
+                <p class="text-sm text-gray-600 mb-4">分類：${escapeHtml(act.cats.map(value => categoryNames[value] || value).join('、'))}${act.subcats.length ? ` · ${escapeHtml(act.subcats.map(value => subcategoryNames[value] || value).join('、'))}` : ''}${serviceCategory ? ` · ${escapeHtml(getLifeServiceCategoryLabel(act))}` : ''}</p>
                 ${act.description ? `<p class="text-gray-700 leading-7 whitespace-pre-line mb-5">${escapeHtml(act.description)}</p>` : ''}
                 ${act.isLifeService ? `<section class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
                     <h3 class="font-semibold text-amber-900">生活服務與資源對接</h3>
@@ -1381,7 +1457,7 @@
                 </section>` : ''}
 
                 <div class="space-y-3 mb-6 text-sm bg-gray-50 p-5 rounded-xl border border-gray-100">
-                    <p class="flex items-start gap-2"><span class="font-bold text-gray-700 w-20 shrink-0">⏰ 活動期：</span><span class="text-gray-600">${escapeHtml(act.time)}${act.endTime ? ` 至 ${escapeHtml(act.endTime.replace('T', ' '))}` : ''}</span></p>
+                    <p class="flex items-start gap-2"><span class="font-bold text-gray-700 w-20 shrink-0">⏰ 活動期：</span><span class="text-gray-600">${escapeHtml(formatActivityPeriod(act.time, act.endTime))}</span></p>
                     <p class="flex items-start gap-2"><span class="font-bold text-gray-700 w-20 shrink-0">${act.eventFormat === 'online' ? '💻 線上：' : '📍 地點：'}</span><span class="text-gray-600">${escapeHtml(act.loc)}</span></p>
                     <p class="flex items-start gap-2"><span class="font-bold text-gray-700 w-20 shrink-0">🎂 適合年齡：</span><span class="text-gray-600">${escapeHtml(act.age)}</span></p>
                     <p class="flex items-start gap-2"><span class="font-bold text-gray-700 w-20 shrink-0">費用：</span><span class="${act.fee === '免費' ? 'text-emerald-700' : 'text-blue-700'} font-semibold">${escapeHtml(act.fee)}</span></p>
