@@ -1,6 +1,7 @@
 const supabaseUrl = 'https://owvsfvunlqudrhdsuqvk.supabase.co';
 const supabaseKey = 'sb_publishable_4kBnCjtv4c7j-sb8l3BrUw_j63egBDR';
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+const siteSettingsChannel = 'BroadcastChannel' in window ? new BroadcastChannel('spotmocity-site-settings') : null;
 const submissionsList = document.getElementById('submissions-list');
 let submissions = [];
 let activeSubmissionFilter = 'pending';
@@ -2647,6 +2648,7 @@ async function saveHomepageItems(containerId, settingKey, label, folder, onlyRow
         if (settingKey === 'home_blog_items') homeBlogItems = items;
         if (settingKey === 'home_ad_items') homeAdItems = items;
         if (settingKey === 'home_hero_items') homeHeroItems = items;
+        if (settingKey === 'home_hero_items') siteSettingsChannel?.postMessage({ key: settingKey });
         if (onlyRow && settingKey === 'home_hero_items') {
             const savedHero = items.find(item => item.pageId === onlyRow.querySelector('[data-content-field="pageId"]').value);
             if (savedHero) {

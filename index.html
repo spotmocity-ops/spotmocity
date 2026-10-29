@@ -8,16 +8,16 @@
     <!-- 引入 Tailwind CSS (免安裝) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        #hero-polaroid-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; padding: 0.25rem 0.5rem 0.75rem; }
+        #hero-polaroid-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; padding: 0.5rem 0.5rem 0.75rem; }
         .hero-polaroid-link { display: block; min-width: 0; color: inherit; text-decoration: none; }
         .hero-polaroid { position: relative; min-width: 0; padding: 0 0 0.75rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.2rem; box-shadow: 0 5px 14px rgb(15 23 42 / 16%); transform: rotate(var(--polaroid-tilt)); animation: polaroid-breeze 5.5s ease-in-out var(--breeze-delay) infinite; }
         .hero-polaroid > picture { display: block; width: 96.5909%; margin: 1.1364% 0 0 1.7045%; }
-        .hero-polaroid > picture img { display: block; width: 100%; aspect-ratio: 425 / 140; object-fit: contain; background: #f3f4f6; }
+        .hero-polaroid > picture img { display: block; width: 100%; aspect-ratio: 425 / 140; object-fit: cover; background: #f3f4f6; }
         .hero-polaroid.has-custom-frame { padding: 0; overflow: hidden; aspect-ratio: 440 / 215; background: #f3f4f6; }
         .hero-photo-window { position: absolute; inset: 0; overflow: hidden; }
         .hero-photo-window picture, .hero-photo-window img { position: absolute; inset: 0; width: 100%; height: 100%; }
         .hero-photo-window .hero-photo-layer { z-index: 1; inset: 2.3256% auto auto 1.7045%; width: 96.5909%; height: 65.1163%; }
-        .hero-photo-window .hero-photo-layer img { display: block; object-fit: contain; background: #f3f4f6; }
+        .hero-photo-window .hero-photo-layer img { display: block; object-fit: cover; background: #f3f4f6; }
         .hero-photo-window .hero-frame-layer { z-index: 0; pointer-events: none; }
         .hero-photo-window .hero-frame-layer img { display: block; object-fit: fill; }
         .hero-polaroid figcaption { margin: 0.5rem; padding: 0.55rem 0.75rem; color: #374151; font-size: 0.75rem; line-height: 1.35; text-align: center; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.75rem; box-shadow: 0 1px 3px rgb(15 23 42 / 10%); }
@@ -31,6 +31,10 @@
             #hero-detail-dialog { width: 100vw; height: 100dvh; max-height: none; border-radius: 0; }
             #hero-detail-dialog .hero-dialog-header { height: 2.75rem; }
             #hero-detail-dialog iframe { height: calc(100% - 2.75rem); }
+        }
+        @media (max-width: 767px) {
+            .hero-polaroid > picture img,
+            .hero-photo-window .hero-photo-layer img { object-fit: cover; }
         }
         .hero-polaroid-link:nth-child(8n + 1) .hero-polaroid { --polaroid-tilt: -3deg; --breeze-delay: -1s; }
         .hero-polaroid-link:nth-child(8n + 2) .hero-polaroid { --polaroid-tilt: 2deg; --breeze-delay: -3.2s; }
@@ -62,15 +66,29 @@
         body.site-mode-mobile #homepage-service-panel { order: 3; margin-top: 1rem; }
         body.site-mode-desktop { min-width: 1024px; }
         body.site-mode-desktop .hero-polaroid { container-type: inline-size; }
-        body.site-mode-desktop .hero-polaroid:not(.has-custom-frame) { padding: 0; overflow: hidden; aspect-ratio: 440 / 215; }
-        body.site-mode-desktop .hero-polaroid:not(.has-custom-frame) > picture { position: absolute; inset: 2.3256% auto auto 1.7045%; width: 96.5909%; height: 65.1163%; margin: 0; }
+        body.site-mode-desktop .hero-polaroid { padding: 0; overflow: hidden; aspect-ratio: 440 / 260; }
+        body.site-mode-desktop .hero-polaroid:not(.has-custom-frame) > picture { position: absolute; inset: 1.9231% auto auto 1.7045%; width: 96.5909%; height: 65.1163%; margin: 0; }
         body.site-mode-desktop .hero-polaroid:not(.has-custom-frame) > picture img { height: 100%; }
+        body.site-mode-desktop .hero-polaroid:not(.has-custom-frame) figcaption { inset: 69.7674% 3.9773% 3.2558%; }
         body.site-mode-desktop .hero-polaroid figcaption { padding-block: 0; font-size: clamp(0.5rem, 6cqw, 0.6875rem); line-height: 1.1; }
         body.site-mode-desktop [role="group"][aria-label="版面模式"] { position: fixed; top: 0.5rem; right: 0.5rem; z-index: 60; }
         body.site-mode-desktop #homepage-hero-layout { display: grid; grid-template-columns: 14rem minmax(0, 1fr) 14rem; }
         body.site-mode-desktop #middle-background > div { display: grid; grid-template-columns: minmax(0, 1fr) 14rem; }
         body.site-mode-desktop #middle-background main > .grid { display: grid; grid-template-columns: 8rem minmax(0, 1fr); }
         body.site-mode-desktop #activity-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        @media (max-width: 767px) {
+            body.site-mode-desktop { width: 100%; min-width: 0; margin-inline: 0; }
+            body.site-mode-desktop #hero-polaroid-grid { grid-template-columns: minmax(0, 1fr); }
+            body.site-mode-desktop #homepage-hero-layout { display: flex; flex-direction: column; }
+            body.site-mode-desktop #homepage-hero-center { order: 1; }
+            body.site-mode-desktop #homepage-info-panel { order: 2; margin-top: 1rem; }
+            body.site-mode-desktop #homepage-service-panel { order: 3; margin-top: 1rem; }
+            body.site-mode-desktop #middle-background > div,
+            body.site-mode-desktop #middle-background main > .grid { display: block; }
+            body.site-mode-desktop #activity-list { grid-template-columns: minmax(0, 1fr); }
+            body.site-mode-desktop #middle-background aside[aria-label="網誌與廣告"] { margin-top: 2rem; }
+            body.site-mode-desktop .hero-polaroid figcaption { padding: 0.1rem 0.3rem; font-size: clamp(0.75rem, 4cqw, 1rem); line-height: 1.35; }
+        }
     </style>
 </head>
 <body id="page-background" class="bg-gray-50 font-sans text-gray-800 pb-20">
@@ -143,7 +161,7 @@
                 </a>
             </section>
             <section id="hero-carousel-wrapper" class="w-full min-w-0 py-3 md:py-4 rounded-2xl bg-cover bg-center bg-no-repeat">
-                <div class="flex items-center justify-between gap-3 px-2 mb-2">
+                <div class="flex items-center justify-between gap-3 px-2 mb-4">
                     <h2 class="text-lg font-bold text-gray-800">置頂內容</h2>
                     <a href="hero-gallery.html" class="shrink-0 text-sm font-bold tracking-widest text-blue-700 hover:text-blue-900 hover:underline" aria-label="查看更多置頂內容">MORE <span aria-hidden="true">→</span></a>
                 </div>
@@ -820,6 +838,12 @@
             }
             renderHomepageContent(Object.fromEntries(data.map(item => [item.key, item.value])));
         }
+
+        const siteSettingsChannel = 'BroadcastChannel' in window ? new BroadcastChannel('spotmocity-site-settings') : null;
+        siteSettingsChannel?.addEventListener('message', event => {
+            if (event.data?.key === 'home_hero_items') void loadHomepageContent();
+        });
+        window.addEventListener('focus', () => void loadHomepageContent());
 
         async function loadHomepageVisitorCount() {
             const display = document.getElementById('homepage-visitor-count');
