@@ -1041,6 +1041,18 @@
             return start.date;
         }
 
+        const calendarCategoryStyles = {
+            limited_offers: { icon: '🏷️', background: '#fff7ed', color: '#c2410c' },
+            leisure: { icon: '🎨', background: '#fdf2f8', color: '#be185d' },
+            adult_social: { icon: '🔗', background: '#f5f3ff', color: '#6d28d9' },
+            senior_community: { icon: '👵', background: '#ecfdf5', color: '#047857' },
+            business_networking: { icon: '💡', background: '#fffbeb', color: '#b45309' },
+            competitions_calls: { icon: '🏆', background: '#eff6ff', color: '#1d4ed8' },
+            school_education: { icon: '🏫', background: '#ecfeff', color: '#0e7490' },
+            learning_certificates: { icon: '📚', background: '#eef2ff', color: '#4338ca' },
+            life_services: { icon: '🤝', background: '#f0fdf4', color: '#15803d' }
+        };
+
         function renderCalendar() {
             const year = calendarYear;
             const month = calendarMonth;
@@ -1064,7 +1076,9 @@
                     const key = dateKey(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate());
                     const dayActivities = activityByDate.get(key) || [];
                     if (!dayActivities.some(item => item.id === activity.id)) {
-                        dayActivities.push({ id: activity.id, title: activity.title || '未命名活動' });
+                        const categories = [...activity.cats];
+                        if (activity.isLifeService && !categories.includes('life_services')) categories.push('life_services');
+                        dayActivities.push({ id: activity.id, title: activity.title || '未命名活動', categories });
                         activityByDate.set(key, dayActivities);
                     }
                     date.setUTCDate(date.getUTCDate() + 1);
@@ -1088,16 +1102,26 @@
                 const isSelected = key === selectedCalendarDate;
                 const isToday = key === dateKey(macauTodayParts.year, macauTodayParts.month, macauTodayParts.day);
                 const style = isSelected ? 'bg-blue-600 text-white' : isToday ? 'border-blue-500 text-blue-700' : 'border-transparent hover:bg-blue-50';
-                const activityTitles = dayActivities.map(item =>
-                    `<span class="mb-1 block truncate rounded bg-blue-50/80 px-1 py-0.5 text-left text-[10px] leading-3 font-semibold text-gray-700" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>`
-                ).join('');
+                const categoryCounts = new Map();
+                dayActivities.forEach(item => item.categories.forEach(categoryId => {
+                    categoryCounts.set(categoryId, (categoryCounts.get(categoryId) || 0) + 1);
+                }));
+                const categoryMarkers = [...categoryCounts]
+                    .map(([categoryId, categoryCount]) => {
+                        const category = categoryGroups.find(item => item.value === categoryId);
+                        const categoryStyle = calendarCategoryStyles[categoryId] || { icon: '•', background: '#f1f5f9', color: '#475569' };
+                        const categoryLabel = category?.label || categoryId;
+                        return `<span class="inline-flex h-5 min-w-5 items-center justify-center gap-0.5 rounded px-1 text-[10px] font-semibold" style="background:${categoryStyle.background};color:${categoryStyle.color}" title="${escapeHtml(categoryLabel)}：${categoryCount} 項活動"><span aria-hidden="true">${categoryStyle.icon}</span><span aria-hidden="true">${categoryCount}</span><span class="sr-only">${escapeHtml(categoryLabel)} ${categoryCount} 項活動</span></span>`;
+                    }).join('');
                 const tooltip = [
                     ...dayActivities.map(item => item.title),
+                    ...[...new Set(dayActivities.flatMap(item => item.categories))]
+                        .map(categoryId => categoryGroups.find(item => item.value === categoryId)?.label || categoryId),
                     specialDay ? `${specialDay.icon} ${specialDay.title}` : ''
                 ].filter(Boolean).join(' · ') || '沒有已公布活動';
-                days.insertAdjacentHTML('beforeend', `<button type="button" role="gridcell" data-calendar-date="${key}" aria-pressed="${isSelected}" title="${escapeHtml(tooltip)}" class="relative h-32 overflow-y-auto overflow-x-hidden border rounded-lg p-1 text-sm text-left ${style}">
+                days.insertAdjacentHTML('beforeend', `<button type="button" role="gridcell" data-calendar-date="${key}" aria-label="${key}：${escapeHtml(tooltip)}" aria-pressed="${isSelected}" title="${escapeHtml(tooltip)}" class="relative h-20 overflow-hidden border rounded-lg p-1 text-sm text-left ${style}">
                     <span class="block text-center text-xs font-semibold">${day}</span>
-                    <span class="mt-0.5 block pb-3">${activityTitles}</span>
+                    <span class="mt-1 flex flex-wrap content-start justify-center gap-0.5">${categoryMarkers}</span>
                     ${specialDay ? `<span aria-label="${escapeHtml(specialDay.title)}" class="absolute bottom-0.5 right-1 text-sm leading-none">${escapeHtml(specialDay.icon)}</span>` : count ? '<span class="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true"></span>' : ''}
                 </button>`);
             }
