@@ -473,6 +473,7 @@ drop policy if exists "Require responsible person phone" on public.submissions;
 drop policy if exists "Admins can view submissions" on public.submissions;
 drop policy if exists "Admins can update submissions" on public.submissions;
 drop policy if exists "Admins can view curated activity drafts" on public.curated_activity_drafts;
+drop policy if exists "Admins can insert curated activity drafts" on public.curated_activity_drafts;
 drop policy if exists "Admins can update curated activity drafts" on public.curated_activity_drafts;
 drop policy if exists "Admins can delete curated activity drafts" on public.curated_activity_drafts;
 drop policy if exists "Admins can view activity curation runs" on public.activity_curation_runs;
@@ -532,6 +533,12 @@ on public.curated_activity_drafts
 for select
 to authenticated
 using ((select public.is_admin()));
+
+create policy "Admins can insert curated activity drafts"
+on public.curated_activity_drafts
+for insert
+to authenticated
+with check ((select public.is_admin()));
 
 create policy "Admins can update curated activity drafts"
 on public.curated_activity_drafts

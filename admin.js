@@ -333,7 +333,7 @@ function renderCuratedActivityDrafts() {
                     <span class="text-xs font-semibold px-2 py-1 rounded ${isExpired ? 'bg-gray-100 text-gray-700' : item.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}">${isExpired ? '已過期（自動下架）' : item.status === 'published' ? '已上架' : '待編輯草稿'}</span>
                     <span class="text-xs text-gray-500 ml-2">搜集時間：${escapeHtml(item.generated_at || item.created_at || '—')}</span>
                 </div>
-                ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-700 underline">原始來源：${escapeHtml(item.source_title || sourceUrl)}</a>` : ''}
+                ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-700 underline">原始來源：${escapeHtml(item.source_title || sourceUrl)}</a>` : item.source_title ? `<span class="text-sm text-gray-600">${escapeHtml(item.source_title)}</span>` : ''}
             </div>
             <div class="grid gap-3 md:grid-cols-2">
                 <label class="text-sm font-semibold">活動名稱<input data-field="title" maxlength="200" value="${escapeHtml(item.title)}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
@@ -508,6 +508,34 @@ async function runCuratedActivitySearch() {
     } finally {
         button.disabled = false;
         button.textContent = '立即手動搜尋';
+    }
+}
+
+async function addManualCuratedActivityDraft() {
+    const button = document.getElementById('add-manual-curated-draft-btn');
+    if (button.disabled) return;
+    button.disabled = true;
+    try {
+        const draftId = createHomepageUploadId();
+        const { error } = await supabaseClient.from('curated_activity_drafts').insert({
+            title: '手動新增活動（請填寫）',
+            org_name: '',
+            source_url: `manual://activity/${draftId}`,
+            source_title: '管理員手動新增',
+            status: 'draft'
+        });
+        if (error) throw error;
+        activeCuratedDraftFilter = 'unpublished';
+        await fetchCuratedActivityDrafts();
+        const newDraft = document.querySelector('#curated-drafts-list [data-curated-draft]');
+        if (newDraft) {
+            newDraft.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            newDraft.querySelector('[data-field="title"]')?.focus();
+        }
+    } catch (error) {
+        alert('手動新增活動失敗：' + (error?.message || '請檢查管理員權限及資料庫設定。'));
+    } finally {
+        button.disabled = false;
     }
 }
 
@@ -3588,6 +3616,7 @@ function bindEvents() {
     document.getElementById('curated-drafts-list').addEventListener('change', updateCuratedLifeServicePromotionVisibility);
     document.getElementById('curated-drafts-list').addEventListener('change', previewCuratedPoster);
     document.getElementById('curated-drafts-list').addEventListener('input', previewCuratedPoster);
+    document.getElementById('add-manual-curated-draft-btn').addEventListener('click', addManualCuratedActivityDraft);
     document.getElementById('edit-category').addEventListener('change', () => {
         const selectedSubcategories = Array.from(
             document.querySelectorAll('#edit-subcategory input[name="editSubcategory"]:checked'),
