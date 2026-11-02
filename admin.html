@@ -323,10 +323,10 @@
                                     </select>
                                 </label>
                                 <label class="text-xs font-medium text-gray-700">模型名稱
-                                    <input id="manual-blog-model" type="text" maxlength="100" value="qwen-plus" placeholder="qwen-plus" class="mt-1 w-full rounded border bg-white px-2 py-2 text-sm">
+                                    <input id="manual-blog-model" type="text" maxlength="100" placeholder="留空以沿用伺服器預設模型" class="mt-1 w-full rounded border bg-white px-2 py-2 text-sm">
                                 </label>
                             </div>
-                            <p id="manual-blog-provider-help" class="mt-1 text-xs text-gray-500">優先使用 Supabase 的 DASHSCOPE_API_KEY／QWEN_BASE_URL；若未設定則沿用 OPENAI_API_KEY／OPENAI_BASE_URL。</p>
+                            <p id="manual-blog-provider-help" class="mt-1 text-xs text-gray-500">留空模型名稱會沿用每日活動 AI 的 OPENAI_MODEL。優先使用 QWEN 設定；未設定時沿用每日活動 AI 的 OPENAI_API_KEY／OPENAI_BASE_URL。</p>
                             <div class="my-2 flex items-center justify-between gap-2">
                                 <span id="manual-blog-activity-count" class="text-xs font-semibold text-gray-700">可選活動</span>
                                 <button id="refresh-blog-activities-btn" type="button" class="text-xs text-blue-700 underline">重新整理</button>

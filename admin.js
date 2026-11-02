@@ -347,13 +347,13 @@ function updateManualBlogModelDefaults() {
     const model = document.getElementById('manual-blog-model');
     const help = document.getElementById('manual-blog-provider-help');
     if (provider === 'qwen') {
-        model.value = 'qwen-plus';
-        model.placeholder = 'qwen-plus';
-        help.textContent = '優先使用 Supabase 的 DASHSCOPE_API_KEY／QWEN_BASE_URL；若未設定則沿用 OPENAI_API_KEY／OPENAI_BASE_URL。';
+        model.value = '';
+        model.placeholder = '沿用每日活動 AI 的設定模型';
+        help.textContent = '模型名稱留空會沿用每日活動 AI 的 OPENAI_MODEL。優先使用 QWEN 設定；未設定時沿用每日活動 AI 的 OPENAI_API_KEY／OPENAI_BASE_URL。';
     } else {
-        model.value = 'gpt-4o-mini';
-        model.placeholder = 'gpt-4o-mini';
-        help.textContent = '使用 Supabase 設定的 OPENAI_API_KEY、OPENAI_BASE_URL 及 OPENAI_MODEL（可由此欄覆寫模型）。';
+        model.value = '';
+        model.placeholder = '沿用 OPENAI_MODEL';
+        help.textContent = '模型名稱留空會沿用每日活動 AI 的 OPENAI_MODEL；輸入模型名稱可手動覆寫。';
     }
 }
 

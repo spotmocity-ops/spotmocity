@@ -237,7 +237,7 @@ async function generateDailyBlogContent(
         ? Deno.env.get('DASHSCOPE_API_KEY')?.trim() || Deno.env.get('OPENAI_API_KEY')?.trim()
         : Deno.env.get('OPENAI_API_KEY')?.trim();
     const configuredBaseUrl = provider === 'qwen'
-        ? Deno.env.get('QWEN_BASE_URL')?.trim() || Deno.env.get('OPENAI_BASE_URL')?.trim()
+        ? Deno.env.get('QWEN_BASE_URL')?.trim() || getOpenAiBaseUrl()
         : getOpenAiBaseUrl();
     const defaultModel = provider === 'qwen'
         ? Deno.env.get('QWEN_MODEL')?.trim() || Deno.env.get('OPENAI_MODEL')?.trim() || 'qwen-plus'
