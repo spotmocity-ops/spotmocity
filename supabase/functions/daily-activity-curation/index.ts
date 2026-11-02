@@ -302,9 +302,22 @@ async function generateDailyBlogContent(
         })
     });
     if (!response.ok) {
-        const errorText = (await response.text()).slice(0, 500);
-        console.error(`${provider} daily blog request failed:`, response.status, errorText);
-        throw new Error(`${provider === 'qwen' ? 'Qwen Cloud' : 'OpenAI 相容服務'}每日網誌生成失敗。`);
+        console.error(`${provider} daily blog request failed: HTTP ${response.status}`);
+        const providerName = provider === 'qwen' ? 'Qwen Cloud' : 'OpenAI 相容服務';
+        const hint = response.status === 401
+            ? '請確認 API Key 有效，且與 API Host 屬於同一服務區域。'
+            : response.status === 403
+                ? 'API Key 無權使用此模型或服務，請檢查模型授權與區域設定。'
+                : response.status === 404
+                    ? 'API Host 或模型名稱不存在，請檢查 API Host 及模型名稱。'
+                    : response.status === 400
+                        ? '服務拒絕此請求格式，請確認模型支援 JSON 輸出及目前的參數設定。'
+                        : response.status === 429
+                            ? '服務已達用量或速率限制，請檢查帳戶額度後再試。'
+                            : response.status >= 500
+                                ? 'AI 服務暫時不可用，請稍後再試。'
+                                : '請檢查 AI 服務設定後再試。';
+        throw new Error(`${providerName}網誌生成失敗（HTTP ${response.status}）。${hint}`);
     }
 
     const result = await response.json();
