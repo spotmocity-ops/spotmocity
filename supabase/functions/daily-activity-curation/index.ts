@@ -288,14 +288,14 @@ async function generateDailyBlogContent(
         .filter((image): image is { title: string; url: string } => Boolean(image.url)) : [];
     const userContent = posterImages.length
         ? [
+            ...posterImages.flatMap(image => [
+                { type: 'image_url', image_url: { url: image.url } },
+                { type: 'text', text: `以上圖片是「${image.title}」的活動海報，只可用作核對或補充該活動資料。` }
+            ]),
             {
                 type: 'text',
-                text: JSON.stringify({ activity_date: macauDate(), activities: activityInput })
-            },
-            ...posterImages.flatMap(image => [
-                { type: 'text', text: `以下是「${image.title}」的活動海報，只可用作核對或補充該活動資料：` },
-                { type: 'image_url', image_url: { url: image.url } }
-            ])
+                text: `請依據以下活動資料及上述對應海報生成網誌：${JSON.stringify({ activity_date: macauDate(), activities: activityInput })}`
+            }
         ]
         : JSON.stringify({ activity_date: macauDate(), activities: activityInput });
 
@@ -312,7 +312,7 @@ async function generateDailyBlogContent(
         },
         body: JSON.stringify({
             model,
-            response_format: { type: 'json_object' },
+            ...(!posterImages.length ? { response_format: { type: 'json_object' } } : {}),
             messages: [
                 {
                     role: 'system',
@@ -347,7 +347,7 @@ async function generateDailyBlogContent(
                 : response.status === 404
                     ? 'API Host 或模型名稱不存在，請檢查 API Host 及模型名稱。'
                     : response.status === 400
-                        ? '服務拒絕此請求格式，請確認模型支援圖片輸入（Vision）及 JSON 輸出；若模型不支援圖片，請改用視覺模型。'
+                        ? '服務拒絕此圖片請求。請確認模型支援圖片輸入（Vision）、海報網址可公開讀取，並確認模型名稱及 API 區域設定。'
                         : response.status === 429
                             ? '服務已達用量或速率限制，請檢查帳戶額度後再試。'
                             : response.status >= 500
