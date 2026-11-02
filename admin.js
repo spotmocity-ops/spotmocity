@@ -598,7 +598,10 @@ async function generateManualBlogPost() {
             filterButton.classList.toggle('border-blue-400', active);
         });
         await fetchBlogPosts(data.blog_post_id);
-        message.textContent = `已生成網誌草稿（${data.provider} · ${data.model}），請審核後儲存或發布。`;
+        const imageSummary = Number(data.image_count) > 0
+            ? `已參考 ${data.image_count} 張活動海報`
+            : '沒有可用海報，使用活動文字資料生成';
+        message.textContent = `已生成網誌草稿（${data.provider} · ${data.model}；${imageSummary}），請審核後儲存或發布。`;
         message.className = 'mt-2 text-xs text-green-700';
     } catch (error) {
         try {
