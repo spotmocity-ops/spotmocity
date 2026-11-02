@@ -349,7 +349,7 @@ function updateManualBlogModelDefaults() {
     if (provider === 'qwen') {
         model.value = 'qwen-plus';
         model.placeholder = 'qwen-plus';
-        help.textContent = '使用 Supabase 設定的 DASHSCOPE_API_KEY 與 QWEN_BASE_URL。';
+        help.textContent = '優先使用 Supabase 的 DASHSCOPE_API_KEY／QWEN_BASE_URL；若未設定則沿用 OPENAI_API_KEY／OPENAI_BASE_URL。';
     } else {
         model.value = 'gpt-4o-mini';
         model.placeholder = 'gpt-4o-mini';

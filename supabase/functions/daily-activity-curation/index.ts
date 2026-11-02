@@ -234,24 +234,24 @@ async function generateDailyBlogContent(
 ): Promise<DailyBlogGeneratedContent> {
     if (!['qwen', 'openai'].includes(provider)) throw new Error('不支援的網誌 AI 服務。');
     const apiKey = provider === 'qwen'
-        ? Deno.env.get('DASHSCOPE_API_KEY')?.trim()
+        ? Deno.env.get('DASHSCOPE_API_KEY')?.trim() || Deno.env.get('OPENAI_API_KEY')?.trim()
         : Deno.env.get('OPENAI_API_KEY')?.trim();
     const configuredBaseUrl = provider === 'qwen'
-        ? Deno.env.get('QWEN_BASE_URL')?.trim()
+        ? Deno.env.get('QWEN_BASE_URL')?.trim() || Deno.env.get('OPENAI_BASE_URL')?.trim()
         : getOpenAiBaseUrl();
     const defaultModel = provider === 'qwen'
-        ? Deno.env.get('QWEN_MODEL')?.trim() || 'qwen-plus'
+        ? Deno.env.get('QWEN_MODEL')?.trim() || Deno.env.get('OPENAI_MODEL')?.trim() || 'qwen-plus'
         : Deno.env.get('OPENAI_MODEL')?.trim() || 'gpt-4o-mini';
     const model = safeText(requestedModel, 100) || defaultModel;
     if (!/^[A-Za-z0-9._:/-]{1,100}$/.test(model)) throw new Error('AI 模型名稱格式無效。');
     if (!apiKey) {
         throw new Error(provider === 'qwen'
-            ? '每日網誌生成尚未設定 DASHSCOPE_API_KEY。'
+            ? '每日網誌生成尚未設定 DASHSCOPE_API_KEY 或 OPENAI_API_KEY。'
             : '尚未設定 OPENAI_API_KEY，無法使用此 OpenAI 相容服務。');
     }
     if (!configuredBaseUrl) {
         throw new Error(provider === 'qwen'
-            ? '每日網誌生成尚未設定 QWEN_BASE_URL。'
+            ? '每日網誌生成尚未設定 QWEN_BASE_URL 或 OPENAI_BASE_URL。'
             : '尚未設定 OPENAI_BASE_URL，無法使用此 OpenAI 相容服務。');
     }
     let baseUrl: URL;
@@ -1265,9 +1265,7 @@ Deno.serve(async request => {
                 success: true,
                 blog_post_id: saveResult.data.id,
                 provider,
-                model: model || (provider === 'qwen'
-                    ? Deno.env.get('QWEN_MODEL')?.trim() || 'qwen-plus'
-                    : Deno.env.get('OPENAI_MODEL')?.trim() || 'gpt-4o-mini'),
+                model,
                 replaced_existing_draft: Boolean(existingBlog)
             });
         } catch (error) {
