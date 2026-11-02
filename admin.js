@@ -541,6 +541,22 @@ async function generateManualBlogRequest(body, onProgress) {
     return result;
 }
 
+async function findRecentlySavedManualBlogDraft(activityIds, requestedAt) {
+    const macauDate = `${adminTodayParts.year}-${String(adminTodayParts.month).padStart(2, '0')}-${String(adminTodayParts.day).padStart(2, '0')}`;
+    const { data, error } = await supabaseClient.from('blog_posts')
+        .select('id,source_activity_ids,updated_at')
+        .eq('activity_date', macauDate)
+        .eq('status', 'draft')
+        .maybeSingle();
+    if (error) throw new Error(`無法確認網誌草稿是否已儲存：${error.message}`);
+    if (!data || new Date(data.updated_at).getTime() < requestedAt - 10000) return null;
+    const savedIds = (data.source_activity_ids || []).map(Number);
+    return savedIds.length === activityIds.length &&
+        savedIds.every((id, index) => id === activityIds[index])
+        ? data
+        : null;
+}
+
 async function generateManualBlogPost() {
     const selectedIds = [...selectedManualBlogActivityIds].map(value => {
         const [source, id] = value.split(':');
@@ -561,6 +577,8 @@ async function generateManualBlogPost() {
     button.textContent = '生成中…';
     message.textContent = '正在依所選活動生成網誌；內容較多時可能需時較久，請勿關閉頁面。';
     message.className = 'mt-2 text-xs text-gray-600';
+    const requestedAt = Date.now();
+    const expectedActivityIds = selectedIds.map(({ source, id }) => source === 'curated' ? -Number(id) : Number(id));
     try {
         const provider = document.getElementById('manual-blog-provider').value;
         const model = document.getElementById('manual-blog-model').value.trim();
@@ -568,10 +586,14 @@ async function generateManualBlogPost() {
             { action: 'manual_generate_blog', activity_ids: selectedIds, provider, model },
             () => { message.textContent = 'AI 正在生成網誌，請稍候…'; }
         );
-        if (data?.success && !data.blog_post_id) {
-            throw new Error('目前部署的 daily-activity-curation Edge Function 尚未支援手動生成網誌。請部署最新函式後再試；這次請求可能已執行活動搜集。');
+        if (data?.success !== true || !data.blog_post_id) {
+            console.error('Manual blog generation returned an incomplete result:', {
+                keys: data && typeof data === 'object' ? Object.keys(data) : [],
+                success: data?.success,
+                hasBlogPostId: Boolean(data?.blog_post_id)
+            });
+            throw new Error('生成服務未回傳完成確認；正在檢查網誌草稿是否已儲存。');
         }
-        if (!data?.success || !data.blog_post_id) throw new Error(data?.error || '網誌服務沒有確認完成。');
         activeBlogFilter = 'draft';
         document.querySelectorAll('[data-blog-filter]').forEach(filterButton => {
             const active = filterButton.dataset.blogFilter === activeBlogFilter;
@@ -583,8 +605,27 @@ async function generateManualBlogPost() {
         message.textContent = `已生成網誌草稿（${data.provider} · ${data.model}），請審核後儲存或發布。`;
         message.className = 'mt-2 text-xs text-green-700';
     } catch (error) {
+        try {
+            const savedDraft = await findRecentlySavedManualBlogDraft(expectedActivityIds, requestedAt);
+            if (savedDraft) {
+                activeBlogFilter = 'draft';
+                document.querySelectorAll('[data-blog-filter]').forEach(filterButton => {
+                    const active = filterButton.dataset.blogFilter === activeBlogFilter;
+                    filterButton.setAttribute('aria-pressed', String(active));
+                    filterButton.classList.toggle('bg-blue-50', active);
+                    filterButton.classList.toggle('border-blue-400', active);
+                });
+                await fetchBlogPosts(savedDraft.id);
+                message.textContent = '網誌草稿已儲存；服務未能回傳完成確認，請檢查草稿內容。';
+                message.className = 'mt-2 text-xs text-green-700';
+                return;
+            }
+        } catch (recoveryError) {
+            console.error('Could not verify whether manual blog generation was saved:', recoveryError);
+        }
         console.error('Manual blog generation failed:', error);
-        message.textContent = `生成失敗：${error?.message || '請檢查 AI 服務設定。'}`;
+        const reason = error?.message || '請檢查 AI 服務設定。';
+        message.textContent = `生成未確認：${reason} 若網誌清單沒有新草稿，請稍後再試。`;
         message.className = 'mt-2 text-xs text-red-600';
     } finally {
         button.disabled = false;
