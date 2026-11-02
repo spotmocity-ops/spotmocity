@@ -387,12 +387,12 @@ async function loadMoreManualBlogActivities(reset = false) {
     }
     const [curatedResponse, submissionsResponse] = await Promise.all([
         supabaseClient.from('curated_activity_drafts')
-        .select('id,title,category,event_time,event_end_time,generated_at,status')
+        .select('id,title,category,event_time,event_end_time,event_end_date,generated_at,status')
         .in('status', ['draft', 'published'])
         .order('generated_at', { ascending: false })
         .range(manualBlogActivityOffsets.curated, manualBlogActivityOffsets.curated + manualBlogActivityPageSize - 1),
         supabaseClient.from('submissions')
-        .select('id,title,category,event_time,event_end_time,created_at')
+        .select('id,title,category,event_time,event_end_time,event_end_date,created_at')
         .eq('status', 'approved')
         .eq('is_visible', true)
         .order('created_at', { ascending: false })
@@ -408,26 +408,40 @@ async function loadMoreManualBlogActivities(reset = false) {
         manualBlogActivitiesLoading = false;
         return;
     }
-    const curatedActivities = (curatedResponse.data || []).map(activity => ({
+    const curatedRows = curatedResponse.data || [];
+    const submissionRows = submissionsResponse.data || [];
+    const curatedActivities = curatedRows.filter(activity => !isCuratedDraftExpired(activity)).map(activity => ({
         ...activity,
         sourceType: 'curated',
         sourceStatus: activity.status
     }));
-    const submissionActivities = (submissionsResponse.data || []).map(activity => ({
+    const submissionActivities = submissionRows.filter(activity => !isCuratedDraftExpired(activity)).map(activity => ({
         ...activity,
         sourceType: 'submission',
         sourceStatus: 'approved',
         generated_at: activity.created_at
     }));
+    curatedRows.filter(isCuratedDraftExpired).forEach(activity => {
+        selectedManualBlogActivityIds.delete(`curated:${activity.id}`);
+    });
+    submissionRows.filter(isCuratedDraftExpired).forEach(activity => {
+        selectedManualBlogActivityIds.delete(`submission:${activity.id}`);
+    });
     const loadedActivities = [...curatedActivities, ...submissionActivities];
     manualBlogActivities.push(...loadedActivities);
-    manualBlogActivityOffsets.curated += curatedActivities.length;
-    manualBlogActivityOffsets.submissions += submissionActivities.length;
+    manualBlogActivityOffsets.curated += curatedRows.length;
+    manualBlogActivityOffsets.submissions += submissionRows.length;
     manualBlogActivityCounts.curated += curatedActivities.length;
     manualBlogActivityCounts.submissions += submissionActivities.length;
     manualBlogActivitiesExhausted =
-        curatedActivities.length < manualBlogActivityPageSize &&
-        submissionActivities.length < manualBlogActivityPageSize;
+        curatedRows.length < manualBlogActivityPageSize &&
+        submissionRows.length < manualBlogActivityPageSize;
+    if (manualBlogActivitiesExhausted) {
+        const availableActivityKeys = new Set(manualBlogActivities.map(activity => `${activity.sourceType}:${activity.id}`));
+        selectedManualBlogActivityIds = new Set(
+            [...selectedManualBlogActivityIds].filter(activityKey => availableActivityKeys.has(activityKey))
+        );
+    }
     if (!manualBlogActivities.length) {
         list.innerHTML = '<p class="py-3 text-center text-xs text-gray-500">目前沒有可選的 AI 活動或已核准投稿活動。</p>';
     } else {
@@ -486,7 +500,7 @@ async function generateManualBlogPost() {
     const button = document.getElementById('manual-generate-blog-btn');
     button.disabled = true;
     button.textContent = '生成中…';
-    message.textContent = '正在依所選活動生成網誌，請稍候。';
+    message.textContent = '正在依所選活動生成網誌；內容較多時可能需時較久，請勿關閉頁面。';
     message.className = 'mt-2 text-xs text-gray-600';
     try {
         const provider = document.getElementById('manual-blog-provider').value;

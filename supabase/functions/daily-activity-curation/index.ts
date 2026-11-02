@@ -1120,6 +1120,46 @@ function jsonResponse(body: unknown, status = 200): Response {
     return Response.json(body, { status, headers: corsHeaders });
 }
 
+function jsonResponseWithKeepAlive(operation: () => Promise<unknown>): Response {
+    const encoder = new TextEncoder();
+    let disconnected = false;
+    let heartbeat: number;
+    const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+            heartbeat = setInterval(() => {
+                if (!disconnected) controller.enqueue(encoder.encode(' '));
+            }, 10000);
+            void operation().then(
+                result => {
+                    clearInterval(heartbeat);
+                    if (disconnected) return;
+                    controller.enqueue(encoder.encode(JSON.stringify(result)));
+                    controller.close();
+                },
+                error => {
+                    clearInterval(heartbeat);
+                    if (disconnected) return;
+                    const errorMessage = error instanceof Error ? error.message : '手動網誌生成失敗。';
+                    console.error('Manual daily blog generation failed:', errorMessage);
+                    controller.enqueue(encoder.encode(JSON.stringify({ success: false, error: errorMessage })));
+                    controller.close();
+                }
+            );
+        },
+        cancel() {
+            disconnected = true;
+            clearInterval(heartbeat);
+        }
+    });
+    return new Response(stream, {
+        headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json; charset=utf-8',
+            'Cache-Control': 'no-cache, no-transform'
+        }
+    });
+}
+
 Deno.serve(async request => {
     if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
     if (request.method !== 'POST') return textResponse('Method not allowed', 405);
@@ -1251,7 +1291,7 @@ Deno.serve(async request => {
         if (existingBlog?.status === 'published') {
             return textResponse('今日網誌已發布，不能再以手動生成覆寫。', 409);
         }
-        try {
+        return jsonResponseWithKeepAlive(async () => {
             const generatedBlog = await generateDailyBlogContent(selectedActivities, provider, model);
             const blogFields = {
                 suggested_title: generatedBlog.title,
@@ -1274,18 +1314,14 @@ Deno.serve(async request => {
                 }).select('id').single();
             if (saveResult.error) throw new Error(`網誌草稿儲存失敗：${saveResult.error.message}`);
             if (!saveResult.data) throw new Error('網誌狀態已變更，未能儲存生成內容；請重新整理後再試。');
-            return jsonResponse({
+            return {
                 success: true,
                 blog_post_id: saveResult.data.id,
                 provider,
                 model,
                 replaced_existing_draft: Boolean(existingBlog)
-            });
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : '手動網誌生成失敗。';
-            console.error('Manual daily blog generation failed:', errorMessage);
-            return textResponse(errorMessage, 502);
-        }
+            };
+        });
     }
     if (requestBody.action === 'preview_draft') {
         if (cronAuthorized) return textResponse('此功能僅供登入的管理員使用。', 403);
