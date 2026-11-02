@@ -648,6 +648,8 @@ function showBlogPost(postId) {
     document.getElementById('blog-post-ig-caption').value = post.ig_caption || '';
     document.getElementById('blog-post-hashtags').value = post.hashtags || '';
     document.getElementById('blog-post-meta').textContent = `活動日期：${post.activity_date || '—'}${post.published_at ? ` · 發布時間：${new Date(post.published_at).toLocaleString('zh-HK')}` : ''}`;
+    const generationInProgress = post.generation_status === 'generating';
+    const generationStale = isBlogGenerationStale(post);
     document.getElementById('blog-post-status').textContent = generationStale
         ? '生成逾時'
         : post.generation_status === 'generating' ? '生成中'
@@ -658,8 +660,6 @@ function showBlogPost(postId) {
                 : post.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
     }`;
     document.getElementById('publish-blog-post-btn').textContent = post.status === 'published' ? '儲存並更新發布內容' : '核准並正式發布';
-    const generationInProgress = post.generation_status === 'generating';
-    const generationStale = isBlogGenerationStale(post);
     document.getElementById('save-blog-post-btn').disabled = generationInProgress;
     document.getElementById('publish-blog-post-btn').disabled = generationInProgress;
     document.getElementById('blog-post-message').textContent = generationStale
