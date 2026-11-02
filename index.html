@@ -165,7 +165,10 @@
                 <div id="homepage-warm-info-content" class="text-sm text-gray-700 leading-6 whitespace-pre-line">暫無溫馨資訊</div>
                 <section id="homepage-curated-activities" class="hidden mt-4 border-t border-amber-200 pt-3" aria-label="每日新增活動">
                     <div class="flex items-center justify-between gap-2 mb-2">
-                        <h3 class="font-semibold text-sm text-amber-900">每日新增活動</h3>
+                        <h3 class="flex items-center gap-2 font-semibold text-sm text-amber-900">
+                            每日新增活動
+                            <span id="homepage-curated-activities-count" class="inline-flex min-w-5 items-center justify-center rounded-full bg-amber-200 px-1.5 py-0.5 text-xs font-bold text-amber-900" aria-label="活動數量">0</span>
+                        </h3>
                         <div class="flex gap-1">
                             <button id="homepage-curated-activities-previous" type="button" aria-label="向左瀏覽每日新增活動" class="hidden h-7 w-7 rounded-full border border-amber-300 bg-white text-amber-900 hover:bg-amber-100 disabled:opacity-40" disabled>‹</button>
                             <button id="homepage-curated-activities-next" type="button" aria-label="向右瀏覽每日新增活動" class="hidden h-7 w-7 rounded-full border border-amber-300 bg-white text-amber-900 hover:bg-amber-100 disabled:opacity-40" disabled>›</button>
@@ -209,7 +212,14 @@
                     </aside>
 
                     <div class="min-w-0">
-                        <div class="flex justify-end">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <label for="activity-sort-order" class="flex items-center gap-2 text-sm text-gray-700">
+                                <span>日期排序</span>
+                                <select id="activity-sort-order" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm">
+                                    <option value="ascending">由早至晚</option>
+                                    <option value="descending">由晚至早</option>
+                                </select>
+                            </label>
                             <div class="inline-flex p-1 bg-gray-200 rounded-lg" role="group" aria-label="活動顯示方式">
                                 <button id="view-mode-list" type="button" aria-pressed="true" class="px-4 py-2 text-sm font-medium rounded-md bg-white text-gray-900 shadow-sm">活動列表</button>
                                 <button id="view-mode-calendar" type="button" aria-pressed="false" class="px-4 py-2 text-sm font-medium rounded-md text-gray-600 hover:text-gray-900">日曆</button>
@@ -373,9 +383,14 @@
         let activeCategory = 'all';
         let activeSubcategory = 'all';
         let activeEventFormat = 'all';
+        let activitySortOrder = 'ascending';
         let searchQuery = '';
         let activityDisplayMode = 'list';
         const layoutModeStorageKey = 'spotmocity_layout_mode';
+        const macauDateFormatter = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Macau', year: 'numeric', month: '2-digit', day: '2-digit'
+        });
+        let homepageCuratedActivitiesRefreshTimer = null;
         const macauTodayParts = new Intl.DateTimeFormat('en-CA', {
             timeZone: 'Asia/Macau', year: 'numeric', month: '2-digit', day: '2-digit'
         }).formatToParts(new Date()).reduce((parts, part) => {
@@ -502,7 +517,7 @@
                 .order('created_at', { ascending: false });
 
             if (!error && data) {
-                renderHomepageCuratedActivities(data.filter(item => item.source_url));
+                renderHomepageCuratedActivities(data);
                 activities = data.map(item => ({
                     id: item.id,
                     cats: String(item.category || '').split(',').filter(Boolean),
@@ -553,6 +568,31 @@
             renderHomepageServiceCategories();
             renderCalendar();
             renderActivities();
+            scheduleHomepageCuratedActivitiesRefresh();
+        }
+
+        function getMacauDateKey(value) {
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '';
+            const parts = macauDateFormatter.formatToParts(date).reduce((result, part) => {
+                if (part.type !== 'literal') result[part.type] = part.value;
+                return result;
+            }, {});
+            return `${parts.year}-${parts.month}-${parts.day}`;
+        }
+
+        function scheduleHomepageCuratedActivitiesRefresh() {
+            if (homepageCuratedActivitiesRefreshTimer !== null) return;
+            const scheduledDate = getMacauDateKey(new Date());
+            const checkDate = () => {
+                homepageCuratedActivitiesRefreshTimer = null;
+                if (getMacauDateKey(new Date()) !== scheduledDate) {
+                    loadActivitiesFromDB();
+                    return;
+                }
+                homepageCuratedActivitiesRefreshTimer = setTimeout(checkDate, 60000);
+            };
+            homepageCuratedActivitiesRefreshTimer = setTimeout(checkDate, 60000);
         }
 
         function formatHomepageActivityDate(item) {
@@ -577,7 +617,12 @@
         function renderHomepageCuratedActivities(items) {
             const section = document.getElementById('homepage-curated-activities');
             const list = document.getElementById('homepage-curated-activities-list');
-            const curatedActivities = items.filter(item => item.title);
+            const today = getMacauDateKey(new Date());
+            const curatedActivities = items.filter(item =>
+                item.title && getMacauDateKey(item.created_at) === today
+            );
+            document.getElementById('homepage-curated-activities-count').textContent = String(curatedActivities.length);
+            document.getElementById('homepage-curated-activities-count').setAttribute('aria-label', `${curatedActivities.length} 項活動`);
             section.classList.toggle('hidden', curatedActivities.length === 0);
             list.innerHTML = curatedActivities.map(item => {
                 const poster = safeExternalUrl(item.poster_url);
@@ -1278,6 +1323,14 @@
             list.classList.toggle('hidden', activityDisplayMode === 'calendar' && !selectedCalendarDate && !searchQuery);
 
             const filtered = activities.filter(activity => matchesActivityFilters(activity));
+            filtered.sort((first, second) => {
+                const firstDate = parseActivityDate(first.time);
+                const secondDate = parseActivityDate(second.time);
+                if (!firstDate) return secondDate ? 1 : 0;
+                if (!secondDate) return -1;
+                const dateOrder = firstDate.localeCompare(secondDate);
+                return activitySortOrder === 'ascending' ? dateOrder : -dateOrder;
+            });
 
             list.innerHTML = '';
             if (filtered.length === 0) {
@@ -1356,6 +1409,11 @@
         document.getElementById('subcategory-filters').addEventListener('click', event => {
             const button = event.target.closest('[data-subcategory]');
             if (button) filterSubcategory(button.dataset.subcategory);
+        });
+
+        document.getElementById('activity-sort-order').addEventListener('change', event => {
+            activitySortOrder = event.currentTarget.value;
+            renderActivities();
         });
 
         document.getElementById('activity-search').addEventListener('input', event => {
