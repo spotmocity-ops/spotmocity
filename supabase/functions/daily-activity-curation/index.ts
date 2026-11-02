@@ -50,6 +50,15 @@ type BlogPosterImage = {
     url: string;
 };
 
+function encodeBase64(bytes: Uint8Array): string {
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+    }
+    return btoa(binary);
+}
+
 const categories = [
     { value: 'limited_offers', label: '限時優惠', subcategories: ['dining_drinks', 'experience_discounts', 'brand_popups', 'exclusive_benefits'] },
     { value: 'leisure', label: '精彩休閒', subcategories: ['exhibitions', 'markets', 'festivals', 'outdoors', 'art_exchange'] },
@@ -101,7 +110,6 @@ function isAllowedPosterHost(hostname: string, supabaseHostname: string): boolea
 async function fetchPosterImage(value: unknown, supabaseHostname: string, cancellationSignal?: AbortSignal): Promise<{
     bytes: Uint8Array;
     contentType: string;
-    extension: string;
 }> {
     const safeUrl = safeHttpsUrl(value);
     if (!safeUrl) throw new Error('poster URL is invalid');
@@ -132,7 +140,7 @@ async function fetchPosterImage(value: unknown, supabaseHostname: string, cancel
         }
         if (!response || !response.ok || !response.body) throw new Error('poster download failed');
         const contentLength = Number(response.headers.get('content-length'));
-        const maximumBytes = 8 * 1024 * 1024;
+        const maximumBytes = 4 * 1024 * 1024;
         if (Number.isFinite(contentLength) && contentLength > maximumBytes) {
             await response.body.cancel();
             throw new Error('poster exceeds the size limit');
@@ -165,10 +173,10 @@ async function fetchPosterImage(value: unknown, supabaseHostname: string, cancel
             String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP';
         const isGif = bytes.length >= 6 &&
             ['GIF87a', 'GIF89a'].includes(String.fromCharCode(...bytes.slice(0, 6)));
-        if (isPng) return { bytes, contentType: 'image/png', extension: 'png' };
-        if (isJpeg) return { bytes, contentType: 'image/jpeg', extension: 'jpg' };
-        if (isWebp) return { bytes, contentType: 'image/webp', extension: 'webp' };
-        if (isGif) return { bytes, contentType: 'image/gif', extension: 'gif' };
+        if (isPng) return { bytes, contentType: 'image/png' };
+        if (isJpeg) return { bytes, contentType: 'image/jpeg' };
+        if (isWebp) return { bytes, contentType: 'image/webp' };
+        if (isGif) return { bytes, contentType: 'image/gif' };
         throw new Error('poster is not a supported image');
     } finally {
         clearTimeout(timeout);
@@ -377,7 +385,9 @@ async function generateDailyBlogContent(
         location: safeText(activity.location, 240),
         fee: safeText(activity.fee, 120),
         source_url: safeHttpsUrl(activity.source_url),
-        poster_image_attached: includePosterImages && Boolean(safeHttpsUrl(activity.poster_url))
+        poster_image_attached: includePosterImages && preparedPosterImages.some(
+            image => image.title === safeText(activity.title, 200)
+        )
     }));
     if (!activityInput.length) throw new Error('沒有當日新增活動可供生成網誌。');
     const posterImages = includePosterImages ? preparedPosterImages : [];
@@ -1496,7 +1506,6 @@ Deno.serve(async request => {
         const blogPostId = placeholderResult.data.id;
         const generationTask = (async () => {
             const cancellationController = new AbortController();
-            const temporaryPosterPaths: string[] = [];
             let monitorActive = true;
             let monitorError = '';
             const cancellationMonitor = (async () => {
@@ -1523,39 +1532,24 @@ Deno.serve(async request => {
                 const preparedPosterImages: BlogPosterImage[] = [];
                 const supabaseHostname = new URL(supabaseUrl).hostname;
                 const posterActivities = selectedActivities.filter(activity => safeHttpsUrl(activity.poster_url));
-                for (let index = 0; index < posterActivities.length && !cancellationController.signal.aborted; index += 4) {
-                    const batch = posterActivities.slice(index, index + 4);
-                    const batchResults = await Promise.all(batch.map(async (activity, batchIndex) => {
-                        try {
-                            const image = await fetchPosterImage(
-                                activity.poster_url, supabaseHostname, cancellationController.signal
-                            );
-                            const path = `blog-generation-temp/${generationId}/${index + batchIndex}-${crypto.randomUUID()}.${image.extension}`;
-                            const { error: uploadError } = await supabase.storage.from('event-media').upload(
-                                path,
-                                image.bytes,
-                                { contentType: image.contentType, cacheControl: '60', upsert: false }
-                            );
-                            if (uploadError) throw uploadError;
-                            const posterUrl = safeHttpsUrl(
-                                supabase.storage.from('event-media').getPublicUrl(path).data.publicUrl
-                            );
-                            if (!posterUrl) {
-                                const { error: removeError } = await supabase.storage.from('event-media').remove([path]);
-                                if (removeError) console.error('Could not remove invalid temporary blog poster:', removeError.message);
-                                throw new Error('Temporary poster URL is invalid');
-                            }
-                            return { path, image: { title: safeText(activity.title, 200), url: posterUrl } };
-                        } catch (error) {
-                            console.error('Could not prepare a poster for manual blog generation:',
-                                error instanceof Error ? error.message : 'Unknown poster preparation error');
-                            return null;
-                        }
-                    }));
-                    for (const result of batchResults) {
-                        if (!result) continue;
-                        temporaryPosterPaths.push(result.path);
-                        preparedPosterImages.push(result.image);
+                let inlineImageBytes = 0;
+                for (const activity of posterActivities) {
+                    if (cancellationController.signal.aborted || preparedPosterImages.length >= 4 ||
+                        inlineImageBytes >= 4 * 1024 * 1024) break;
+                    try {
+                        const image = await fetchPosterImage(
+                            activity.poster_url, supabaseHostname, cancellationController.signal
+                        );
+                        if (inlineImageBytes + image.bytes.byteLength > 4 * 1024 * 1024) continue;
+                        preparedPosterImages.push({
+                            title: safeText(activity.title, 200),
+                            url: `data:${image.contentType};base64,${encodeBase64(image.bytes)}`
+                        });
+                        inlineImageBytes += image.bytes.byteLength;
+                    } catch (error) {
+                        if (cancellationController.signal.aborted) break;
+                        console.error('Could not prepare a poster for manual blog generation:',
+                            error instanceof Error ? error.message : 'Unknown poster preparation error');
                     }
                 }
                 if (cancellationController.signal.aborted) throw new Error('網誌生成已取消。');
@@ -1609,10 +1603,6 @@ Deno.serve(async request => {
                 if (statusError) console.error('Could not save manual blog generation error:', statusError.message);
             } finally {
                 monitorActive = false;
-                if (temporaryPosterPaths.length) {
-                    const { error: cleanupError } = await supabase.storage.from('event-media').remove(temporaryPosterPaths);
-                    if (cleanupError) console.error('Could not remove temporary blog posters:', cleanupError.message);
-                }
                 await cancellationMonitor;
             }
         })();
