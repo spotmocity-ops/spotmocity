@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SpotMoCity 澳聚光每日澳門活動網誌">
+    <title>網誌 - SpotMoCity 澳聚光</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .rich-content h1 { margin: 1.25rem 0 0.75rem; font-size: 1.875rem; font-weight: 700; line-height: 1.25; }
+        .rich-content h2 { margin: 1.25rem 0 0.5rem; font-size: 1.5rem; font-weight: 700; line-height: 1.35; }
+        .rich-content h3 { margin: 1rem 0 0.5rem; font-size: 1.25rem; font-weight: 700; line-height: 1.4; }
+        .rich-content p { margin: 0.5rem 0; }
+        .rich-content section { margin: 1.5rem 0; }
+        .rich-content table { width: 100%; margin: 1rem 0; border: 1px solid #cbd5e1; border-collapse: separate; border-spacing: 0; border-radius: 0.75rem; overflow: hidden; table-layout: fixed; }
+        .rich-content .rich-table-cell { min-width: 4rem; border: 0; border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; padding: 0.75rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+        .rich-content tr > :last-child { border-right: 0; }
+        .rich-content tr:last-child > .rich-table-cell { border-bottom: 0; }
+        .rich-content th.rich-table-cell { background: #f1f5f9; font-weight: 700; }
+        .rich-content a { color: #1d4ed8; text-decoration: underline; }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 font-sans text-gray-800">
+    <header class="bg-white shadow-sm">
+        <div class="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+            <a href="index.html" class="font-bold text-blue-800">SpotMoCity 澳聚光</a>
+            <a href="index.html" class="text-sm text-blue-700 hover:underline">返回主頁</a>
+        </div>
+    </header>
+    <main class="mx-auto max-w-4xl px-4 py-8">
+        <article class="overflow-hidden rounded-2xl bg-white shadow-sm">
+            <img id="blog-cover" alt="" class="hidden max-h-[28rem] w-full object-cover">
+            <div class="p-5 sm:p-8">
+                <p id="blog-date" class="mb-3 text-sm text-gray-500"></p>
+                <h1 id="blog-title" class="text-2xl font-bold leading-tight text-gray-900 sm:text-3xl"></h1>
+                <div id="blog-content" class="rich-content mt-6 space-y-4 leading-8"></div>
+                <p id="blog-message" class="py-12 text-center text-gray-600" aria-live="polite">正在載入網誌…</p>
+            </div>
+        </article>
+    </main>
+    <footer class="py-6 text-center text-xs text-gray-500">© 2026 SpotMoCity 澳聚光</footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseClient = window.supabase.createClient(
+            'https://owvsfvunlqudrhdsuqvk.supabase.co',
+            'sb_publishable_4kBnCjtv4c7j-sb8l3BrUw_j63egBDR'
+        );
+
+        function sanitizeBlogHtml(value) {
+            const template = document.createElement('template');
+            template.innerHTML = String(value || '');
+            const allowedTags = new Set(['DIV', 'SECTION', 'H1', 'H2', 'H3', 'P', 'STRONG', 'B', 'EM', 'I', 'U', 'UL', 'OL', 'LI', 'A', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD', 'BR', 'BLOCKQUOTE']);
+            const dangerousTags = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH', 'TEMPLATE']);
+            const cleanNode = node => {
+                if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.textContent || '');
+                if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
+                if (dangerousTags.has(node.tagName)) return document.createDocumentFragment();
+                if (!allowedTags.has(node.tagName)) {
+                    const fragment = document.createDocumentFragment();
+                    Array.from(node.childNodes).forEach(child => fragment.append(cleanNode(child)));
+                    return fragment;
+                }
+                const element = document.createElement(node.tagName.toLowerCase());
+                if (node.tagName === 'TABLE') element.className = 'rich-table';
+                if (node.tagName === 'TH' || node.tagName === 'TD') element.className = 'rich-table-cell';
+                if (node.tagName === 'A') {
+                    try {
+                        const href = node.getAttribute('href') || '';
+                        const url = new URL(href, window.location.href);
+                        if (!href.trim() || url.protocol !== 'https:') {
+                            const fragment = document.createDocumentFragment();
+                            Array.from(node.childNodes).forEach(child => fragment.append(cleanNode(child)));
+                            return fragment;
+                        }
+                        element.href = url.href;
+                        element.target = '_blank';
+                        element.rel = 'noopener noreferrer';
+                    } catch {
+                        const fragment = document.createDocumentFragment();
+                        Array.from(node.childNodes).forEach(child => fragment.append(cleanNode(child)));
+                        return fragment;
+                    }
+                }
+                Array.from(node.childNodes).forEach(child => element.append(cleanNode(child)));
+                return element;
+            };
+            const output = document.createDocumentFragment();
+            Array.from(template.content.childNodes).forEach(child => output.append(cleanNode(child)));
+            const wrapper = document.createElement('div');
+            wrapper.append(output);
+            return wrapper.innerHTML;
+        }
+
+        async function loadBlogPost() {
+            const message = document.getElementById('blog-message');
+            const id = new URLSearchParams(window.location.search).get('id') || '';
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+                message.textContent = '網誌連結無效。';
+                return;
+            }
+            const { data: post, error } = await supabaseClient.from('blog_posts')
+                .select('activity_date,title,html_content,cover_image_url,status')
+                .eq('id', id)
+                .eq('status', 'published')
+                .maybeSingle();
+            if (error) {
+                console.error('Could not load published blog post:', error.message);
+                message.textContent = '網誌載入失敗，請稍後再試。';
+                return;
+            }
+            if (!post) {
+                message.textContent = '找不到這篇網誌，或文章尚未發布。';
+                return;
+            }
+            document.title = `${post.title} - SpotMoCity 澳聚光`;
+            document.querySelector('meta[name="description"]').content = post.title;
+            document.getElementById('blog-title').textContent = post.title;
+            document.getElementById('blog-date').textContent = `${post.activity_date} 澳門活動網誌`;
+            document.getElementById('blog-content').innerHTML = sanitizeBlogHtml(post.html_content);
+            try {
+                const cover = new URL(post.cover_image_url || '');
+                if (cover.protocol === 'https:') {
+                    const image = document.getElementById('blog-cover');
+                    image.src = cover.href;
+                    image.alt = post.title;
+                    image.classList.remove('hidden');
+                }
+            } catch {
+                // A missing or invalid optional cover does not prevent reading the article.
+            }
+            message.classList.add('hidden');
+        }
+
+        loadBlogPost().catch(error => {
+            console.error('Could not load blog post:', error);
+            document.getElementById('blog-message').textContent = '網誌載入失敗，請稍後再試。';
+        });
+    </script>
+</body>
+</html>

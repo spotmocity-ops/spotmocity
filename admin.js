@@ -8,6 +8,16 @@ let activeSubmissionFilter = 'pending';
 let activityFeedback = [];
 let curatedActivityDrafts = [];
 let activeCuratedDraftFilter = 'unpublished';
+let blogPosts = [];
+let manualBlogActivities = [];
+let selectedManualBlogActivityIds = new Set();
+const manualBlogActivityPageSize = 50;
+let manualBlogActivityOffsets = { curated: 0, submissions: 0 };
+let manualBlogActivityCounts = { curated: 0, submissions: 0 };
+let manualBlogActivitiesExhausted = false;
+let manualBlogActivitiesLoading = false;
+let activeBlogFilter = 'draft';
+let selectedBlogPostId = '';
 const activityCategoryGroups = window.SpotMoCityCategories;
 function getCuratedActivityCategoryGroups() {
     const serviceCategories = homeServiceCategories.length ? homeServiceCategories : defaultHomeServiceCategories;
@@ -244,7 +254,7 @@ async function checkLogin() {
 }
 
 function switchTab(tab) {
-    const tabs = ['approvals', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'settings', 'backgrounds'];
+    const tabs = ['approvals', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
     for (const name of tabs) {
         const active = name === tab;
         document.getElementById(`view-${name}`).classList.toggle('hidden', !active);
@@ -254,7 +264,375 @@ function switchTab(tab) {
     if (tab === 'calendar') renderCalendarEditor();
     if (tab === 'feedback') fetchActivityFeedback();
     if (tab === 'activity-curation') fetchCuratedActivityDrafts();
+    if (tab === 'blog-review') {
+        fetchBlogPosts();
+        fetchManualBlogActivities();
+    }
     if (tab === 'settings' || tab === 'backgrounds' || tab === 'home-content' || tab === 'life-services') fetchSettings();
+}
+
+function sanitizeBlogHtml(value) {
+    const template = document.createElement('template');
+    template.innerHTML = String(value || '');
+    const allowedTags = new Set(['DIV', 'SECTION', 'H1', 'H2', 'H3', 'P', 'STRONG', 'B', 'EM', 'I', 'U', 'UL', 'OL', 'LI', 'A', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD', 'BR', 'BLOCKQUOTE']);
+    const dangerousTags = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH', 'TEMPLATE']);
+    const cleanNode = node => {
+        if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.textContent || '');
+        if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
+        if (dangerousTags.has(node.tagName)) return document.createDocumentFragment();
+        if (!allowedTags.has(node.tagName)) {
+            const fragment = document.createDocumentFragment();
+            Array.from(node.childNodes).forEach(child => fragment.append(cleanNode(child)));
+            return fragment;
+        }
+        const element = document.createElement(node.tagName.toLowerCase());
+        if (node.tagName === 'TABLE') element.className = 'rich-table';
+        if (node.tagName === 'TH' || node.tagName === 'TD') element.className = 'rich-table-cell';
+        if (node.tagName === 'A') {
+            try {
+                const href = node.getAttribute('href') || '';
+                const url = new URL(href, window.location.href);
+                if (!href.trim() || url.protocol !== 'https:') {
+                    const fragment = document.createDocumentFragment();
+                    Array.from(node.childNodes).forEach(child => fragment.append(cleanNode(child)));
+                    return fragment;
+                }
+                element.href = url.href;
+                element.target = '_blank';
+                element.rel = 'noopener noreferrer';
+            } catch {
+                const fragment = document.createDocumentFragment();
+                Array.from(node.childNodes).forEach(child => fragment.append(cleanNode(child)));
+                return fragment;
+            }
+        }
+        Array.from(node.childNodes).forEach(child => element.append(cleanNode(child)));
+        return element;
+    };
+    const output = document.createDocumentFragment();
+    Array.from(template.content.childNodes).forEach(child => output.append(cleanNode(child)));
+    const wrapper = document.createElement('div');
+    wrapper.append(output);
+    return wrapper.innerHTML;
+}
+
+function renderBlogPostList() {
+    const list = document.getElementById('blog-post-list');
+    const filtered = blogPosts.filter(post => post.status === activeBlogFilter);
+    if (!filtered.length) {
+        list.innerHTML = `<p class="py-6 text-center text-sm text-gray-500">${activeBlogFilter === 'draft' ? '暫無待審網誌' : '暫無已發布網誌'}</p>`;
+        return;
+    }
+    list.innerHTML = filtered.map(post => `
+        <button type="button" data-blog-post-id="${escapeHtml(post.id)}" class="block w-full rounded-lg border p-3 text-left hover:border-blue-400 hover:bg-blue-50 ${post.id === selectedBlogPostId ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}">
+            <span class="block text-xs text-gray-500">${escapeHtml(post.activity_date || '')} · ${post.status === 'published' ? '已發布' : '待審核'}</span>
+            <span class="mt-1 block font-medium text-gray-800">${escapeHtml(post.title || '未命名網誌')}</span>
+        </button>
+    `).join('');
+}
+
+function setBlogPostFilter(filter) {
+    activeBlogFilter = filter;
+    document.querySelectorAll('[data-blog-filter]').forEach(button => {
+        const active = button.dataset.blogFilter === filter;
+        button.setAttribute('aria-pressed', String(active));
+        button.classList.toggle('bg-blue-50', active);
+        button.classList.toggle('border-blue-400', active);
+    });
+    fetchBlogPosts('');
+}
+
+function updateManualBlogModelDefaults() {
+    const provider = document.getElementById('manual-blog-provider').value;
+    const model = document.getElementById('manual-blog-model');
+    const help = document.getElementById('manual-blog-provider-help');
+    if (provider === 'qwen') {
+        model.value = 'qwen-plus';
+        model.placeholder = 'qwen-plus';
+        help.textContent = '使用 Supabase 設定的 DASHSCOPE_API_KEY 與 QWEN_BASE_URL。';
+    } else {
+        model.value = 'gpt-4o-mini';
+        model.placeholder = 'gpt-4o-mini';
+        help.textContent = '使用 Supabase 設定的 OPENAI_API_KEY、OPENAI_BASE_URL 及 OPENAI_MODEL（可由此欄覆寫模型）。';
+    }
+}
+
+async function fetchManualBlogActivities() {
+    manualBlogActivityOffsets = { curated: 0, submissions: 0 };
+    manualBlogActivityCounts = { curated: 0, submissions: 0 };
+    manualBlogActivitiesExhausted = false;
+    manualBlogActivities = [];
+    selectedManualBlogActivityIds = new Set(
+        [...document.querySelectorAll('[data-manual-blog-activity]:checked')]
+            .map(input => String(input.dataset.manualBlogActivity))
+    );
+    await loadMoreManualBlogActivities(true);
+}
+
+async function loadMoreManualBlogActivities(reset = false) {
+    const list = document.getElementById('manual-blog-activity-list');
+    const loadMoreButton = document.getElementById('load-more-blog-activities-btn');
+    const countLabel = document.getElementById('manual-blog-activity-count');
+    if (manualBlogActivitiesLoading || (!reset && manualBlogActivitiesExhausted)) return;
+    manualBlogActivitiesLoading = true;
+    loadMoreButton.disabled = true;
+    loadMoreButton.textContent = '載入中…';
+    loadMoreButton.classList.remove('hidden');
+    if (reset) {
+        list.innerHTML = '<p class="py-3 text-center text-xs text-gray-500">載入活動中...</p>';
+        manualBlogActivityOffsets = { curated: 0, submissions: 0 };
+        manualBlogActivityCounts = { curated: 0, submissions: 0 };
+        manualBlogActivitiesExhausted = false;
+        manualBlogActivities = [];
+    }
+    const [curatedResponse, submissionsResponse] = await Promise.all([
+        supabaseClient.from('curated_activity_drafts')
+        .select('id,title,category,event_time,event_end_time,generated_at,status')
+        .in('status', ['draft', 'published'])
+        .order('generated_at', { ascending: false })
+        .range(manualBlogActivityOffsets.curated, manualBlogActivityOffsets.curated + manualBlogActivityPageSize - 1),
+        supabaseClient.from('submissions')
+        .select('id,title,category,event_time,event_end_time,created_at')
+        .eq('status', 'approved')
+        .eq('is_visible', true)
+        .order('created_at', { ascending: false })
+        .range(manualBlogActivityOffsets.submissions, manualBlogActivityOffsets.submissions + manualBlogActivityPageSize - 1)
+    ]);
+    if (curatedResponse.error || submissionsResponse.error) {
+        const error = curatedResponse.error || submissionsResponse.error;
+        console.error('Could not load activities for manual blog generation:', error.message);
+        if (reset) list.innerHTML = '<p class="py-3 text-center text-xs text-red-600">活動載入失敗，請稍後重試。</p>';
+        else list.insertAdjacentHTML('beforeend', '<p class="py-3 text-center text-xs text-red-600">載入更多活動失敗，請重試。</p>');
+        loadMoreButton.disabled = false;
+        loadMoreButton.textContent = '重試載入更多活動';
+        manualBlogActivitiesLoading = false;
+        return;
+    }
+    const curatedActivities = (curatedResponse.data || []).map(activity => ({
+        ...activity,
+        sourceType: 'curated',
+        sourceStatus: activity.status
+    }));
+    const submissionActivities = (submissionsResponse.data || []).map(activity => ({
+        ...activity,
+        sourceType: 'submission',
+        sourceStatus: 'approved',
+        generated_at: activity.created_at
+    }));
+    const loadedActivities = [...curatedActivities, ...submissionActivities];
+    manualBlogActivities.push(...loadedActivities);
+    manualBlogActivityOffsets.curated += curatedActivities.length;
+    manualBlogActivityOffsets.submissions += submissionActivities.length;
+    manualBlogActivityCounts.curated += curatedActivities.length;
+    manualBlogActivityCounts.submissions += submissionActivities.length;
+    manualBlogActivitiesExhausted =
+        curatedActivities.length < manualBlogActivityPageSize &&
+        submissionActivities.length < manualBlogActivityPageSize;
+    if (!manualBlogActivities.length) {
+        list.innerHTML = '<p class="py-3 text-center text-xs text-gray-500">目前沒有可選的 AI 活動或已核准投稿活動。</p>';
+    } else {
+        list.innerHTML = manualBlogActivities.map(activity => {
+            const eventDate = activity.event_time ? String(activity.event_time).slice(0, 10) : '日期待核實';
+            const activityKey = `${activity.sourceType}:${activity.id}`;
+            const selected = selectedManualBlogActivityIds.has(activityKey);
+            const sourceLabel = activity.sourceType === 'curated'
+                ? activity.sourceStatus === 'published' ? 'AI 活動・已上架' : 'AI 活動・待上架'
+                : '投稿活動・已核准';
+            return `<label class="flex cursor-pointer items-start gap-2 rounded px-2 py-1.5 hover:bg-blue-50">
+                <input type="checkbox" data-manual-blog-activity="${escapeHtml(activityKey)}" ${selected ? 'checked' : ''} class="mt-1 accent-blue-700">
+                <span class="min-w-0"><span class="block text-xs font-medium text-gray-800">${escapeHtml(activity.title)}</span><span class="block text-[11px] text-gray-500">${escapeHtml(eventDate)} · ${escapeHtml(activity.category || '未分類')} · ${sourceLabel}</span></span>
+            </label>`;
+        }).join('');
+    }
+    countLabel.textContent = `已載入 ${manualBlogActivities.length} 項（AI ${manualBlogActivityCounts.curated}、投稿 ${manualBlogActivityCounts.submissions}）${manualBlogActivitiesExhausted ? ' · 全部載入' : ' · 可繼續載入'} · 已選 ${selectedManualBlogActivityIds.size} 項`;
+    loadMoreButton.classList.toggle('hidden', manualBlogActivitiesExhausted);
+    loadMoreButton.disabled = false;
+    loadMoreButton.textContent = '載入更多活動';
+    manualBlogActivitiesLoading = false;
+}
+
+function updateManualBlogActivitySelection(event) {
+    const checkbox = event.target.closest('[data-manual-blog-activity]');
+    if (!checkbox) return;
+    const activityKey = String(checkbox.dataset.manualBlogActivity);
+    if (checkbox.checked && selectedManualBlogActivityIds.size >= 20) {
+        checkbox.checked = false;
+        document.getElementById('manual-blog-generator-message').textContent = '每篇網誌最多選擇 20 項活動。';
+        document.getElementById('manual-blog-generator-message').className = 'mt-2 text-xs text-red-600';
+        return;
+    }
+    if (checkbox.checked) selectedManualBlogActivityIds.add(activityKey);
+    else selectedManualBlogActivityIds.delete(activityKey);
+    document.getElementById('manual-blog-activity-count').textContent =
+        `已載入 ${manualBlogActivities.length} 項（AI ${manualBlogActivityCounts.curated}、投稿 ${manualBlogActivityCounts.submissions}）${manualBlogActivitiesExhausted ? ' · 全部載入' : ' · 可繼續載入'} · 已選 ${selectedManualBlogActivityIds.size} 項`;
+    document.getElementById('manual-blog-generator-message').textContent = '';
+}
+
+async function generateManualBlogPost() {
+    const selectedIds = [...selectedManualBlogActivityIds].map(value => {
+        const [source, id] = value.split(':');
+        return { source, id };
+    });
+    const message = document.getElementById('manual-blog-generator-message');
+    if (selectedIds.length < 1 || selectedIds.length > 20) {
+        message.textContent = '請選擇 1 至 20 項活動。';
+        message.className = 'mt-2 text-xs text-red-600';
+        return;
+    }
+    const macauDate = `${adminTodayParts.year}-${String(adminTodayParts.month).padStart(2, '0')}-${String(adminTodayParts.day).padStart(2, '0')}`;
+    const existingDraft = blogPosts.find(post => post.activity_date === macauDate && post.status === 'draft');
+    if (existingDraft && !confirm('今日已有待審網誌。繼續後會以新生成的內容取代該草稿，確定繼續嗎？')) return;
+
+    const button = document.getElementById('manual-generate-blog-btn');
+    button.disabled = true;
+    button.textContent = '生成中…';
+    message.textContent = '正在依所選活動生成網誌，請稍候。';
+    message.className = 'mt-2 text-xs text-gray-600';
+    try {
+        const provider = document.getElementById('manual-blog-provider').value;
+        const model = document.getElementById('manual-blog-model').value.trim();
+        const { data, error } = await supabaseClient.functions.invoke('daily-activity-curation', {
+            body: { action: 'manual_generate_blog', activity_ids: selectedIds, provider, model }
+        });
+        if (error) {
+            const responseMessage = await error.context?.text?.().catch(() => '');
+            throw new Error(responseMessage || error.message || '無法生成網誌。');
+        }
+        if (data?.success && !data.blog_post_id) {
+            throw new Error('目前部署的 daily-activity-curation Edge Function 尚未支援手動生成網誌。請部署最新函式後再試；這次請求可能已執行活動搜集。');
+        }
+        if (!data?.success || !data.blog_post_id) throw new Error(data?.error || '網誌服務沒有確認完成。');
+        activeBlogFilter = 'draft';
+        document.querySelectorAll('[data-blog-filter]').forEach(filterButton => {
+            const active = filterButton.dataset.blogFilter === activeBlogFilter;
+            filterButton.setAttribute('aria-pressed', String(active));
+            filterButton.classList.toggle('bg-blue-50', active);
+            filterButton.classList.toggle('border-blue-400', active);
+        });
+        await fetchBlogPosts(data.blog_post_id);
+        message.textContent = `已生成網誌草稿（${data.provider} · ${data.model}），請審核後儲存或發布。`;
+        message.className = 'mt-2 text-xs text-green-700';
+    } catch (error) {
+        console.error('Manual blog generation failed:', error);
+        message.textContent = `生成失敗：${error?.message || '請檢查 AI 服務設定。'}`;
+        message.className = 'mt-2 text-xs text-red-600';
+    } finally {
+        button.disabled = false;
+        button.textContent = '生成所選活動網誌';
+    }
+}
+
+function showBlogPost(postId) {
+    const post = blogPosts.find(item => item.id === postId);
+    selectedBlogPostId = post?.id || '';
+    const form = document.getElementById('blog-post-form');
+    const empty = document.getElementById('blog-editor-empty');
+    renderBlogPostList();
+    if (!post) {
+        form.classList.add('hidden');
+        empty.classList.remove('hidden');
+        return;
+    }
+    empty.classList.add('hidden');
+    form.classList.remove('hidden');
+    document.getElementById('blog-post-title').value = post.title || post.suggested_title || '';
+    document.getElementById('blog-post-content').innerHTML = sanitizeBlogHtml(post.html_content || '');
+    document.getElementById('blog-post-canva').value = post.canva_card_text || '';
+    document.getElementById('blog-post-ig-caption').value = post.ig_caption || '';
+    document.getElementById('blog-post-hashtags').value = post.hashtags || '';
+    document.getElementById('blog-post-meta').textContent = `活動日期：${post.activity_date || '—'}${post.published_at ? ` · 發布時間：${new Date(post.published_at).toLocaleString('zh-HK')}` : ''}`;
+    document.getElementById('blog-post-status').textContent = post.status === 'published' ? '已發布' : '待審核';
+    document.getElementById('blog-post-status').className = `rounded-full px-2.5 py-1 text-xs font-medium ${post.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`;
+    document.getElementById('publish-blog-post-btn').textContent = post.status === 'published' ? '儲存並更新發布內容' : '核准並正式發布';
+    document.getElementById('blog-post-message').textContent = '';
+}
+
+async function fetchBlogPosts(preferredId = selectedBlogPostId) {
+    const list = document.getElementById('blog-post-list');
+    list.innerHTML = '<p class="py-6 text-center text-sm text-gray-500">載入網誌中...</p>';
+    const { data, error } = await supabaseClient.from('blog_posts')
+        .select('id,activity_date,suggested_title,title,html_content,canva_card_text,ig_caption,hashtags,cover_image_url,status,published_at')
+        .order('activity_date', { ascending: false });
+    if (error) {
+        console.error('Could not load blog posts:', error.message);
+        list.innerHTML = '<p class="py-6 text-center text-sm text-red-600">無法載入網誌，請確認已套用網誌審核資料庫遷移。</p>';
+        return;
+    }
+    blogPosts = data || [];
+    const selected = blogPosts.find(post => post.id === preferredId && post.status === activeBlogFilter) ||
+        blogPosts.find(post => post.status === activeBlogFilter);
+    showBlogPost(selected?.id || '');
+}
+
+async function saveBlogPost(publish = false) {
+    const post = blogPosts.find(item => item.id === selectedBlogPostId);
+    if (!post) return;
+    const title = document.getElementById('blog-post-title').value.trim();
+    const htmlContent = sanitizeBlogHtml(document.getElementById('blog-post-content').innerHTML);
+    if (!title || !htmlContent) {
+        document.getElementById('blog-post-message').textContent = '請填寫網誌標題及內容。';
+        document.getElementById('blog-post-message').className = 'text-sm text-red-600';
+        return;
+    }
+    const saveButton = document.getElementById('save-blog-post-btn');
+    const publishButton = document.getElementById('publish-blog-post-btn');
+    saveButton.disabled = true;
+    publishButton.disabled = true;
+    document.getElementById('blog-post-message').textContent = '正在儲存...';
+    document.getElementById('blog-post-message').className = 'text-sm text-gray-500';
+    const updates = {
+        title,
+        html_content: htmlContent,
+        canva_card_text: document.getElementById('blog-post-canva').value.trim(),
+        ig_caption: document.getElementById('blog-post-ig-caption').value.trim(),
+        hashtags: document.getElementById('blog-post-hashtags').value.trim(),
+        updated_at: new Date().toISOString()
+    };
+    const { error: saveError } = await supabaseClient.from('blog_posts').update(updates).eq('id', post.id);
+    if (saveError) {
+        console.error('Could not save blog post:', saveError.message);
+        document.getElementById('blog-post-message').textContent = `儲存失敗：${saveError.message}`;
+        document.getElementById('blog-post-message').className = 'text-sm text-red-600';
+        saveButton.disabled = false;
+        publishButton.disabled = false;
+        return;
+    }
+    if (publish) {
+        const { error: publishError } = await supabaseClient.rpc('publish_blog_post', { p_blog_post_id: post.id });
+        if (publishError) {
+            console.error('Could not publish blog post:', publishError.message);
+            document.getElementById('blog-post-message').textContent = `內容已儲存，但發布失敗：${publishError.message}`;
+            document.getElementById('blog-post-message').className = 'text-sm text-red-600';
+            saveButton.disabled = false;
+            publishButton.disabled = false;
+            return;
+        }
+        activeBlogFilter = 'published';
+        document.querySelectorAll('[data-blog-filter]').forEach(button => {
+            const active = button.dataset.blogFilter === activeBlogFilter;
+            button.setAttribute('aria-pressed', String(active));
+            button.classList.toggle('bg-blue-50', active);
+            button.classList.toggle('border-blue-400', active);
+        });
+    }
+    const message = publish ? '已核准發布，文章頁及首頁連結已更新。' : '修改已儲存。';
+    await fetchBlogPosts(post.id);
+    document.getElementById('blog-post-message').textContent = message;
+    document.getElementById('blog-post-message').className = 'text-sm text-green-700';
+    saveButton.disabled = false;
+    publishButton.disabled = false;
+}
+
+async function copyBlogText(value, label) {
+    try {
+        await navigator.clipboard.writeText(value);
+        document.getElementById('blog-post-message').textContent = `${label}已複製。`;
+        document.getElementById('blog-post-message').className = 'text-sm text-green-700';
+    } catch (error) {
+        console.error(`Could not copy ${label}:`, error);
+        document.getElementById('blog-post-message').textContent = `無法複製${label}，請手動選取文字。`;
+        document.getElementById('blog-post-message').className = 'text-sm text-red-600';
+    }
 }
 
 function toDateTimeLocalValue(value) {
@@ -324,6 +702,7 @@ function renderCuratedActivityDrafts() {
             ? item.promotion_image_urls.map(safeImageUrl).filter(Boolean)
             : [];
         const isExpired = isCuratedDraftExpired(item);
+        const isDateUnconfirmed = !item.event_time || !(item.event_end_time || item.event_end_date);
         const imageCandidates = Array.isArray(item.candidate_image_urls)
             ? item.candidate_image_urls.filter(url => /^https:\/\//i.test(url))
             : [];
@@ -332,6 +711,7 @@ function renderCuratedActivityDrafts() {
             <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
                 <div>
                     <span class="text-xs font-semibold px-2 py-1 rounded ${isExpired ? 'bg-gray-100 text-gray-700' : item.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}">${isExpired ? '已過期（自動下架）' : item.status === 'published' ? '已上架' : '待編輯草稿'}</span>
+                    ${isDateUnconfirmed ? '<span class="text-xs font-semibold px-2 py-1 rounded bg-orange-100 text-orange-800">日期待核實</span>' : ''}
                     <span class="text-xs text-gray-500 ml-2">搜集時間：${escapeHtml(item.generated_at || item.created_at || '—')}</span>
                 </div>
                 ${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-700 underline">原始來源：${escapeHtml(item.source_title || sourceUrl)}</a>` : item.source_title ? `<span class="text-sm text-gray-600">${escapeHtml(item.source_title)}</span>` : ''}
@@ -512,7 +892,12 @@ async function runCuratedActivitySearch() {
         }
         if (!data?.success) throw new Error(data?.error || '搜尋服務沒有確認完成');
         await fetchCuratedActivityDrafts();
-        status.textContent = `手動搜尋完成：找到 ${data.found_count} 項，新增草稿 ${data.inserted_count} 項。`;
+        const blogStatus = data.blog_generation_error
+            ? `網誌草稿生成失敗：${data.blog_generation_error}`
+            : data.blog_generated
+                ? '已建立每日網誌待審草稿。'
+                : '當日網誌已存在，或今日沒有新增活動。';
+        status.textContent = `手動搜尋完成：找到 ${data.found_count} 項，新增活動草稿 ${data.inserted_count} 項。${blogStatus}`;
     } catch (error) {
         status.textContent = `手動搜尋失敗：${error?.message || '請檢查 Edge Function 設定及執行記錄。'}`;
     } finally {
@@ -1188,8 +1573,8 @@ function renderContentRows(containerId, items, fields, removeAttribute) {
             return `<div><label class="text-sm font-medium text-gray-700">${field.label}<input data-content-field="${field.name}" type="${field.type || 'text'}" ${rangeAttributes} value="${escapeHtml(fieldValue)}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal">${rangeOutput}</label>${field.imageUpload ? `<label class="block mt-2 text-xs font-medium text-gray-600">從電腦選擇圖片<input type="file" data-content-image data-image-field="${field.name}" data-image-variant="${field.imageVariant || ''}" ${cropAttributes} accept="image/jpeg,image/png,image/webp" class="mt-1 block w-full text-xs file:mr-2 file:rounded file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:font-semibold file:text-blue-700"></label><div class="${imageUrl ? '' : 'hidden'} mt-2 ${field.previewRatio             ? 'w-[225px] max-w-full aspect-[45/14] overflow-hidden rounded-lg bg-gray-100' : ''}"><img data-content-preview="${field.name}" ${field.previewRatio ? `data-image-scale-preview="${field.name}"` : ''} src="${escapeHtml(imageUrl)}" alt="${escapeHtml(field.label)}預覽" class="${imageUrl ? '' : 'hidden'} ${previewClass}"${previewStyle}></div></div>` : '</div>'}`;
         }).join('')}
         ${containerId === 'home-ad-editor' ? `<div class="flex items-center gap-2">
-            <button type="button" data-move-ad="up" aria-label="廣告上移" ${index === 0 ? 'disabled' : ''} class="rounded border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40">↑ 上移</button>
-            <button type="button" data-move-ad="down" aria-label="廣告下移" ${index === items.length - 1 ? 'disabled' : ''} class="rounded border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40">↓ 下移</button>
+            <button type="button" data-move-ad="up" aria-label="推薦連結上移" ${index === 0 ? 'disabled' : ''} class="rounded border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40">↑ 上移</button>
+            <button type="button" data-move-ad="down" aria-label="推薦連結下移" ${index === items.length - 1 ? 'disabled' : ''} class="rounded border px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-40">↓ 下移</button>
             <button type="button" ${removeAttribute}="${index}" class="text-sm text-red-700 hover:underline">移除</button>
         </div>` : `<button type="button" ${removeAttribute}="${index}" class="justify-self-start text-sm text-red-700 hover:underline">移除</button>`}
     </article>`).join('');
@@ -1207,6 +1592,7 @@ function collectContentRows(containerId) {
 function contentRowHasValues(row) {
     return Array.from(row.querySelectorAll('[data-content-field]'))
         .some(input => input.dataset.contentField !== 'order' && (input.type === 'checkbox' ? input.checked : input.value.trim())) ||
+        Array.from(row.querySelectorAll('[data-faq-question], [data-faq-answer]')).some(input => input.value.trim()) ||
         Array.from(row.querySelectorAll('[data-content-image], [data-content-media]')).some(input => input.files[0]);
 }
 
@@ -1236,7 +1622,7 @@ function renderHomeContentEditors() {
         { name: 'imageUrl', label: '圖片網址（選填）', type: 'url', imageUpload: true, previewRatio: 225 / 70 },
         { name: 'imageScale', label: '圖片縮放', type: 'range', min: 100, max: 200, step: 5, defaultValue: 100 },
         { name: 'imagePosition', label: '圖片上下位置', type: 'range', min: 0, max: 100, step: 5, defaultValue: 50 },
-        { name: 'url', label: '外部網頁連結', type: 'url' }
+        { name: 'url', label: '推薦網址', type: 'url' }
     ], 'data-remove-ad');
     renderHomeHeroEditors();
 }
@@ -1337,6 +1723,64 @@ function renderHeroRichEditor(name, label, value = '', placeholder = '') {
         <p class="text-xs text-gray-500">表格對齊前，先將游標放在儲存格，再設定水平／垂直位置。圖片可由工具列上傳、拖放至編輯器，或貼上截圖；上傳前可裁剪，插入後可拖曳圖片右下角調整寬度。</p>
         <textarea data-content-field="${name}" data-rich-value hidden>${escapeHtml(value)}</textarea>
     </div>`;
+}
+
+function renderHeroFaqEntry(question = '', answer = '') {
+    return `<article data-faq-entry class="rounded-lg border bg-white p-3 space-y-2">
+        <div class="flex items-center justify-between gap-2"><h4 class="text-sm font-semibold text-gray-800">問答</h4><button type="button" data-remove-faq-entry class="rounded border border-red-200 px-2 py-1 text-xs text-red-700 hover:bg-red-50">移除</button></div>
+        <label class="block text-sm font-medium text-gray-700">標題／問題<input data-faq-question maxlength="200" value="${escapeHtml(question)}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal" placeholder="例如：活動適合什麼年齡？"></label>
+        <label class="block text-sm font-medium text-gray-700">對話／答案<textarea data-faq-answer maxlength="2000" rows="3" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal" placeholder="輸入答案，換行會保留。">${escapeHtml(answer)}</textarea></label>
+    </article>`;
+}
+
+function serializeHeroFaqEntries(row) {
+    return Array.from(row.querySelectorAll('[data-faq-entry]')).map(entry => ({
+        question: entry.querySelector('[data-faq-question]').value.trim(),
+        answer: entry.querySelector('[data-faq-answer]').value.trim()
+    })).filter(entry => entry.question && entry.answer).map(entry =>
+        `<details class="activity-faq-item"><summary>${escapeHtml(entry.question)}</summary><div>${entry.answer.split(/\r?\n/).map(escapeHtml).join('<br>')}</div></details>`
+    ).join('');
+}
+
+function syncHeroFaqBuilder(row) {
+    const output = row.querySelector('[data-faq-output]');
+    const legacy = row.querySelector('[data-content-field="tabFaqLegacy"]');
+    if (output) output.value = [legacy?.value.trim(), serializeHeroFaqEntries(row)].filter(Boolean).join('');
+}
+
+function renderHeroFaqEditor(value = '') {
+    const template = document.createElement('template');
+    template.innerHTML = sanitizeHeroRichHtml(value);
+    const entries = [];
+    template.content.querySelectorAll('details.activity-faq-item').forEach(detail => {
+        const question = detail.querySelector('summary')?.textContent.trim() || '';
+        const answerHtml = (detail.querySelector('.activity-faq-answer') || detail).innerHTML
+            .replace(/<summary\b[^>]*>[\s\S]*?<\/summary\s*>/i, '')
+            .replace(/<br\s*\/?>/gi, '\n');
+        const answerContainer = document.createElement('div');
+        answerContainer.innerHTML = answerHtml;
+        const answer = answerContainer.textContent.trim();
+        if (question || answer) entries.push({ question, answer });
+        detail.remove();
+    });
+    const legacyHtml = sanitizeHeroRichHtml(template.innerHTML);
+    const initialFaq = [
+        legacyHtml,
+        ...entries.map(entry =>
+            `<details class="activity-faq-item"><summary>${escapeHtml(entry.question)}</summary><div>${entry.answer.split(/\r?\n/).map(escapeHtml).join('<br>')}</div></details>`
+        )
+    ].filter(Boolean).join('');
+    const editorId = `hero-faq-legacy-${createHomepageUploadId()}`;
+    return `<div data-faq-editor class="space-y-3">
+        <p class="text-xs text-gray-500">新增問題和答案後，活動詳情頁會自動生成可展開的標題問答。未填完整的問答不能儲存；最多 30 組。</p>
+        <div data-faq-items class="space-y-3">${(entries.length ? entries : [{ question: '', answer: '' }]).map(entry => renderHeroFaqEntry(entry.question, entry.answer)).join('')}</div>
+        <button type="button" data-add-faq-entry class="rounded border border-blue-300 px-3 py-2 text-sm font-medium text-blue-800 hover:bg-blue-50">＋新增一組問答</button>
+    </div>
+    <details class="rounded-lg border bg-gray-50 p-3">
+        <summary class="cursor-pointer text-sm font-medium text-gray-700">自由格式補充內容（保留舊有 FAQ）</summary>
+        <div class="mt-3">${renderHeroRichEditor('tabFaqLegacy', '補充內容', legacyHtml, '輸入其他補充內容，可使用標題、清單、連結或圖片。')}</div>
+    </details>
+    <textarea data-content-field="tabFaq" data-faq-output hidden>${escapeHtml(initialFaq)}</textarea>`;
 }
 
 function saveHeroRichEditorSelection(editor) {
@@ -1533,7 +1977,7 @@ function applyHeroRichStyle(editor, property, value) {
 function sanitizeHeroRichHtml(value) {
     const template = document.createElement('template');
     template.innerHTML = String(value || '');
-    const allowedTags = new Set(['P', 'BR', 'H2', 'H3', 'UL', 'OL', 'LI', 'STRONG', 'B', 'EM', 'I', 'U', 'BLOCKQUOTE', 'A', 'IMG', 'SPAN', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD']);
+    const allowedTags = new Set(['P', 'BR', 'H2', 'H3', 'UL', 'OL', 'LI', 'STRONG', 'B', 'EM', 'I', 'U', 'BLOCKQUOTE', 'A', 'IMG', 'SPAN', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TH', 'TD', 'DETAILS', 'SUMMARY', 'DIV']);
     const cleanNode = node => {
         if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.textContent || '');
         if (node.nodeType !== Node.ELEMENT_NODE) return document.createDocumentFragment();
@@ -1545,6 +1989,9 @@ function sanitizeHeroRichHtml(value) {
         const element = document.createElement(node.tagName.toLowerCase());
         if (node.tagName === 'TABLE') element.className = 'rich-table';
         if (node.tagName === 'TH' || node.tagName === 'TD') element.className = 'rich-table-cell';
+        if (node.tagName === 'DETAILS' && node.classList.contains('activity-faq-item')) element.className = 'activity-faq-item';
+        if (node.tagName === 'SUMMARY' && node.parentElement?.classList.contains('activity-faq-item')) element.className = 'activity-faq-question';
+        if (node.tagName === 'DIV' && node.parentElement?.classList.contains('activity-faq-item')) element.className = 'activity-faq-answer';
         if (node.tagName === 'TH' || node.tagName === 'TD') {
             if (['left', 'center', 'right'].includes(node.style.textAlign)) element.style.textAlign = node.style.textAlign;
             if (['top', 'middle', 'bottom'].includes(node.style.verticalAlign)) element.style.verticalAlign = node.style.verticalAlign;
@@ -1676,6 +2123,7 @@ function renderHomeHeroEditors() {
                 item.tabHighlightsImageUrl5 || ''
             ];
         while (highlightImageUrls.length < 5) highlightImageUrls.push('');
+        const highlightVideoUrl = tabs.highlightsVideoUrl || item.tabHighlightsVideoUrl || '';
         let members = Array.isArray(details.members) ? details.members : [];
         if (!Array.isArray(details.members) && item.teamJson) {
             try { members = JSON.parse(item.teamJson); } catch { members = []; }
@@ -1770,8 +2218,14 @@ function renderHomeHeroEditors() {
                     <fieldset class="space-y-3"><legend class="font-semibold text-gray-800 mb-2">3. 深度內容與分頁</legend>
                         ${renderHeroRichEditor('tabHighlights', '標籤 A｜活動／品牌亮點', tabs.highlights || '', '輸入文字，使用工具列設定格式或插入圖片。')}
                         <div><p class="text-sm font-medium text-gray-700 mb-2">標籤 A｜現場／產品相片（最多 5 張）</p><div class="grid gap-3 sm:grid-cols-2">${highlightImageUrls.map((url, imageIndex) => renderHeroImageField({ [`tabHighlightsImageUrl${imageIndex + 1}`]: url }, `tabHighlightsImageUrl${imageIndex + 1}`, `相片 ${imageIndex + 1}`, '建議 1200 × 800 px；每張可上傳 JPG／PNG／WebP，最多 10 MB。', { ratio: 3 / 2, width: 1200, height: 800 }, true)).join('')}</div></div>
+                        <div class="rounded-lg border bg-white p-3 space-y-3">
+                            <p class="text-sm font-medium text-gray-700">標籤 A｜活動／品牌影片（選填）</p>
+                            ${renderHeroTextField('tabHighlightsVideoUrl', '影片 HTTPS 網址（直接 MP4 連結）', highlightVideoUrl, 'url')}
+                            <label class="block text-xs font-medium text-gray-600">上傳 MP4 影片（最多 50 MB）<input type="file" data-content-media data-media-field="tabHighlightsVideoUrl" accept="video/mp4" class="mt-1 block w-full"></label>
+                            <p class="text-xs text-gray-500">可輸入直接 MP4 網址，或上傳影片；上傳影片會取代目前網址。儲存後會在活動／品牌亮點標籤中顯示播放器。</p>
+                        </div>
                         ${renderHeroRichEditor('tabSchedule', '標籤 B｜詳細內容', tabs.schedule || '', '輸入活動詳細內容，可設定標題、清單或插入圖片。')}
-                        ${renderHeroRichEditor('tabFaq', '標籤 C｜常見問題 FAQ', tabs.faq || '', '輸入問題與答案，可使用標題、清單、連結或圖片。')}
+                        <div class="space-y-2"><p class="text-sm font-medium text-gray-700">標籤 C｜常見問題 FAQ</p>${renderHeroFaqEditor(tabs.faq || '')}</div>
                     </fieldset>
                     <fieldset class="space-y-3"><legend class="font-semibold text-gray-800 mb-2">4. 嘉賓／導師／品牌團隊</legend>
                         <div class="flex flex-wrap items-center justify-between gap-2"><p class="text-sm font-medium text-gray-700">嘉賓／導師／品牌團隊</p><span data-team-member-count class="text-xs text-gray-500">${members.length}/8 位</span></div>
@@ -1819,7 +2273,8 @@ function heroPreviewItem(row, design, allowRewrite) {
             },
             tabs: {
                 highlights: item.tabHighlights, schedule: item.tabSchedule, faq: item.tabFaq,
-                highlightsImageUrls: Array.from({ length: 5 }, (_, i) => item[`tabHighlightsImageUrl${i + 1}`]).filter(Boolean)
+                highlightsImageUrls: Array.from({ length: 5 }, (_, i) => item[`tabHighlightsImageUrl${i + 1}`]).filter(Boolean),
+                highlightsVideoUrl: item.tabHighlightsVideoUrl
             },
             members
         }
@@ -2444,13 +2899,13 @@ async function saveHomepageItems(containerId, settingKey, label, folder, onlyRow
         const orders = orderedRows.map(row => Number(row.querySelector('[data-content-field="order"]').value));
         if (orderedRows.some((row, index) => !Number.isInteger(orders[index]) || orders[index] < 1)) {
             alert(settingKey === 'home_ad_items'
-                ? '請為每則廣告輸入大於 0 的整數顯示位置。'
+                ? '請為每則推薦連結輸入大於 0 的整數顯示位置。'
                 : '請為每張置頂圖片輸入大於 0 的整數顯示次序。');
             return false;
         }
         if (new Set(orders).size !== orders.length) {
             alert(settingKey === 'home_ad_items'
-                ? '廣告顯示位置不可重複。'
+                ? '推薦連結的顯示位置不可重複。'
                 : '置頂圖片的顯示次序不可重複。');
             return false;
         }
@@ -2462,6 +2917,19 @@ async function saveHomepageItems(containerId, settingKey, label, folder, onlyRow
             return false;
         }
         for (const row of heroRows) {
+            const incompleteFaq = Array.from(row.querySelectorAll('[data-faq-entry]')).find(entry => {
+                const question = entry.querySelector('[data-faq-question]').value.trim();
+                const answer = entry.querySelector('[data-faq-answer]').value.trim();
+                return Boolean(question) !== Boolean(answer);
+            });
+            if (incompleteFaq) {
+                alert('FAQ 問題和答案必須同時填寫；不需要的問答請移除或留空。');
+                const missingField = incompleteFaq.querySelector('[data-faq-question]').value.trim()
+                    ? incompleteFaq.querySelector('[data-faq-answer]')
+                    : incompleteFaq.querySelector('[data-faq-question]');
+                missingField.focus();
+                return false;
+            }
             const value = row.querySelector('[data-content-field="smartLayoutJson"]').value;
             if (value) {
                 let layout;
@@ -2570,8 +3038,10 @@ async function saveHomepageItems(containerId, settingKey, label, folder, onlyRow
                 });
                 if (error) throw error;
                 uploadedPaths.push(path);
-                item.heroMediaUrl = bucket.getPublicUrl(path).data.publicUrl;
-                row.querySelector('[data-content-field="heroMediaUrl"]').value = item.heroMediaUrl;
+                const mediaField = mediaInput.dataset.mediaField || 'heroMediaUrl';
+                item[mediaField] = bucket.getPublicUrl(path).data.publicUrl;
+                const mediaUrlField = row.querySelector(`[data-content-field="${mediaField}"]`);
+                if (mediaUrlField) mediaUrlField.value = item[mediaField];
             }
             if (settingKey === 'home_hero_items') {
                 if (item.smartLayoutJson) item.smartLayout = JSON.parse(item.smartLayoutJson);
@@ -2594,14 +3064,16 @@ async function saveHomepageItems(containerId, settingKey, label, folder, onlyRow
                         highlights: item.tabHighlights,
                         schedule: item.tabSchedule,
                         faq: item.tabFaq,
-                        highlightsImageUrls: highlightImageUrls
+                        highlightsImageUrls: highlightImageUrls,
+                        highlightsVideoUrl: item.tabHighlightsVideoUrl || ''
                     },
                     members
                 };
                 Object.keys(item).filter(key =>
-                    /^tabHighlightsImageUrl[1-5]$/.test(key) || /^teamMemberImage-\d+$/.test(key)
+                    /^tabHighlightsImageUrl[1-5]$/.test(key) || /^teamMemberImage-\d+$/.test(key) ||
+                    key === 'tabHighlightsVideoUrl'
                 ).forEach(key => delete item[key]);
-                ['highlightTicket', 'highlightAudience', 'highlightAward', 'highlightVenue', 'tabHighlights', 'tabSchedule', 'tabFaq', 'teamJson', 'customPrompt'].forEach(key => delete item[key]);
+                ['highlightTicket', 'highlightAudience', 'highlightAward', 'highlightVenue', 'tabHighlights', 'tabSchedule', 'tabFaq', 'tabFaqLegacy', 'teamJson', 'customPrompt'].forEach(key => delete item[key]);
                 item.pageId = item.pageId || `hero-${createHomepageUploadId()}`;
             }
             items[itemIndex] = item;
@@ -2611,9 +3083,9 @@ async function saveHomepageItems(containerId, settingKey, label, folder, onlyRow
         if (uploadedPaths.length) await bucket.remove(uploadedPaths);
         const message = error?.message || '未知錯誤';
         const rlsHint = /row-level security|42501/i.test(`${error?.code || ''} ${message}`)
-            ? '\n請確認目前登入帳號具有管理員權限，並已在 Supabase 執行更新後的首頁圖片 Storage policy。'
+            ? '\n請確認目前登入帳號具有管理員權限，並已在 Supabase 執行更新後的首頁媒體 Storage policy。'
             : '';
-        alert(`${label}圖片上傳失敗：${message}${rlsHint}`);
+        alert(`${label}圖片或影片上傳失敗：${message}${rlsHint}`);
         return false;
     }
 
@@ -3626,8 +4098,38 @@ function bindEvents() {
     document.getElementById('tab-home-content').addEventListener('click', () => switchTab('home-content'));
     document.getElementById('tab-life-services').addEventListener('click', () => switchTab('life-services'));
     document.getElementById('tab-activity-curation').addEventListener('click', () => switchTab('activity-curation'));
+    document.getElementById('tab-blog-review').addEventListener('click', () => switchTab('blog-review'));
     document.getElementById('tab-settings').addEventListener('click', () => switchTab('settings'));
     document.getElementById('tab-backgrounds').addEventListener('click', () => switchTab('backgrounds'));
+    document.getElementById('manual-blog-provider').addEventListener('change', updateManualBlogModelDefaults);
+    document.getElementById('refresh-blog-activities-btn').addEventListener('click', fetchManualBlogActivities);
+    document.getElementById('load-more-blog-activities-btn').addEventListener('click', () => loadMoreManualBlogActivities());
+    document.getElementById('manual-blog-activity-list').addEventListener('change', updateManualBlogActivitySelection);
+    document.getElementById('manual-generate-blog-btn').addEventListener('click', generateManualBlogPost);
+    document.getElementById('refresh-blog-posts-btn').addEventListener('click', () => fetchBlogPosts());
+    document.getElementById('blog-status-filters').addEventListener('click', event => {
+        const button = event.target.closest('[data-blog-filter]');
+        if (button) setBlogPostFilter(button.dataset.blogFilter);
+    });
+    document.getElementById('blog-post-list').addEventListener('click', event => {
+        const button = event.target.closest('[data-blog-post-id]');
+        if (button) showBlogPost(button.dataset.blogPostId);
+    });
+    document.getElementById('save-blog-post-btn').addEventListener('click', () => saveBlogPost());
+    document.getElementById('publish-blog-post-btn').addEventListener('click', () => saveBlogPost(true));
+    document.getElementById('copy-blog-canva-btn').addEventListener('click', () =>
+        copyBlogText(document.getElementById('blog-post-canva').value, 'Canva 圖卡文字')
+    );
+    document.getElementById('copy-blog-instagram-btn').addEventListener('click', () => {
+        const caption = document.getElementById('blog-post-ig-caption').value.trim();
+        const hashtags = document.getElementById('blog-post-hashtags').value.trim();
+        copyBlogText([caption, hashtags].filter(Boolean).join('\n\n'), 'Instagram 文案');
+    });
+    document.getElementById('blog-post-content').addEventListener('paste', event => {
+        event.preventDefault();
+        const text = event.clipboardData?.getData('text/plain') || '';
+        document.execCommand('insertText', false, text);
+    });
     document.getElementById('refresh-feedback-btn').addEventListener('click', fetchActivityFeedback);
     document.getElementById('feedback-list').addEventListener('click', saveActivityFeedbackStatus);
     document.getElementById('refresh-curated-drafts-btn').addEventListener('click', fetchCuratedActivityDrafts);
@@ -3713,7 +4215,7 @@ function bindEvents() {
         renderHomeContentEditors();
     });
     document.getElementById('save-home-ads-btn').addEventListener('click', () => {
-        saveHomepageItems('home-ad-editor', 'home_ad_items', '廣告', 'ad');
+        saveHomepageItems('home-ad-editor', 'home_ad_items', '推薦連結', 'ad');
     });
     ['home-blog-editor', 'home-ad-editor', 'home-hero-editor'].forEach(id => {
         document.getElementById(id).addEventListener('change', updateContentImagePreview);
@@ -3821,6 +4323,27 @@ function bindEvents() {
             updateHeroTeamMemberIndexes(row);
             return;
         }
+        const addFaqEntryButton = event.target.closest('[data-add-faq-entry]');
+        if (addFaqEntryButton) {
+            const row = addFaqEntryButton.closest('[data-content-row]');
+            const entries = row.querySelectorAll('[data-faq-entry]');
+            if (entries.length >= 30) {
+                alert('每個活動最多可新增 30 組 FAQ 問答。');
+                return;
+            }
+            row.querySelector('[data-faq-items]').insertAdjacentHTML('beforeend', renderHeroFaqEntry());
+            row.querySelector('[data-faq-entry]:last-child [data-faq-question]').focus();
+            return;
+        }
+        const removeFaqEntryButton = event.target.closest('[data-remove-faq-entry]');
+        if (removeFaqEntryButton) {
+            const row = removeFaqEntryButton.closest('[data-content-row]');
+            const entries = row.querySelector('[data-faq-items]');
+            removeFaqEntryButton.closest('[data-faq-entry]').remove();
+            if (!entries.querySelector('[data-faq-entry]')) entries.insertAdjacentHTML('beforeend', renderHeroFaqEntry());
+            syncHeroFaqBuilder(row);
+            return;
+        }
         const generateBackground = event.target.closest('[data-generate-hero-background]');
         if (generateBackground) {
             void generateHeroBackground(generateBackground.closest('[data-content-row]'), generateBackground);
@@ -3905,6 +4428,11 @@ function bindEvents() {
             const field = event.target.parentElement.querySelector('[data-rich-value]');
             if (field) field.value = event.target.innerHTML;
             saveHeroRichEditorSelection(event.target);
+            if (field?.dataset.contentField === 'tabFaqLegacy') syncHeroFaqBuilder(row);
+            return;
+        }
+        if (event.target.matches('[data-faq-question], [data-faq-answer]')) {
+            syncHeroFaqBuilder(row);
             return;
         }
         const range = event.target.closest('[data-content-field="pageBackgroundScale"], [data-content-field="pageBackgroundPosition"]');
