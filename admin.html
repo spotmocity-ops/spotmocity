@@ -323,11 +323,11 @@
                                     </select>
                                 </label>
                                 <label class="text-xs font-medium text-gray-700">模型名稱
-                                    <input id="manual-blog-model" type="text" maxlength="100" placeholder="讀取海報請輸入支援圖片的模型" class="mt-1 w-full rounded border bg-white px-2 py-2 text-sm">
+                                    <input id="manual-blog-model" type="text" maxlength="100" placeholder="請輸入已開通的視覺模型名稱" class="mt-1 w-full rounded border bg-white px-2 py-2 text-sm">
                                 </label>
                             </div>
-                            <p id="manual-blog-provider-help" class="mt-1 text-xs text-gray-500">留空模型名稱會沿用每日活動 AI 的 OPENAI_MODEL。優先使用 QWEN 設定；未設定時沿用每日活動 AI 的 OPENAI_API_KEY／OPENAI_BASE_URL。</p>
-                            <p class="mt-1 text-xs leading-5 text-gray-500">如有活動海報，生成時會把海報網址交給所選 AI 服務讀取。請使用支援圖片輸入（Vision）及 JSON 輸出的模型；文字模型可能不支援。海報上的資料只作補充核對，活動資料為準。</p>
+                            <p id="manual-blog-provider-help" class="mt-1 text-xs text-gray-500">留空模型名稱會沿用伺服器的 QWEN_MODEL／OPENAI_MODEL；未設定 Qwen 時則預設 qwen-plus。</p>
+                            <p class="mt-1 text-xs leading-5 text-gray-500">讀取活動海報需要視覺模型；預設 QWEN_MODEL 或 qwen-plus 可能只支援文字。如未支援圖片，請輸入你所在 API 區域已開通的視覺模型名稱（例如 qwen3.8-max）。海報只作補充核對，活動資料為準。</p>
                             <div class="my-2 flex items-center justify-between gap-2">
                                 <span id="manual-blog-activity-count" class="text-xs font-semibold text-gray-700">可選活動</span>
                                 <button id="refresh-blog-activities-btn" type="button" class="text-xs text-blue-700 underline">重新整理</button>
@@ -633,7 +633,7 @@
 
     <script src="categories.js?v=20261027-life-services"></script>
     <script src="smart-layout.js?v=20261029-page"></script>
-    <script src="admin.js?v=20261102-blog-poster-vision"></script>
+    <script src="admin.js?v=20261102-blog-vision-model-guidance"></script>
     <script src="site-backgrounds.js"></script>
 </body>
 </html>
