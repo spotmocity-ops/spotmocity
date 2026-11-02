@@ -1120,46 +1120,6 @@ function jsonResponse(body: unknown, status = 200): Response {
     return Response.json(body, { status, headers: corsHeaders });
 }
 
-function jsonLinesResponseWithKeepAlive(operation: () => Promise<unknown>): Response {
-    const encoder = new TextEncoder();
-    let disconnected = false;
-    let heartbeat: number;
-    const stream = new ReadableStream<Uint8Array>({
-        start(controller) {
-            heartbeat = setInterval(() => {
-                if (!disconnected) controller.enqueue(encoder.encode('{"type":"progress"}\n'));
-            }, 10000);
-            void operation().then(
-                result => {
-                    clearInterval(heartbeat);
-                    if (disconnected) return;
-                    controller.enqueue(encoder.encode(`${JSON.stringify({ type: 'complete', result })}\n`));
-                    controller.close();
-                },
-                error => {
-                    clearInterval(heartbeat);
-                    if (disconnected) return;
-                    const errorMessage = error instanceof Error ? error.message : '手動網誌生成失敗。';
-                    console.error('Manual daily blog generation failed:', errorMessage);
-                    controller.enqueue(encoder.encode(`${JSON.stringify({ type: 'error', error: errorMessage })}\n`));
-                    controller.close();
-                }
-            );
-        },
-        cancel() {
-            disconnected = true;
-            clearInterval(heartbeat);
-        }
-    });
-    return new Response(stream, {
-        headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/x-ndjson; charset=utf-8',
-            'Cache-Control': 'no-cache, no-transform'
-        }
-    });
-}
-
 Deno.serve(async request => {
     if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
     if (request.method !== 'POST') return textResponse('Method not allowed', 405);
@@ -1291,37 +1251,81 @@ Deno.serve(async request => {
         if (existingBlog?.status === 'published') {
             return textResponse('今日網誌已發布，不能再以手動生成覆寫。', 409);
         }
-        return jsonLinesResponseWithKeepAlive(async () => {
-            const generatedBlog = await generateDailyBlogContent(selectedActivities, provider, model);
-            const blogFields = {
-                suggested_title: generatedBlog.title,
-                title: generatedBlog.title,
-                html_content: generatedBlog.html_content,
-                canva_card_text: generatedBlog.canva_card_text,
-                ig_caption: generatedBlog.ig_caption,
-                hashtags: generatedBlog.hashtags,
-                cover_image_url: safeHttpsUrl(selectedActivities[0].poster_url),
-                source_activity_ids: activityRefs.map(item => item.source === 'curated' ? -item.id : item.id),
-                updated_at: new Date().toISOString()
-            };
-            const saveResult = existingBlog
-                ? await supabase.from('blog_posts').update(blogFields).eq('id', existingBlog.id)
-                    .eq('status', 'draft').select('id').single()
-                : await supabase.from('blog_posts').insert({
-                    ...blogFields,
-                    activity_date: activityDate,
-                    status: 'draft'
-                }).select('id').single();
-            if (saveResult.error) throw new Error(`網誌草稿儲存失敗：${saveResult.error.message}`);
-            if (!saveResult.data) throw new Error('網誌狀態已變更，未能儲存生成內容；請重新整理後再試。');
-            return {
-                success: true,
-                blog_post_id: saveResult.data.id,
-                provider,
-                model,
-                replaced_existing_draft: Boolean(existingBlog)
-            };
-        });
+        const generationId = crypto.randomUUID();
+        const sourceActivityIds = activityRefs.map(item => item.source === 'curated' ? -item.id : item.id);
+        const generationStart = new Date().toISOString();
+        const placeholderFields = {
+            generation_id: generationId,
+            generation_status: 'generating',
+            generation_error: '',
+            source_activity_ids: sourceActivityIds,
+            updated_at: generationStart
+        };
+        const placeholderResult = existingBlog
+            ? await supabase.from('blog_posts').update(placeholderFields).eq('id', existingBlog.id)
+                .eq('status', 'draft').select('id').single()
+            : await supabase.from('blog_posts').insert({
+                ...placeholderFields,
+                activity_date: activityDate,
+                suggested_title: '網誌生成中…',
+                title: '網誌生成中…',
+                html_content: '',
+                status: 'draft'
+            }).select('id').single();
+        if (placeholderResult.error) {
+            console.error('Could not create manual blog generation placeholder:', placeholderResult.error.message);
+            return textResponse('無法建立網誌草稿，請稍後重試。', 500);
+        }
+        const blogPostId = placeholderResult.data.id;
+        const generationTask = (async () => {
+            try {
+                const generatedBlog = await generateDailyBlogContent(selectedActivities, provider, model);
+                const { data: savedBlog, error: saveError } = await supabase.from('blog_posts')
+                    .update({
+                        suggested_title: generatedBlog.title,
+                        title: generatedBlog.title,
+                        html_content: generatedBlog.html_content,
+                        canva_card_text: generatedBlog.canva_card_text,
+                        ig_caption: generatedBlog.ig_caption,
+                        hashtags: generatedBlog.hashtags,
+                        cover_image_url: safeHttpsUrl(selectedActivities[0].poster_url),
+                        generation_status: 'completed',
+                        generation_error: '',
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', blogPostId)
+                    .eq('generation_id', generationId)
+                    .eq('status', 'draft')
+                    .select('id')
+                    .maybeSingle();
+                if (saveError || !savedBlog) {
+                    console.error('Could not save generated manual blog:', saveError?.message || 'Generation was superseded.');
+                    return;
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : '手動網誌生成失敗。';
+                console.error('Manual daily blog generation failed:', errorMessage);
+                const { error: statusError } = await supabase.from('blog_posts')
+                    .update({
+                        generation_status: 'failed',
+                        generation_error: safeText(errorMessage, 1000),
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', blogPostId)
+                    .eq('generation_id', generationId)
+                    .eq('status', 'draft');
+                if (statusError) console.error('Could not save manual blog generation error:', statusError.message);
+            }
+        })();
+        EdgeRuntime.waitUntil(generationTask);
+        return jsonResponse({
+            success: true,
+            blog_post_id: blogPostId,
+            generation_id: generationId,
+            generation_status: 'generating',
+            provider,
+            model
+        }, 202);
     }
     if (requestBody.action === 'preview_draft') {
         if (cronAuthorized) return textResponse('此功能僅供登入的管理員使用。', 403);

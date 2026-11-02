@@ -18,6 +18,7 @@ let manualBlogActivitiesExhausted = false;
 let manualBlogActivitiesLoading = false;
 let activeBlogFilter = 'draft';
 let selectedBlogPostId = '';
+let blogGenerationRefreshTimer = null;
 const activityCategoryGroups = window.SpotMoCityCategories;
 function getCuratedActivityCategoryGroups() {
     const serviceCategories = homeServiceCategories.length ? homeServiceCategories : defaultHomeServiceCategories;
@@ -325,7 +326,7 @@ function renderBlogPostList() {
     }
     list.innerHTML = filtered.map(post => `
         <button type="button" data-blog-post-id="${escapeHtml(post.id)}" class="block w-full rounded-lg border p-3 text-left hover:border-blue-400 hover:bg-blue-50 ${post.id === selectedBlogPostId ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}">
-            <span class="block text-xs text-gray-500">${escapeHtml(post.activity_date || '')} · ${post.status === 'published' ? '已發布' : '待審核'}</span>
+            <span class="block text-xs text-gray-500">${escapeHtml(post.activity_date || '')} · ${post.generation_status === 'generating' ? '生成中' : post.status === 'published' ? '已發布' : '待審核'}</span>
             <span class="mt-1 block font-medium text-gray-800">${escapeHtml(post.title || '未命名網誌')}</span>
         </button>
     `).join('');
@@ -496,57 +497,43 @@ async function generateManualBlogRequest(body, onProgress) {
         },
         body: JSON.stringify(body)
     });
-    if (!response.ok) {
-        const errorMessage = await response.text();
-        throw new Error(errorMessage || `網誌服務連線失敗（HTTP ${response.status}）。`);
-    }
-    if (!response.body) throw new Error('瀏覽器無法讀取生成進度，請更新瀏覽器後再試。');
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let result = null;
-    let streamError = '';
-    const consumeLine = line => {
-        if (!line.trim()) return;
-        let event;
-        try {
-            event = JSON.parse(line);
-        } catch {
-            throw new Error('網誌服務回傳的進度資料無效，請重新整理網誌清單確認是否已儲存草稿。');
-        }
-        if (event.type === 'progress') onProgress();
-        else if (event.type === 'complete') result = event.result;
-        else if (event.type === 'error') streamError = event.error || '手動網誌生成失敗。';
-    };
-
+    const responseText = await response.text();
+    let result;
     try {
-        while (true) {
-            const { value, done } = await reader.read();
-            buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-            lines.forEach(consumeLine);
-            if (done) break;
-        }
-    } catch (error) {
-        if (error instanceof Error && error.message.startsWith('網誌服務回傳的進度資料無效')) throw error;
-        throw new Error('生成連線中斷，尚未收到完成確認。請先重新整理網誌清單確認是否已儲存，避免重複呼叫 AI。');
-    } finally {
-        reader.releaseLock();
+        result = JSON.parse(responseText);
+    } catch {
+        throw new Error(`網誌服務回應格式無效（HTTP ${response.status}）。`);
     }
-    if (buffer.trim()) consumeLine(buffer);
-    if (streamError) throw new Error(streamError);
-    if (!result) throw new Error('生成連線已結束，但沒有收到完成確認。請先重新整理網誌清單確認是否已儲存，避免重複呼叫 AI。');
-    return result;
+    if (!response.ok) throw new Error(result?.error || result?.message || `網誌服務連線失敗（HTTP ${response.status}）。`);
+    if (result?.success !== true || !result.blog_post_id || !result.generation_id) {
+        throw new Error(result?.error || '網誌服務沒有建立生成工作，請重新整理後再試。');
+    }
+
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+        const { data: job, error } = await supabaseClient.from('blog_posts')
+            .select('generation_status,generation_error')
+            .eq('id', result.blog_post_id)
+            .eq('generation_id', result.generation_id)
+            .maybeSingle();
+        if (error) throw new Error(`無法讀取網誌生成進度：${error.message}`);
+        if (!job) throw new Error('網誌生成工作不存在，請重新整理網誌清單確認草稿狀態。');
+        if (job.generation_status === 'completed') return result;
+        if (job.generation_status === 'failed') {
+            throw new Error(job.generation_error || 'AI 網誌生成失敗，請檢查服務設定後再試。');
+        }
+        onProgress(Math.ceil(((attempt + 1) * 5) / 60));
+        await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+    throw new Error('網誌仍在背景生成中；請稍後重新整理網誌清單查看結果，不要重複提交。');
 }
 
 async function findRecentlySavedManualBlogDraft(activityIds, requestedAt) {
     const macauDate = `${adminTodayParts.year}-${String(adminTodayParts.month).padStart(2, '0')}-${String(adminTodayParts.day).padStart(2, '0')}`;
     const { data, error } = await supabaseClient.from('blog_posts')
-        .select('id,source_activity_ids,updated_at')
+        .select('id,source_activity_ids,updated_at,generation_status')
         .eq('activity_date', macauDate)
         .eq('status', 'draft')
+        .eq('generation_status', 'completed')
         .maybeSingle();
     if (error) throw new Error(`無法確認網誌草稿是否已儲存：${error.message}`);
     if (!data || new Date(data.updated_at).getTime() < requestedAt - 10000) return null;
@@ -584,7 +571,7 @@ async function generateManualBlogPost() {
         const model = document.getElementById('manual-blog-model').value.trim();
         const data = await generateManualBlogRequest(
             { action: 'manual_generate_blog', activity_ids: selectedIds, provider, model },
-            () => { message.textContent = 'AI 正在生成網誌，請稍候…'; }
+            elapsedMinutes => { message.textContent = `AI 正在背景生成網誌（約 ${elapsedMinutes} 分鐘），請稍候…`; }
         );
         if (data?.success !== true || !data.blog_post_id) {
             console.error('Manual blog generation returned an incomplete result:', {
@@ -652,17 +639,28 @@ function showBlogPost(postId) {
     document.getElementById('blog-post-ig-caption').value = post.ig_caption || '';
     document.getElementById('blog-post-hashtags').value = post.hashtags || '';
     document.getElementById('blog-post-meta').textContent = `活動日期：${post.activity_date || '—'}${post.published_at ? ` · 發布時間：${new Date(post.published_at).toLocaleString('zh-HK')}` : ''}`;
-    document.getElementById('blog-post-status').textContent = post.status === 'published' ? '已發布' : '待審核';
-    document.getElementById('blog-post-status').className = `rounded-full px-2.5 py-1 text-xs font-medium ${post.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`;
+    document.getElementById('blog-post-status').textContent = post.generation_status === 'generating'
+        ? '生成中'
+        : post.generation_status === 'failed' ? '生成失敗' : post.status === 'published' ? '已發布' : '待審核';
+    document.getElementById('blog-post-status').className = `rounded-full px-2.5 py-1 text-xs font-medium ${
+        post.generation_status === 'generating' ? 'bg-blue-100 text-blue-800'
+            : post.generation_status === 'failed' ? 'bg-red-100 text-red-800'
+                : post.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+    }`;
     document.getElementById('publish-blog-post-btn').textContent = post.status === 'published' ? '儲存並更新發布內容' : '核准並正式發布';
-    document.getElementById('blog-post-message').textContent = '';
+    const generationInProgress = post.generation_status === 'generating';
+    document.getElementById('save-blog-post-btn').disabled = generationInProgress;
+    document.getElementById('publish-blog-post-btn').disabled = generationInProgress;
+    document.getElementById('blog-post-message').textContent = generationInProgress
+        ? '網誌正在背景生成，完成後會自動更新。'
+        : post.generation_status === 'failed' ? `生成失敗：${post.generation_error || '請重新挑選活動生成。'}` : '';
 }
 
 async function fetchBlogPosts(preferredId = selectedBlogPostId) {
     const list = document.getElementById('blog-post-list');
     list.innerHTML = '<p class="py-6 text-center text-sm text-gray-500">載入網誌中...</p>';
     const { data, error } = await supabaseClient.from('blog_posts')
-        .select('id,activity_date,suggested_title,title,html_content,canva_card_text,ig_caption,hashtags,cover_image_url,status,published_at')
+        .select('id,activity_date,suggested_title,title,html_content,canva_card_text,ig_caption,hashtags,cover_image_url,status,published_at,generation_id,generation_status,generation_error')
         .order('activity_date', { ascending: false });
     if (error) {
         console.error('Could not load blog posts:', error.message);
@@ -670,6 +668,10 @@ async function fetchBlogPosts(preferredId = selectedBlogPostId) {
         return;
     }
     blogPosts = data || [];
+    clearTimeout(blogGenerationRefreshTimer);
+    if (blogPosts.some(post => post.generation_status === 'generating')) {
+        blogGenerationRefreshTimer = setTimeout(() => fetchBlogPosts(selectedBlogPostId), 5000);
+    }
     const selected = blogPosts.find(post => post.id === preferredId && post.status === activeBlogFilter) ||
         blogPosts.find(post => post.status === activeBlogFilter);
     showBlogPost(selected?.id || '');

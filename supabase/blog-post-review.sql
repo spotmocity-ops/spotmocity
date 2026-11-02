@@ -9,6 +9,9 @@ create table if not exists public.blog_posts (
     hashtags text not null default '',
     cover_image_url text not null default '',
     source_activity_ids bigint[] not null default '{}',
+    generation_id uuid,
+    generation_status text not null default 'completed' check (generation_status in ('generating', 'completed', 'failed')),
+    generation_error text not null default '',
     status text not null default 'draft' check (status in ('draft', 'published')),
     published_at timestamptz,
     created_at timestamptz not null default now(),
@@ -17,6 +20,18 @@ create table if not exists public.blog_posts (
 
 create index if not exists blog_posts_status_activity_date_idx
     on public.blog_posts (status, activity_date desc);
+
+alter table public.blog_posts
+    add column if not exists generation_id uuid,
+    add column if not exists generation_status text not null default 'completed',
+    add column if not exists generation_error text not null default '';
+
+alter table public.blog_posts
+    drop constraint if exists blog_posts_generation_status_check;
+
+alter table public.blog_posts
+    add constraint blog_posts_generation_status_check
+    check (generation_status in ('generating', 'completed', 'failed'));
 
 alter table public.blog_posts enable row level security;
 
