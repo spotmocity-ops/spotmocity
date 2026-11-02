@@ -141,6 +141,7 @@ async function enrichActivitySuggestions(
         title: suggestion.title || '',
         organization: suggestion.org_name || '',
         description: suggestion.description || '',
+        source_excerpt: safeText(sourceByUrl.get(safeHttpsUrl(suggestion.source_url))?.content, 2500),
         age_range: suggestion.age_range || '',
         location: suggestion.location || '',
         fee: suggestion.fee || '',
@@ -279,7 +280,7 @@ function sourcePageUrl(value: unknown): string {
     const url = safeHttpsUrl(value);
     if (!url) return '';
     const parsed = new URL(url);
-    const hosts = ['www.icm.gov.mo', 'www.macaotourism.gov.mo', 'www.macauticket.com', 'ticketing.enjoymacao.mo'];
+    const hosts = ['www.icm.gov.mo', 'www.macaotourism.gov.mo', 'www.ccm.gov.mo', 'www.macauticket.com', 'ticketing.enjoymacao.mo'];
     return hosts.includes(parsed.hostname) && !parsed.username && !parsed.password && !parsed.port ? url : '';
 }
 
@@ -421,6 +422,7 @@ async function searchOfficialActivities(): Promise<{
     const sourceResults = await Promise.allSettled([
         searchCultureBureauActivities(today),
         searchTourismBureauActivities(today),
+        searchCulturalCentreActivities(today),
         ...ticketingSources.map(source => searchTicketingSiteActivities(
             source.baseUrl, source.label, source.organization, today
         ))
@@ -429,6 +431,7 @@ async function searchOfficialActivities(): Promise<{
     const sourceNames = [
         '澳門文化局官方活動 RSS',
         '澳門旅遊局官方活動資料',
+        '????????????',
         ...ticketingSources.map(source => `${source.label}公開活動清單`)
     ];
     let successfulSources = 0;
@@ -440,7 +443,7 @@ async function searchOfficialActivities(): Promise<{
             console.error(`${sourceNames[index]} 搜集失敗：`, result.reason);
         }
     }
-    if (!successfulSources) throw new Error('澳門文化局及旅遊局官方活動來源均無法讀取，請稍後重試。');
+    if (!successfulSources) throw new Error('??????????????????');
     const uniqueByUrl = new Map(candidates.map(item => [item.source.url, item]));
     const uniqueByTitleAndDates = new Map<string, (typeof candidates)[number]>();
     for (const item of uniqueByUrl.values()) {
@@ -466,7 +469,7 @@ async function fetchText(url: string, label: string): Promise<string> {
     let response: Response;
     try {
         response = await fetch(url, {
-            headers: { Accept: 'application/json, application/rss+xml, application/xml, text/xml' },
+            headers: { Accept: 'text/html, application/json, application/rss+xml, application/xml, text/xml' },
             signal: controller.signal
         });
         if (!response.ok) throw new Error(`${label}回應錯誤 (${response.status})`);
@@ -553,6 +556,120 @@ function parseTicketDateRange(value: unknown, today: string): { start: string; e
         endDate.getUTCDate() !== endDay || endDate < startDate) return null;
     const formatDate = (date: Date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
     return { start: formatDate(startDate), end: formatDate(endDate) };
+}
+
+function parseCulturalCentreDateRange(value: unknown, today: string): { start: string; end: string } | null {
+    const text = safeText(value, 120);
+    const crossMonthRange = text.match(/(\d{1,2})\.(\d{1,2})\s*[-–—]\s*(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    const sameMonthRange = text.match(/(\d{1,2})\s*[-–—]\s*(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    const singleDate = text.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    let startDay: number;
+    let startMonth: number;
+    let endDay: number;
+    let endMonth: number;
+    let year: number;
+    if (crossMonthRange) {
+        startDay = Number(crossMonthRange[1]);
+        startMonth = Number(crossMonthRange[2]);
+        endDay = Number(crossMonthRange[3]);
+        endMonth = Number(crossMonthRange[4]);
+        year = Number(crossMonthRange[5]);
+    } else if (sameMonthRange) {
+        startDay = Number(sameMonthRange[1]);
+        endDay = Number(sameMonthRange[2]);
+        startMonth = Number(sameMonthRange[3]);
+        endMonth = startMonth;
+        year = Number(sameMonthRange[4]);
+    } else if (singleDate) {
+        startDay = Number(singleDate[1]);
+        startMonth = Number(singleDate[2]);
+        endDay = startDay;
+        endMonth = startMonth;
+        year = Number(singleDate[3]);
+    } else {
+        const [currentYear] = today.split('-').map(Number);
+        const monthDay = text.match(/(\d{1,2})\.(\d{1,2})/);
+        if (!monthDay) return null;
+        startDay = Number(monthDay[1]);
+        startMonth = Number(monthDay[2]);
+        endDay = startDay;
+        endMonth = startMonth;
+        year = currentYear;
+    }
+
+    const startDate = new Date(Date.UTC(year, startMonth - 1, startDay));
+    const endYear = endMonth < startMonth ? year + 1 : year;
+    const endDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
+    if (startDate.getUTCFullYear() !== year || startDate.getUTCMonth() !== startMonth - 1 ||
+        startDate.getUTCDate() !== startDay || endDate.getUTCFullYear() !== endYear ||
+        endDate.getUTCMonth() !== endMonth - 1 || endDate.getUTCDate() !== endDay || endDate < startDate) {
+        return null;
+    }
+    const formatDate = (date: Date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+    return { start: formatDate(startDate), end: formatDate(endDate) };
+}
+
+async function searchCulturalCentreActivities(
+    today: string
+): Promise<Array<{ suggestion: ActivitySuggestion; source: SearchResult; publishedAt: number }>> {
+    const baseUrl = 'https://www.ccm.gov.mo';
+    const html = await fetchText(`${baseUrl}/whatson`, '澳門文化中心官方節目清單');
+    if (html.length > 5_000_000) throw new Error('澳門文化中心活動頁面超過允許大小，已停止處理。');
+
+    const candidates: Array<{ suggestion: ActivitySuggestion; source: SearchResult; publishedAt: number }> = [];
+    for (const match of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi)) {
+        const path = readHtmlAttribute(match[1], 'href');
+        if (!/^\/(?:othershow|show)\/[a-z0-9_-]+\/?$/i.test(path)) continue;
+        const sourceUrl = resolveHttpsUrl(path, `${baseUrl}/whatson`);
+        const cardHtml = match[2];
+        const title = [...cardHtml.matchAll(/<h[1-3]\b[^>]*>([\s\S]*?)<\/h[1-3]\s*>/gi)]
+            .map(heading => safeText(plainText(heading[1]), 200))
+            .filter(Boolean)
+            .at(-1) || '';
+        if (!sourceUrl || !title) continue;
+
+        const cardText = safeText(plainText(cardHtml), 2000);
+        const dateRange = parseCulturalCentreDateRange(cardText, today);
+        if (dateRange && dateRange.end < today) continue;
+        const fee = cardText.match(/免費(?:派發)?|MOP\s*\$?\s*\d[\d,]*(?:\s*\/\s*(?:MOP\s*)?\$?\s*\d[\d,]*)*(?:\s*起)?|\$\s*\d[\d,]*(?:\s*[,/]\s*\$?\s*\d[\d,]*)?/i)?.[0].replace(/[,\s/]+$/, '') || '';
+        const imageTag = cardHtml.match(/<img\b[^>]*>/i)?.[0] || '';
+        const backgroundImage = readHtmlAttribute(cardHtml.match(/\bstyle\s*=\s*(?:"[^"]*"|'[^']*')/i)?.[0] || '', 'style')
+            .match(/background-image\s*:\s*url\(\s*['"]?([^)'"]+)/i)?.[1] || '';
+        const imageUrl = resolveHttpsUrl(
+            readHtmlAttribute(imageTag, 'src') || readHtmlAttribute(imageTag, 'data-src') || backgroundImage,
+            `${baseUrl}/whatson`
+        );
+        const category = classifyOfficialEvent(title);
+        const excerpt = cardText.slice(0, 2000);
+        const source: SearchResult = {
+            url: sourceUrl,
+            title,
+            content: excerpt,
+            image_urls: imageUrl ? [imageUrl] : []
+        };
+        candidates.push({
+            publishedAt: dateRange ? Date.parse(`${dateRange.start}T00:00:00+08:00`) || 0 : 0,
+            source,
+            suggestion: {
+                title,
+                org_name: '澳門文化中心',
+                description: excerpt,
+                promo_copy: '',
+                category: category.category,
+                subcategory: category.subcategory,
+                age_range: '',
+                event_start: dateRange ? `${dateRange.start} 00:00` : '',
+                event_end: dateRange ? `${dateRange.end} 23:59` : '',
+                event_format: 'offline',
+                location: '',
+                fee,
+                image_url: imageUrl,
+                source_url: sourceUrl,
+                source_title: title
+            }
+        });
+    }
+    return candidates;
 }
 
 function classifyTicketActivity(title: string, type: string): { category: string; subcategory: string } {
@@ -651,10 +768,13 @@ async function searchTourismBureauActivities(today: string): Promise<Array<{ sug
         } catch {
             throw new Error('澳門旅遊局官方活動資料格式無效。');
         }
-        if (typeof parsed !== 'object' || parsed === null || !Array.isArray((parsed as { results?: unknown }).results)) {
+        if (typeof parsed !== 'object' || parsed === null) {
             throw new Error('澳門旅遊局官方活動資料缺少活動清單。');
         }
-        return (parsed as { results: unknown[] }).results;
+        const resultList = parsed as { results?: unknown; resultCount?: unknown };
+        if (Array.isArray(resultList.results)) return resultList.results;
+        if (resultList.resultCount === 0) return [];
+        throw new Error('澳門旅遊局官方活動資料缺少活動清單。');
     }));
 
     const candidates: Array<{ suggestion: ActivitySuggestion; source: SearchResult; publishedAt: number }> = [];
