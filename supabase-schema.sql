@@ -7,6 +7,7 @@ create table if not exists public.submissions (
     contact_person_phone text,
     title text not null,
     description text not null default '',
+    promo_copy text not null default '',
     category text not null,
     age_range text not null default '不限',
     pricing_plan integer not null default 0 check (pricing_plan >= 0),
@@ -33,6 +34,7 @@ create table if not exists public.submissions (
     poster_display_width integer not null default 100 check (poster_display_width between 25 and 100),
     poster_display_scale integer not null default 100 check (poster_display_scale between 100 and 200),
     poster_display_position integer not null default 50 check (poster_display_position between 0 and 100),
+    poster_display_horizontal_position integer not null default 50 check (poster_display_horizontal_position between 0 and 100),
     is_life_service boolean not null default false,
     life_service_category text,
     life_service_subcategory text,
@@ -73,6 +75,9 @@ alter table public.submissions
     add column if not exists poster_display_position integer not null default 50 check (poster_display_position between 0 and 100);
 
 alter table public.submissions
+    add column if not exists poster_display_horizontal_position integer not null default 50 check (poster_display_horizontal_position between 0 and 100);
+
+alter table public.submissions
     add column if not exists is_life_service boolean not null default false;
 
 alter table public.submissions
@@ -108,6 +113,9 @@ alter table public.submissions
 
 alter table public.submissions
     add column if not exists description text not null default '';
+
+alter table public.submissions
+    add column if not exists promo_copy text not null default '';
 
 alter table public.submissions
     add column if not exists promotion_image_urls text[] not null default '{}';
@@ -187,6 +195,7 @@ create table if not exists public.curated_activity_drafts (
     poster_display_width integer not null default 100 check (poster_display_width between 25 and 100),
     poster_display_scale integer not null default 100 check (poster_display_scale between 100 and 200),
     poster_display_position integer not null default 50 check (poster_display_position between 0 and 100),
+    poster_display_horizontal_position integer not null default 50 check (poster_display_horizontal_position between 0 and 100),
     candidate_image_urls text[] not null default '{}',
     promotion_image_urls text[] not null default '{}',
     related_links jsonb not null default '[]'::jsonb,
@@ -216,6 +225,9 @@ alter table public.curated_activity_drafts
 
 alter table public.curated_activity_drafts
     add column if not exists poster_display_position integer not null default 50 check (poster_display_position between 0 and 100);
+
+alter table public.curated_activity_drafts
+    add column if not exists poster_display_horizontal_position integer not null default 50 check (poster_display_horizontal_position between 0 and 100);
 
 alter table public.curated_activity_drafts
     add column if not exists promotion_image_urls text[] not null default '{}';
@@ -379,7 +391,7 @@ as
         map_url,
         event_end_time,
         event_format,
-        null::text as promo_copy,
+        promo_copy,
         null::jsonb as related_links,
         null::text as source_url,
         null::text as source_title,
@@ -392,7 +404,8 @@ as
         life_service_summary,
         life_service_details,
         life_service_thumbnail_url,
-        life_service_pin_text
+        life_service_pin_text,
+        poster_display_horizontal_position
     from public.submissions
     where status = 'approved'
         and is_visible = true
@@ -444,7 +457,8 @@ as
         life_service_summary,
         life_service_details,
         life_service_thumbnail_url,
-        null::text as life_service_pin_text
+        null::text as life_service_pin_text,
+        poster_display_horizontal_position
     from public.curated_activity_drafts
     where status = 'published'
         and event_end_date >= (now() at time zone 'Asia/Macau')::date

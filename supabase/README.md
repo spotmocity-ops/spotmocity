@@ -32,6 +32,14 @@ The function checks the `x-webhook-secret` header itself. Do not remove that che
 
 Before deploying the updated submission form and admin frontend, run [`contact-person-phone.sql`](./contact-person-phone.sql) in the Supabase SQL Editor. The organiser's responsible-person phone is required for club and organisation submissions, stored separately from the required public contact phone, and displayed only to administrators. The public organiser email is optional. Old submissions may have no private phone. `public_activities` must not expose `contact_person_phone`; verify that the `submissions` table remains protected by admin-only SELECT row-level security and that anonymous and non-admin users cannot read it before enabling this feature. The submission notification intentionally omits the private number. Apply the column migration before publishing the form so inserts do not fail. After publishing, run [`require-contact-person-phone.sql`](./require-contact-person-phone.sql) to enforce the phone requirement on new club and organisation submissions at the database layer. Old browser tabs with the previous form will fail to submit until refreshed; existing records are unaffected.
 
+## Activity promotional copy
+
+Before deploying the updated submission form and admin frontend, run [`activity-promo-copy.sql`](./activity-promo-copy.sql) in the Supabase SQL Editor. It adds the optional `promo_copy` field to submissions and exposes it through `public_activities`; the activity detail modal displays it separately from the activity description.
+
+## Poster horizontal position
+
+Before deploying the updated admin and homepage, run [`poster-horizontal-position.sql`](./poster-horizontal-position.sql) against the linked Supabase project. It adds a horizontal crop position (defaulting to the current centered appearance) for submitted and curated activity posters and exposes it through `public_activities`.
+
 ## Create the database webhook
 
 In the Supabase Dashboard, open **Database → Webhooks** and create a webhook with:

@@ -19,6 +19,12 @@ alter table public.submissions
 alter table public.submissions
     add column if not exists life_service_pin_text text;
 
+alter table public.submissions
+    add column if not exists poster_display_horizontal_position integer not null default 50 check (poster_display_horizontal_position between 0 and 100);
+
+alter table public.curated_activity_drafts
+    add column if not exists poster_display_horizontal_position integer not null default 50 check (poster_display_horizontal_position between 0 and 100);
+
 create index if not exists submissions_life_service_category_idx
     on public.submissions (life_service_category, life_service_subcategory)
     where status = 'approved' and is_visible = true and is_life_service = true;
@@ -64,7 +70,8 @@ as
         life_service_summary,
         life_service_details,
         life_service_thumbnail_url,
-        life_service_pin_text
+        life_service_pin_text,
+        poster_display_horizontal_position
     from public.submissions
     where status = 'approved'
         and is_visible = true
@@ -115,7 +122,8 @@ as
         null::text as life_service_summary,
         null::text as life_service_details,
         null::text as life_service_thumbnail_url,
-        null::text as life_service_pin_text
+        null::text as life_service_pin_text,
+        poster_display_horizontal_position
     from public.curated_activity_drafts
     where status = 'published'
         and event_end_date >= (now() at time zone 'Asia/Macau')::date

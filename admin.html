@@ -356,6 +356,10 @@
                         <label for="edit-description" class="block text-sm font-bold mb-1">活動簡介</label>
                         <textarea id="edit-description" rows="4" class="w-full border rounded p-2"></textarea>
                     </div>
+                    <div>
+                        <label for="edit-promo-copy" class="block text-sm font-bold mb-1">宣傳文案</label>
+                        <textarea id="edit-promo-copy" rows="3" maxlength="1000" class="w-full border rounded p-2"></textarea>
+                    </div>
                     <section class="rounded-lg border border-blue-200 bg-blue-50/50 p-4 space-y-3">
                         <label class="flex items-start gap-2 text-sm font-semibold text-gray-800">
                             <input id="edit-is-life-service" type="checkbox" class="mt-1 h-4 w-4 accent-blue-700">
@@ -443,6 +447,8 @@
                         <input id="edit-poster-display-scale" type="range" min="100" max="200" step="10" value="100" class="w-full accent-blue-700">
                         <label for="edit-poster-display-position" class="block text-xs font-medium text-gray-600 mt-2">圖片上下位置：<output id="edit-poster-display-position-value">50%</output></label>
                         <input id="edit-poster-display-position" type="range" min="0" max="100" step="5" value="50" class="w-full accent-blue-700">
+                        <label for="edit-poster-display-horizontal-position" class="block text-xs font-medium text-gray-600 mt-2">圖片左右位置：<output id="edit-poster-display-horizontal-position-value">50%</output></label>
+                        <input id="edit-poster-display-horizontal-position" type="range" min="0" max="100" step="5" value="50" class="w-full accent-blue-700">
                     </div>
                     <div>
                         <label for="edit-promotion-files" class="block text-sm font-bold mb-1">宣傳圖片</label>
@@ -524,7 +530,7 @@
 
     <script src="categories.js?v=20261027-life-services"></script>
     <script src="smart-layout.js?v=20261029-page"></script>
-    <script src="admin.js?v=20261030-home-content-sync"></script>
+    <script src="admin.js?v=20261102-promo-poster-position"></script>
     <script src="site-backgrounds.js"></script>
 </body>
 </html>

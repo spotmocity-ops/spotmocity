@@ -371,6 +371,8 @@ function renderCuratedActivityDrafts() {
                     <input data-poster-display-scale type="range" min="100" max="200" step="10" value="${getPosterDisplayScale(item.poster_display_scale)}" class="w-full accent-blue-700">
                     <label class="block text-xs font-medium text-gray-600 mt-2">圖片上下位置：<output data-poster-position-value>${getPosterDisplayPosition(item.poster_display_position)}%</output></label>
                     <input data-poster-display-position type="range" min="0" max="100" step="5" value="${getPosterDisplayPosition(item.poster_display_position)}" class="w-full accent-blue-700">
+                    <label class="block text-xs font-medium text-gray-600 mt-2">圖片左右位置：<output data-poster-horizontal-position-value>${getPosterDisplayPosition(item.poster_display_horizontal_position)}%</output></label>
+                    <input data-poster-display-horizontal-position type="range" min="0" max="100" step="5" value="${getPosterDisplayPosition(item.poster_display_horizontal_position)}" class="w-full accent-blue-700">
                     <label class="block text-sm font-semibold mt-3">或輸入海報圖片網址<input data-field="poster_url" type="url" value="${escapeHtml(item.poster_url || '')}" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
                 </div>
             </div>
@@ -400,6 +402,7 @@ function renderCuratedActivityDrafts() {
             curatedActivityDrafts.find(item => String(item.id) === card.dataset.curatedDraft)?.life_service_subcategory || '';
         card.querySelector('[data-poster-display-scale]').addEventListener('input', updatePosterCropPreview);
         card.querySelector('[data-poster-display-position]').addEventListener('input', updatePosterCropPreview);
+        card.querySelector('[data-poster-display-horizontal-position]').addEventListener('input', updatePosterCropPreview);
     }
 }
 
@@ -421,30 +424,36 @@ function getPosterDisplayPosition(value) {
 }
 
 function updatePosterCropPreview(event) {
-    const input = event.target.closest('[data-poster-display-scale], [data-poster-display-position], #edit-poster-display-scale, #edit-poster-display-position');
+    const input = event.target.closest('[data-poster-display-scale], [data-poster-display-position], [data-poster-display-horizontal-position], #edit-poster-display-scale, #edit-poster-display-position, #edit-poster-display-horizontal-position');
     if (!input) return;
     const isAdminEditor = input.id.startsWith('edit-');
     const container = input.closest('[data-curated-draft]') || document;
     const scaleInput = isAdminEditor ? document.getElementById('edit-poster-display-scale') : container.querySelector('[data-poster-display-scale]');
     const positionInput = isAdminEditor ? document.getElementById('edit-poster-display-position') : container.querySelector('[data-poster-display-position]');
+    const horizontalPositionInput = isAdminEditor ? document.getElementById('edit-poster-display-horizontal-position') : container.querySelector('[data-poster-display-horizontal-position]');
     const scale = getPosterDisplayScale(scaleInput.value);
     const position = getPosterDisplayPosition(positionInput.value);
+    const horizontalPosition = getPosterDisplayPosition(horizontalPositionInput.value);
     scaleInput.value = String(scale);
     positionInput.value = String(position);
+    horizontalPositionInput.value = String(horizontalPosition);
     const previewFrame = isAdminEditor ? document.getElementById('edit-poster-preview') : container.querySelector('[data-poster-frame]');
-    applyPosterCropPreview(previewFrame, scale, position);
+    applyPosterCropPreview(previewFrame, scale, horizontalPosition, position);
     const scaleOutput = isAdminEditor ? document.getElementById('edit-poster-display-scale-value') : container.querySelector('[data-poster-scale-value]');
     const positionOutput = isAdminEditor ? document.getElementById('edit-poster-display-position-value') : container.querySelector('[data-poster-position-value]');
+    const horizontalPositionOutput = isAdminEditor ? document.getElementById('edit-poster-display-horizontal-position-value') : container.querySelector('[data-poster-horizontal-position-value]');
     scaleOutput.value = `${scale}%`;
     scaleOutput.textContent = `${scale}%`;
     positionOutput.value = `${position}%`;
     positionOutput.textContent = `${position}%`;
+    horizontalPositionOutput.value = `${horizontalPosition}%`;
+    horizontalPositionOutput.textContent = `${horizontalPosition}%`;
 }
 
-function applyPosterCropPreview(previewFrame, scale, position) {
+function applyPosterCropPreview(previewFrame, scale, horizontalPosition, position) {
     previewFrame.querySelectorAll('img').forEach(preview => {
         preview.style.transform = `scale(${scale / 100})`;
-        preview.style.objectPosition = `center ${position}%`;
+        preview.style.objectPosition = `${horizontalPosition}% ${position}%`;
     });
 }
 
@@ -581,6 +590,7 @@ async function saveCuratedActivityDraft(card, status) {
         poster_url: read('poster_url'),
         poster_display_scale: getPosterDisplayScale(card.querySelector('[data-poster-display-scale]').value),
         poster_display_position: getPosterDisplayPosition(card.querySelector('[data-poster-display-position]').value),
+        poster_display_horizontal_position: getPosterDisplayPosition(card.querySelector('[data-poster-display-horizontal-position]').value),
         is_life_service: card.querySelector('[data-field="is_life_service"]').checked,
         life_service_category: card.querySelector('[data-field="is_life_service"]').checked
             ? read('life_service_category') || null
@@ -943,6 +953,7 @@ function previewCuratedPoster(event) {
         applyPosterCropPreview(
             frame,
             getPosterDisplayScale(card.querySelector('[data-poster-display-scale]').value),
+            getPosterDisplayPosition(card.querySelector('[data-poster-display-horizontal-position]').value),
             getPosterDisplayPosition(card.querySelector('[data-poster-display-position]').value)
         );
         return;
@@ -955,6 +966,7 @@ function previewCuratedPoster(event) {
         applyPosterCropPreview(
             frame,
             getPosterDisplayScale(card.querySelector('[data-poster-display-scale]').value),
+            getPosterDisplayPosition(card.querySelector('[data-poster-display-horizontal-position]').value),
             getPosterDisplayPosition(card.querySelector('[data-poster-display-position]').value)
         );
     } else {
@@ -3063,6 +3075,7 @@ function openEditModal(item) {
     document.getElementById('edit-id').value = item.id;
     document.getElementById('edit-title').value = item.title || '';
     document.getElementById('edit-description').value = item.description || '';
+    document.getElementById('edit-promo-copy').value = item.promo_copy || '';
     document.getElementById('edit-is-life-service').checked = item.is_life_service === true;
     document.getElementById('edit-life-service-summary').value = item.life_service_summary || '';
     document.getElementById('edit-life-service-details').value = item.life_service_details || '';
@@ -3090,13 +3103,17 @@ function openEditModal(item) {
     renderEventImagePreview(document.getElementById('edit-poster-preview'), [item.poster_url || '']);
     const posterDisplayScale = getPosterDisplayScale(item.poster_display_scale);
     const posterDisplayPosition = getPosterDisplayPosition(item.poster_display_position);
+    const posterDisplayHorizontalPosition = getPosterDisplayPosition(item.poster_display_horizontal_position);
     document.getElementById('edit-poster-display-scale').value = String(posterDisplayScale);
     document.getElementById('edit-poster-display-scale-value').value = `${posterDisplayScale}%`;
     document.getElementById('edit-poster-display-scale-value').textContent = `${posterDisplayScale}%`;
     document.getElementById('edit-poster-display-position').value = String(posterDisplayPosition);
     document.getElementById('edit-poster-display-position-value').value = `${posterDisplayPosition}%`;
     document.getElementById('edit-poster-display-position-value').textContent = `${posterDisplayPosition}%`;
-    applyPosterCropPreview(document.getElementById('edit-poster-preview'), posterDisplayScale, posterDisplayPosition);
+    document.getElementById('edit-poster-display-horizontal-position').value = String(posterDisplayHorizontalPosition);
+    document.getElementById('edit-poster-display-horizontal-position-value').value = `${posterDisplayHorizontalPosition}%`;
+    document.getElementById('edit-poster-display-horizontal-position-value').textContent = `${posterDisplayHorizontalPosition}%`;
+    applyPosterCropPreview(document.getElementById('edit-poster-preview'), posterDisplayScale, posterDisplayHorizontalPosition, posterDisplayPosition);
     document.getElementById('edit-promotion-files').value = '';
     document.getElementById('edit-clear-promotion-images').checked = false;
     renderEventImagePreview(
@@ -3209,6 +3226,7 @@ async function updateSubmission(status = null) {
     const changes = {
         title: document.getElementById('edit-title').value.trim(),
         description: document.getElementById('edit-description').value.trim(),
+        promo_copy: document.getElementById('edit-promo-copy').value.trim(),
         event_time: eventTime ? eventTime.replace('T', ' ') : null,
         event_end_date: eventEndTime ? eventEndTime.slice(0, 10) : null,
         event_end_time: eventEndTime ? eventEndTime.replace('T', ' ') : null,
@@ -3222,6 +3240,7 @@ async function updateSubmission(status = null) {
         poster_url: posterUrlInput,
         poster_display_scale: getPosterDisplayScale(document.getElementById('edit-poster-display-scale').value),
         poster_display_position: getPosterDisplayPosition(document.getElementById('edit-poster-display-position').value),
+        poster_display_horizontal_position: getPosterDisplayPosition(document.getElementById('edit-poster-display-horizontal-position').value),
         video_url: document.getElementById('edit-video-url').value.trim() || null,
         contact_email: document.getElementById('edit-contact-email').value.trim(),
         contact_phone: document.getElementById('edit-contact-phone').value.trim(),
@@ -3557,6 +3576,7 @@ function bindEvents() {
     document.getElementById('edit-life-service-thumbnail-url').addEventListener('input', previewEditedLifeServiceThumbnail);
     document.getElementById('edit-poster-display-scale').addEventListener('input', updatePosterCropPreview);
     document.getElementById('edit-poster-display-position').addEventListener('input', updatePosterCropPreview);
+    document.getElementById('edit-poster-display-horizontal-position').addEventListener('input', updatePosterCropPreview);
     document.getElementById('edit-poster').addEventListener('input', () => {
         if (!document.getElementById('edit-poster-file').files.length) previewEditedPoster();
     });

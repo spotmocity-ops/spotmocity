@@ -1,6 +1,12 @@
 alter table public.curated_activity_drafts
     add column if not exists promotion_image_urls text[] not null default '{}';
 
+alter table public.submissions
+    add column if not exists poster_display_horizontal_position integer not null default 50 check (poster_display_horizontal_position between 0 and 100);
+
+alter table public.curated_activity_drafts
+    add column if not exists poster_display_horizontal_position integer not null default 50 check (poster_display_horizontal_position between 0 and 100);
+
 create or replace view public.public_activities
 with (security_barrier = true)
 as
@@ -42,7 +48,8 @@ as
         life_service_summary,
         life_service_details,
         life_service_thumbnail_url,
-        life_service_pin_text
+        life_service_pin_text,
+        poster_display_horizontal_position
     from public.submissions
     where status = 'approved'
         and is_visible = true
@@ -93,7 +100,8 @@ as
         life_service_summary,
         life_service_details,
         life_service_thumbnail_url,
-        null::text as life_service_pin_text
+        null::text as life_service_pin_text,
+        poster_display_horizontal_position
     from public.curated_activity_drafts
     where status = 'published'
         and event_end_date >= (now() at time zone 'Asia/Macau')::date

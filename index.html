@@ -503,6 +503,7 @@
                     time: item.event_time || '時間待公布',
                     endTime: item.event_end_time || item.event_end_date || '',
                     description: item.description || '',
+                    promoCopy: item.promo_copy || '',
                     loc: item.location || '地點待公布',
                     mapUrl: item.map_url || '',
                     fee: item.fee || (Number(item.total_amount) > 0 ? `MOP ${item.total_amount}` : '免費'),
@@ -519,6 +520,9 @@
                         : 100,
                     posterDisplayPosition: item.poster_display_position !== null && item.poster_display_position !== undefined && item.poster_display_position !== '' && Number.isFinite(Number(item.poster_display_position))
                         ? Math.min(100, Math.max(0, Math.round(Number(item.poster_display_position) / 5) * 5))
+                        : 50,
+                    posterDisplayHorizontalPosition: item.poster_display_horizontal_position !== null && item.poster_display_horizontal_position !== undefined && item.poster_display_horizontal_position !== '' && Number.isFinite(Number(item.poster_display_horizontal_position))
+                        ? Math.min(100, Math.max(0, Math.round(Number(item.poster_display_horizontal_position) / 5) * 5))
                         : 50,
                     img: item.poster_url || 'https://via.placeholder.com/600x400?text=No+Image',
                     promotionImages: Array.isArray(item.promotion_image_urls) ? item.promotion_image_urls : [],
@@ -1217,7 +1221,7 @@
                 const serviceCategoryLabel = getLifeServiceCategoryLabel(act);
                 list.innerHTML += `
                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition" onclick="openModal(${act.id})">
-                        <img src="${escapeHtml(act.img)}" alt="${escapeHtml(act.title)}" class="w-full h-48 object-cover" style="object-position:center ${act.posterDisplayPosition}%;transform:scale(${act.posterDisplayScale / 100});">
+                        <img src="${escapeHtml(act.img)}" alt="${escapeHtml(act.title)}" class="w-full h-48 object-cover" style="object-position:${act.posterDisplayHorizontalPosition}% ${act.posterDisplayPosition}%;transform:scale(${act.posterDisplayScale / 100});">
                         <div class="p-4">
                             <div class="flex items-center justify-between gap-2">
                                 <h4 class="font-bold text-lg truncate">${escapeHtml(act.title)}</h4>
@@ -1484,6 +1488,7 @@
                 <p class="text-sm text-gray-600 mb-2">主辦單位：${escapeHtml(act.org)}</p>
                 <p class="text-sm text-gray-600 mb-4">分類：${escapeHtml(act.cats.map(value => categoryNames[value] || value).join('、'))}${act.subcats.length ? ` · ${escapeHtml(act.subcats.map(value => subcategoryNames[value] || value).join('、'))}` : ''}${serviceCategory ? ` · ${escapeHtml(getLifeServiceCategoryLabel(act))}` : ''}</p>
                 ${act.description ? `<p class="text-gray-700 leading-7 whitespace-pre-line mb-5">${escapeHtml(act.description)}</p>` : ''}
+                ${act.promoCopy ? `<section class="mb-5 rounded-xl border border-blue-200 bg-blue-50 p-4"><h3 class="font-semibold text-blue-900 mb-2">宣傳文案</h3><p class="text-blue-800 leading-7 whitespace-pre-line">${escapeHtml(act.promoCopy)}</p></section>` : ''}
                 ${act.isLifeService ? `<section class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
                     <h3 class="font-semibold text-amber-900">生活服務與資源對接</h3>
                     ${serviceCategory ? `<p class="mt-1 text-sm text-gray-700">分類：${escapeHtml(serviceCategory.name)}${serviceSubcategory ? ` · ${escapeHtml(serviceSubcategory.name)}` : ''}</p>` : ''}

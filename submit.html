@@ -114,6 +114,11 @@
                     <label for="activity-description" class="block text-sm font-semibold mb-1 text-gray-700">活動簡介 <span class="text-red-500">*</span></label>
                     <textarea id="activity-description" name="description" rows="5" maxlength="1600" required placeholder="介紹活動內容、對象及參加方式" class="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
                 </div>
+                <div class="mt-3">
+                    <label for="activity-promo-copy" class="block text-sm font-semibold mb-1 text-gray-700">宣傳文案（選填）</label>
+                    <textarea id="activity-promo-copy" name="promoCopy" rows="3" maxlength="1000" placeholder="撰寫吸引參加者的活動宣傳文案" class="w-full border rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">填寫後會與活動簡介分開顯示於活動詳情。</p>
+                </div>
 
                 <div class="mt-3">
                     <label id="activity-location-label" for="activity-location" class="block text-sm font-semibold mb-1 text-gray-700">活動地址 <span class="text-red-500">*</span></label>
@@ -533,6 +538,7 @@
                 contact_person_phone: currentIdentity === 'personal' ? null : contactPersonPhone,
                 title: formData.get('title') || '',
                 description: (formData.get('description') || '').toString().trim(),
+                promo_copy: (formData.get('promoCopy') || '').toString().trim(),
                 location: (formData.get('location') || '').toString().trim(),
                 event_format: formData.get('eventFormat') || 'offline',
                 map_url: mapUrl || null,
