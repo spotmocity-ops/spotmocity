@@ -1488,7 +1488,7 @@
                 <p class="text-sm text-gray-600 mb-2">主辦單位：${escapeHtml(act.org)}</p>
                 <p class="text-sm text-gray-600 mb-4">分類：${escapeHtml(act.cats.map(value => categoryNames[value] || value).join('、'))}${act.subcats.length ? ` · ${escapeHtml(act.subcats.map(value => subcategoryNames[value] || value).join('、'))}` : ''}${serviceCategory ? ` · ${escapeHtml(getLifeServiceCategoryLabel(act))}` : ''}</p>
                 ${act.description ? `<p class="text-gray-700 leading-7 whitespace-pre-line mb-5">${escapeHtml(act.description)}</p>` : ''}
-                ${act.promoCopy ? `<section class="mb-5 rounded-xl border border-blue-200 bg-blue-50 p-4"><h3 class="font-semibold text-blue-900 mb-2">宣傳文案</h3><p class="text-blue-800 leading-7 whitespace-pre-line">${escapeHtml(act.promoCopy)}</p></section>` : ''}
+                ${act.promoCopy ? `<section class="mb-5 rounded-xl border border-blue-200 bg-blue-50 p-4"><p class="text-blue-800 leading-7 whitespace-pre-line">${escapeHtml(act.promoCopy)}</p></section>` : ''}
                 ${act.isLifeService ? `<section class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
                     <h3 class="font-semibold text-amber-900">生活服務與資源對接</h3>
                     ${serviceCategory ? `<p class="mt-1 text-sm text-gray-700">分類：${escapeHtml(serviceCategory.name)}${serviceSubcategory ? ` · ${escapeHtml(serviceSubcategory.name)}` : ''}</p>` : ''}
