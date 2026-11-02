@@ -1279,6 +1279,7 @@ Deno.serve(async request => {
         if (selectedActivities.length !== activityRefs.length) {
             return textResponse('部分活動已不存在、已下架或狀態不可用，請重新整理後再選擇。', 409);
         }
+        const posterImageCount = selectedActivities.filter(activity => Boolean(safeHttpsUrl(activity.poster_url))).length;
         const activityDate = macauDate();
         const { data: existingBlog, error: existingBlogError } = await supabase
             .from('blog_posts')
@@ -1366,7 +1367,7 @@ Deno.serve(async request => {
             generation_status: 'generating',
             provider,
             model,
-            image_count: posterImages.length
+            image_count: posterImageCount
         }, 202);
     }
     if (requestBody.action === 'preview_draft') {
