@@ -10,7 +10,7 @@ create table if not exists public.blog_posts (
     cover_image_url text not null default '',
     source_activity_ids bigint[] not null default '{}',
     generation_id uuid,
-    generation_status text not null default 'completed' check (generation_status in ('generating', 'completed', 'failed')),
+    generation_status text not null default 'completed' check (generation_status in ('generating', 'completed', 'failed', 'cancelled')),
     generation_error text not null default '',
     status text not null default 'draft' check (status in ('draft', 'published')),
     published_at timestamptz,
@@ -31,7 +31,7 @@ alter table public.blog_posts
 
 alter table public.blog_posts
     add constraint blog_posts_generation_status_check
-    check (generation_status in ('generating', 'completed', 'failed'));
+    check (generation_status in ('generating', 'completed', 'failed', 'cancelled'));
 
 alter table public.blog_posts enable row level security;
 

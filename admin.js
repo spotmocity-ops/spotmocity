@@ -325,10 +325,13 @@ function renderBlogPostList() {
         return;
     }
     list.innerHTML = filtered.map(post => `
-        <button type="button" data-blog-post-id="${escapeHtml(post.id)}" class="block w-full rounded-lg border p-3 text-left hover:border-blue-400 hover:bg-blue-50 ${post.id === selectedBlogPostId ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}">
-            <span class="block text-xs text-gray-500">${escapeHtml(post.activity_date || '')} · ${isBlogGenerationStale(post) ? '生成逾時' : post.generation_status === 'generating' ? '生成中' : post.status === 'published' ? '已發布' : '待審核'}</span>
-            <span class="mt-1 block font-medium text-gray-800">${escapeHtml(post.title || '未命名網誌')}</span>
-        </button>
+        <div class="rounded-lg border ${post.id === selectedBlogPostId ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}">
+            <button type="button" data-blog-post-id="${escapeHtml(post.id)}" class="block w-full rounded-t-lg p-3 text-left hover:bg-blue-50">
+                <span class="block text-xs text-gray-500">${escapeHtml(post.activity_date || '')} · ${isBlogGenerationStale(post) ? '生成逾時' : post.generation_status === 'generating' ? '生成中' : post.generation_status === 'cancelled' ? '已取消' : post.generation_status === 'failed' ? '生成失敗' : post.status === 'published' ? '已發布' : '待審核'}</span>
+                <span class="mt-1 block font-medium text-gray-800">${escapeHtml(post.title || '未命名網誌')}</span>
+            </button>
+            ${post.generation_status === 'generating' ? `<button type="button" data-cancel-blog-generation="${escapeHtml(post.id)}" data-generation-id="${escapeHtml(post.generation_id || '')}" class="w-full border-t px-3 py-2 text-left text-xs font-medium text-red-700 hover:bg-red-50">取消生成</button>` : ''}
+        </div>
     `).join('');
 }
 
@@ -527,6 +530,7 @@ async function generateManualBlogRequest(body, onProgress) {
         if (job.generation_status === 'failed') {
             throw new Error(job.generation_error || 'AI 網誌生成失敗，請檢查服務設定後再試。');
         }
+        if (job.generation_status === 'cancelled') throw new Error('網誌生成已取消。');
         if (isBlogGenerationStale(job)) {
             throw new Error('背景生成已超過 3 分鐘沒有更新，可能已中斷。請確認所選活動後重新生成；新工作會安全取代這份卡住的草稿。');
         }
@@ -534,6 +538,56 @@ async function generateManualBlogRequest(body, onProgress) {
         await new Promise(resolve => setTimeout(resolve, 5000));
     }
     throw new Error('網誌仍在背景生成中；請稍後重新整理網誌清單查看結果，不要重複提交。');
+}
+
+async function cancelManualBlogGeneration(post, cancelButton) {
+    if (!confirm('確定取消這篇網誌的生成？取消後不會保存本次 AI 結果。')) return;
+    const message = document.getElementById('blog-post-message');
+    let resultMessage = '';
+    let resultClass = 'text-xs text-gray-600';
+    if (cancelButton) {
+        cancelButton.disabled = true;
+        cancelButton.textContent = '正在取消…';
+    }
+    try {
+        const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError) throw new Error(`無法確認管理員登入狀態：${sessionError.message}`);
+        if (!sessionData.session?.access_token) throw new Error('登入狀態已失效，請重新登入後再試。');
+        const response = await fetch(`${supabaseUrl}/functions/v1/daily-activity-curation`, {
+            method: 'POST',
+            headers: {
+                apikey: supabaseKey,
+                Authorization: `Bearer ${sessionData.session.access_token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'cancel_blog_generation',
+                blog_post_id: post.id,
+                generation_id: post.generation_id
+            })
+        });
+        const responseText = await response.text();
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch {
+            throw new Error(`取消服務回應格式無效（HTTP ${response.status}）。`);
+        }
+        if (!response.ok || result?.success !== true) {
+            throw new Error(result?.error || `取消網誌生成失敗（HTTP ${response.status}）。`);
+        }
+        resultMessage = result.cancelled
+            ? '生成已取消；AI 服務可能仍需短暫時間停止處理本次請求。'
+            : '生成已完成或已被其他工作取代，已重新整理網誌狀態。';
+    } catch (error) {
+        console.error('Could not cancel manual blog generation:', error);
+        resultMessage = `取消失敗：${error?.message || '請重新整理確認生成狀態。'}`;
+        resultClass = 'text-xs text-red-600';
+    } finally {
+        await fetchBlogPosts(post.id);
+        message.textContent = resultMessage;
+        message.className = resultClass;
+    }
 }
 
 async function findRecentlySavedManualBlogDraft(activityIds, requestedAt) {
@@ -599,7 +653,7 @@ async function generateManualBlogPost() {
         });
         await fetchBlogPosts(data.blog_post_id);
         const imageSummary = Number(data.image_count) > 0
-            ? `已參考 ${data.image_count} 張活動海報`
+            ? `活動資料中有 ${data.image_count} 張海報（可安全讀取的圖片會供 AI 參考）`
             : '沒有可用海報，使用活動文字資料生成';
         message.textContent = `已生成網誌草稿（${data.provider} · ${data.model}；${imageSummary}），請審核後儲存或發布。`;
         message.className = 'mt-2 text-xs text-green-700';
@@ -621,6 +675,12 @@ async function generateManualBlogPost() {
             }
         } catch (recoveryError) {
             console.error('Could not verify whether manual blog generation was saved:', recoveryError);
+        }
+        if (error?.message === '網誌生成已取消。') {
+            await fetchBlogPosts();
+            message.textContent = '網誌生成已取消。';
+            message.className = 'mt-2 text-xs text-gray-600';
+            return;
         }
         console.error('Manual blog generation failed:', error);
         const reason = error?.message || '請檢查 AI 服務設定。';
@@ -656,10 +716,12 @@ function showBlogPost(postId) {
     document.getElementById('blog-post-status').textContent = generationStale
         ? '生成逾時'
         : post.generation_status === 'generating' ? '生成中'
+        : post.generation_status === 'cancelled' ? '已取消'
         : post.generation_status === 'failed' ? '生成失敗' : post.status === 'published' ? '已發布' : '待審核';
     document.getElementById('blog-post-status').className = `rounded-full px-2.5 py-1 text-xs font-medium ${
         generationStale || post.generation_status === 'failed' ? 'bg-red-100 text-red-800'
             : post.generation_status === 'generating' ? 'bg-blue-100 text-blue-800'
+                : post.generation_status === 'cancelled' ? 'bg-gray-100 text-gray-700'
                 : post.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
     }`;
     document.getElementById('publish-blog-post-btn').textContent = post.status === 'published' ? '儲存並更新發布內容' : '核准並正式發布';
@@ -668,6 +730,7 @@ function showBlogPost(postId) {
     document.getElementById('blog-post-message').textContent = generationStale
         ? '背景生成已超過 3 分鐘沒有更新，可能已中斷。請重新挑選活動生成以安全取代這份卡住的草稿。'
         : generationInProgress ? '網誌正在背景生成，完成後會自動更新。'
+        : post.generation_status === 'cancelled' ? '此網誌生成已取消；你可以重新挑選活動生成。'
         : post.generation_status === 'failed' ? `生成失敗：${post.generation_error || '請重新挑選活動生成。'}` : '';
 }
 
@@ -4240,6 +4303,12 @@ function bindEvents() {
         if (button) setBlogPostFilter(button.dataset.blogFilter);
     });
     document.getElementById('blog-post-list').addEventListener('click', event => {
+        const cancelButton = event.target.closest('[data-cancel-blog-generation]');
+        if (cancelButton) {
+            const post = blogPosts.find(item => String(item.id) === cancelButton.dataset.cancelBlogGeneration);
+            if (post?.generation_id) cancelManualBlogGeneration(post, cancelButton);
+            return;
+        }
         const button = event.target.closest('[data-blog-post-id]');
         if (button) showBlogPost(button.dataset.blogPostId);
     });

@@ -45,6 +45,11 @@ type DailyBlogGeneratedContent = {
     hashtags: string;
 };
 
+type BlogPosterImage = {
+    title: string;
+    url: string;
+};
+
 const categories = [
     { value: 'limited_offers', label: '限時優惠', subcategories: ['dining_drinks', 'experience_discounts', 'brand_popups', 'exclusive_benefits'] },
     { value: 'leisure', label: '精彩休閒', subcategories: ['exhibitions', 'markets', 'festivals', 'outdoors', 'art_exchange'] },
@@ -75,6 +80,99 @@ function safeHttpsUrl(value: unknown): string {
         return url.href;
     } catch {
         return '';
+    }
+}
+
+function isAllowedPosterHost(hostname: string, supabaseHostname: string): boolean {
+    const host = hostname.toLowerCase();
+    const allowedDomains = [
+        'ctmcloud.com.mo',
+        'gov.mo',
+        'macaotourism.gov.mo',
+        'enjoymacao.mo',
+        'macauticket.com',
+        'macaoticket.com',
+        'unicornpopcorn.com.tw'
+    ];
+    return host === supabaseHostname.toLowerCase() ||
+        allowedDomains.some(domain => host === domain || host.endsWith(`.${domain}`));
+}
+
+async function fetchPosterImage(value: unknown, supabaseHostname: string, cancellationSignal?: AbortSignal): Promise<{
+    bytes: Uint8Array;
+    contentType: string;
+    extension: string;
+}> {
+    const safeUrl = safeHttpsUrl(value);
+    if (!safeUrl) throw new Error('poster URL is invalid');
+    let url = new URL(safeUrl);
+    if (url.username || url.password || (url.port && url.port !== '443') ||
+        !isAllowedPosterHost(url.hostname, supabaseHostname)) {
+        throw new Error('poster host is not allowed');
+    }
+
+    const controller = new AbortController();
+    const abortForCancellation = () => controller.abort();
+    if (cancellationSignal?.aborted) controller.abort();
+    else cancellationSignal?.addEventListener('abort', abortForCancellation, { once: true });
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+        let response: Response | undefined;
+        for (let redirectCount = 0; redirectCount <= 3; redirectCount += 1) {
+            response = await fetch(url.href, { signal: controller.signal, redirect: 'manual' });
+            if (![301, 302, 303, 307, 308].includes(response.status)) break;
+            const location = response.headers.get('location');
+            await response.body?.cancel();
+            if (!location || redirectCount === 3) throw new Error('poster redirect is invalid');
+            url = new URL(location, url);
+            if (url.protocol !== 'https:' || url.username || url.password ||
+                (url.port && url.port !== '443') || !isAllowedPosterHost(url.hostname, supabaseHostname)) {
+                throw new Error('poster redirect host is not allowed');
+            }
+        }
+        if (!response || !response.ok || !response.body) throw new Error('poster download failed');
+        const contentLength = Number(response.headers.get('content-length'));
+        const maximumBytes = 8 * 1024 * 1024;
+        if (Number.isFinite(contentLength) && contentLength > maximumBytes) {
+            await response.body.cancel();
+            throw new Error('poster exceeds the size limit');
+        }
+        const reader = response.body.getReader();
+        const chunks: Uint8Array[] = [];
+        let totalBytes = 0;
+        while (true) {
+            const { done, value: chunk } = await reader.read();
+            if (done) break;
+            totalBytes += chunk.byteLength;
+            if (totalBytes > maximumBytes) {
+                await reader.cancel();
+                throw new Error('poster exceeds the size limit');
+            }
+            chunks.push(chunk);
+        }
+        const bytes = new Uint8Array(totalBytes);
+        let offset = 0;
+        for (const chunk of chunks) {
+            bytes.set(chunk, offset);
+            offset += chunk.byteLength;
+        }
+        const isPng = bytes.length >= 8 &&
+            bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 &&
+            bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a;
+        const isJpeg = bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+        const isWebp = bytes.length >= 12 &&
+            String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' &&
+            String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP';
+        const isGif = bytes.length >= 6 &&
+            ['GIF87a', 'GIF89a'].includes(String.fromCharCode(...bytes.slice(0, 6)));
+        if (isPng) return { bytes, contentType: 'image/png', extension: 'png' };
+        if (isJpeg) return { bytes, contentType: 'image/jpeg', extension: 'jpg' };
+        if (isWebp) return { bytes, contentType: 'image/webp', extension: 'webp' };
+        if (isGif) return { bytes, contentType: 'image/gif', extension: 'gif' };
+        throw new Error('poster is not a supported image');
+    } finally {
+        clearTimeout(timeout);
+        cancellationSignal?.removeEventListener('abort', abortForCancellation);
     }
 }
 
@@ -231,7 +329,9 @@ async function generateDailyBlogContent(
     activities: Record<string, unknown>[],
     provider = 'qwen',
     requestedModel = '',
-    includePosterImages = false
+    includePosterImages = false,
+    cancellationSignal?: AbortSignal,
+    preparedPosterImages: BlogPosterImage[] = []
 ): Promise<DailyBlogGeneratedContent> {
     if (!['qwen', 'openai'].includes(provider)) throw new Error('不支援的網誌 AI 服務。');
     const apiKey = provider === 'qwen'
@@ -280,12 +380,7 @@ async function generateDailyBlogContent(
         poster_image_attached: includePosterImages && Boolean(safeHttpsUrl(activity.poster_url))
     }));
     if (!activityInput.length) throw new Error('沒有當日新增活動可供生成網誌。');
-    const posterImages = includePosterImages ? activities
-        .map(activity => ({
-            title: safeText(activity.title, 200),
-            url: safeHttpsUrl(activity.poster_url)
-        }))
-        .filter((image): image is { title: string; url: string } => Boolean(image.url)) : [];
+    const posterImages = includePosterImages ? preparedPosterImages : [];
     const userContent = posterImages.length
         ? [
             ...posterImages.flatMap(image => [
@@ -300,6 +395,9 @@ async function generateDailyBlogContent(
         : JSON.stringify({ activity_date: macauDate(), activities: activityInput });
 
     const controller = new AbortController();
+    const abortForCancellation = () => controller.abort();
+    if (cancellationSignal?.aborted) controller.abort();
+    else cancellationSignal?.addEventListener('abort', abortForCancellation, { once: true });
     const timeout = setTimeout(() => controller.abort(), 90000);
     let response: Response;
     let responseText: string;
@@ -328,6 +426,9 @@ async function generateDailyBlogContent(
         });
         responseText = await response.text();
     } catch (error) {
+        if (cancellationSignal?.aborted) {
+            throw new Error('網誌生成已取消。');
+        }
         if (controller.signal.aborted) {
             throw new Error('AI 網誌生成超過 90 秒，已停止本次工作；請減少所選活動數量後再試。');
         }
@@ -335,6 +436,7 @@ async function generateDailyBlogContent(
         throw new Error('無法連接 AI 網誌服務，請檢查 API Host 後再試。');
     } finally {
         clearTimeout(timeout);
+        cancellationSignal?.removeEventListener('abort', abortForCancellation);
     }
     if (!response.ok) {
         let providerDetail = '';
@@ -1230,8 +1332,69 @@ Deno.serve(async request => {
     }
     const requestBody = body as Record<string, unknown>;
     if (typeof requestBody.action === 'string' &&
-        !['manual_generate_blog', 'preview_draft'].includes(requestBody.action)) {
+        !['manual_generate_blog', 'cancel_blog_generation', 'preview_draft'].includes(requestBody.action)) {
         return textResponse('不支援的每日活動整理操作。請更新管理頁面後重試。', 400);
+    }
+    if (requestBody.action === 'cancel_blog_generation') {
+        if (cronAuthorized) return textResponse('此功能僅供登入的管理員使用。', 403);
+        const blogPostId = typeof requestBody.blog_post_id === 'string' ? requestBody.blog_post_id : '';
+        const generationId = typeof requestBody.generation_id === 'string' ? requestBody.generation_id : '';
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(blogPostId) ||
+            !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(generationId)) {
+            return textResponse('網誌生成工作識別碼無效。', 400);
+        }
+        const { data: currentJob, error: currentJobError } = await supabase.from('blog_posts')
+            .select('id,title,html_content,generation_status')
+            .eq('id', blogPostId)
+            .eq('generation_id', generationId)
+            .eq('status', 'draft')
+            .eq('generation_status', 'generating')
+            .maybeSingle();
+        if (currentJobError) {
+            console.error('Could not load blog generation for cancellation:', currentJobError.message);
+            return textResponse('無法讀取網誌生成狀態。', 500);
+        }
+        if (!currentJob) {
+            const { data: latestJob, error: latestJobError } = await supabase.from('blog_posts')
+                .select('generation_status')
+                .eq('id', blogPostId)
+                .eq('generation_id', generationId)
+                .maybeSingle();
+            if (latestJobError) {
+                console.error('Could not confirm blog generation cancellation:', latestJobError.message);
+                return textResponse('無法確認網誌生成狀態。', 500);
+            }
+            return jsonResponse({
+                success: true,
+                cancelled: latestJob?.generation_status === 'cancelled',
+                generation_status: latestJob?.generation_status || 'superseded'
+            });
+        }
+        const cancelFields = {
+            generation_status: 'cancelled',
+            generation_error: '已由管理員取消生成。',
+            updated_at: new Date().toISOString(),
+            ...(currentJob.title === '網誌生成中…' && !currentJob.html_content
+                ? { title: '網誌生成已取消', suggested_title: '網誌生成已取消' }
+                : {})
+        };
+        const { data: cancelledJob, error: cancelError } = await supabase.from('blog_posts')
+            .update(cancelFields)
+            .eq('id', blogPostId)
+            .eq('generation_id', generationId)
+            .eq('status', 'draft')
+            .eq('generation_status', 'generating')
+            .select('id')
+            .maybeSingle();
+        if (cancelError) {
+            console.error('Could not cancel manual blog generation:', cancelError.message);
+            return textResponse('取消網誌生成失敗，請重新整理後確認狀態。', 500);
+        }
+        return jsonResponse({
+            success: true,
+            cancelled: Boolean(cancelledJob),
+            generation_status: cancelledJob ? 'cancelled' : 'completed'
+        });
     }
     if (requestBody.action === 'manual_generate_blog') {
         if (cronAuthorized) return textResponse('此功能僅供登入的管理員使用。', 403);
@@ -1332,8 +1495,74 @@ Deno.serve(async request => {
         }
         const blogPostId = placeholderResult.data.id;
         const generationTask = (async () => {
+            const cancellationController = new AbortController();
+            const temporaryPosterPaths: string[] = [];
+            let monitorActive = true;
+            let monitorError = '';
+            const cancellationMonitor = (async () => {
+                while (monitorActive && !cancellationController.signal.aborted) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    if (!monitorActive || cancellationController.signal.aborted) return;
+                    const { data: job, error } = await supabase.from('blog_posts')
+                        .select('generation_status')
+                        .eq('id', blogPostId)
+                        .eq('generation_id', generationId)
+                        .maybeSingle();
+                    if (error) {
+                        monitorError = '無法檢查生成取消狀態。';
+                        cancellationController.abort();
+                        return;
+                    }
+                    if (job?.generation_status !== 'generating') {
+                        cancellationController.abort();
+                        return;
+                    }
+                }
+            })();
             try {
-                const generatedBlog = await generateDailyBlogContent(selectedActivities, provider, model, true);
+                const preparedPosterImages: BlogPosterImage[] = [];
+                const supabaseHostname = new URL(supabaseUrl).hostname;
+                const posterActivities = selectedActivities.filter(activity => safeHttpsUrl(activity.poster_url));
+                for (let index = 0; index < posterActivities.length && !cancellationController.signal.aborted; index += 4) {
+                    const batch = posterActivities.slice(index, index + 4);
+                    const batchResults = await Promise.all(batch.map(async (activity, batchIndex) => {
+                        try {
+                            const image = await fetchPosterImage(
+                                activity.poster_url, supabaseHostname, cancellationController.signal
+                            );
+                            const path = `blog-generation-temp/${generationId}/${index + batchIndex}-${crypto.randomUUID()}.${image.extension}`;
+                            const { error: uploadError } = await supabase.storage.from('event-media').upload(
+                                path,
+                                image.bytes,
+                                { contentType: image.contentType, cacheControl: '60', upsert: false }
+                            );
+                            if (uploadError) throw uploadError;
+                            const posterUrl = safeHttpsUrl(
+                                supabase.storage.from('event-media').getPublicUrl(path).data.publicUrl
+                            );
+                            if (!posterUrl) {
+                                const { error: removeError } = await supabase.storage.from('event-media').remove([path]);
+                                if (removeError) console.error('Could not remove invalid temporary blog poster:', removeError.message);
+                                throw new Error('Temporary poster URL is invalid');
+                            }
+                            return { path, image: { title: safeText(activity.title, 200), url: posterUrl } };
+                        } catch (error) {
+                            console.error('Could not prepare a poster for manual blog generation:',
+                                error instanceof Error ? error.message : 'Unknown poster preparation error');
+                            return null;
+                        }
+                    }));
+                    for (const result of batchResults) {
+                        if (!result) continue;
+                        temporaryPosterPaths.push(result.path);
+                        preparedPosterImages.push(result.image);
+                    }
+                }
+                if (cancellationController.signal.aborted) throw new Error('網誌生成已取消。');
+                const generatedBlog = await generateDailyBlogContent(
+                    selectedActivities, provider, model, true, cancellationController.signal, preparedPosterImages
+                );
+                if (cancellationController.signal.aborted) return;
                 const { data: savedBlog, error: saveError } = await supabase.from('blog_posts')
                     .update({
                         suggested_title: generatedBlog.title,
@@ -1350,6 +1579,7 @@ Deno.serve(async request => {
                     .eq('id', blogPostId)
                     .eq('generation_id', generationId)
                     .eq('status', 'draft')
+                    .eq('generation_status', 'generating')
                     .select('id')
                     .maybeSingle();
                 if (saveError || !savedBlog) {
@@ -1357,7 +1587,14 @@ Deno.serve(async request => {
                     return;
                 }
             } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : '手動網誌生成失敗。';
+                const { data: currentJob, error: currentJobError } = await supabase.from('blog_posts')
+                    .select('generation_status')
+                    .eq('id', blogPostId)
+                    .eq('generation_id', generationId)
+                    .maybeSingle();
+                if (currentJobError) console.error('Could not check manual blog generation status:', currentJobError.message);
+                if (currentJob?.generation_status === 'cancelled') return;
+                const errorMessage = monitorError || (error instanceof Error ? error.message : '手動網誌生成失敗。');
                 console.error('Manual daily blog generation failed:', errorMessage);
                 const { error: statusError } = await supabase.from('blog_posts')
                     .update({
@@ -1367,8 +1604,16 @@ Deno.serve(async request => {
                     })
                     .eq('id', blogPostId)
                     .eq('generation_id', generationId)
-                    .eq('status', 'draft');
+                    .eq('status', 'draft')
+                    .eq('generation_status', 'generating');
                 if (statusError) console.error('Could not save manual blog generation error:', statusError.message);
+            } finally {
+                monitorActive = false;
+                if (temporaryPosterPaths.length) {
+                    const { error: cleanupError } = await supabase.storage.from('event-media').remove(temporaryPosterPaths);
+                    if (cleanupError) console.error('Could not remove temporary blog posters:', cleanupError.message);
+                }
+                await cancellationMonitor;
             }
         })();
         EdgeRuntime.waitUntil(generationTask);
