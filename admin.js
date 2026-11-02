@@ -326,10 +326,16 @@ function renderBlogPostList() {
     }
     list.innerHTML = filtered.map(post => `
         <button type="button" data-blog-post-id="${escapeHtml(post.id)}" class="block w-full rounded-lg border p-3 text-left hover:border-blue-400 hover:bg-blue-50 ${post.id === selectedBlogPostId ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}">
-            <span class="block text-xs text-gray-500">${escapeHtml(post.activity_date || '')} · ${post.generation_status === 'generating' ? '生成中' : post.status === 'published' ? '已發布' : '待審核'}</span>
+            <span class="block text-xs text-gray-500">${escapeHtml(post.activity_date || '')} · ${isBlogGenerationStale(post) ? '生成逾時' : post.generation_status === 'generating' ? '生成中' : post.status === 'published' ? '已發布' : '待審核'}</span>
             <span class="mt-1 block font-medium text-gray-800">${escapeHtml(post.title || '未命名網誌')}</span>
         </button>
     `).join('');
+}
+
+function isBlogGenerationStale(post) {
+    return post.generation_status === 'generating' &&
+        Number.isFinite(Date.parse(post.updated_at)) &&
+        Date.now() - Date.parse(post.updated_at) > 180000;
 }
 
 function setBlogPostFilter(filter) {
@@ -511,7 +517,7 @@ async function generateManualBlogRequest(body, onProgress) {
 
     for (let attempt = 0; attempt < 120; attempt += 1) {
         const { data: job, error } = await supabaseClient.from('blog_posts')
-            .select('generation_status,generation_error')
+            .select('generation_status,generation_error,updated_at')
             .eq('id', result.blog_post_id)
             .eq('generation_id', result.generation_id)
             .maybeSingle();
@@ -520,6 +526,9 @@ async function generateManualBlogRequest(body, onProgress) {
         if (job.generation_status === 'completed') return result;
         if (job.generation_status === 'failed') {
             throw new Error(job.generation_error || 'AI 網誌生成失敗，請檢查服務設定後再試。');
+        }
+        if (isBlogGenerationStale(job)) {
+            throw new Error('背景生成已超過 3 分鐘沒有更新，可能已中斷。請確認所選活動後重新生成；新工作會安全取代這份卡住的草稿。');
         }
         onProgress(Math.ceil(((attempt + 1) * 5) / 60));
         await new Promise(resolve => setTimeout(resolve, 5000));
@@ -612,7 +621,7 @@ async function generateManualBlogPost() {
         }
         console.error('Manual blog generation failed:', error);
         const reason = error?.message || '請檢查 AI 服務設定。';
-        message.textContent = `生成未確認：${reason} 若網誌清單沒有新草稿，請稍後再試。`;
+        message.textContent = `生成未確認：${reason} 請查看網誌清單中的草稿狀態，再決定是否重新生成。`;
         message.className = 'mt-2 text-xs text-red-600';
     } finally {
         button.disabled = false;
@@ -639,20 +648,23 @@ function showBlogPost(postId) {
     document.getElementById('blog-post-ig-caption').value = post.ig_caption || '';
     document.getElementById('blog-post-hashtags').value = post.hashtags || '';
     document.getElementById('blog-post-meta').textContent = `活動日期：${post.activity_date || '—'}${post.published_at ? ` · 發布時間：${new Date(post.published_at).toLocaleString('zh-HK')}` : ''}`;
-    document.getElementById('blog-post-status').textContent = post.generation_status === 'generating'
-        ? '生成中'
+    document.getElementById('blog-post-status').textContent = generationStale
+        ? '生成逾時'
+        : post.generation_status === 'generating' ? '生成中'
         : post.generation_status === 'failed' ? '生成失敗' : post.status === 'published' ? '已發布' : '待審核';
     document.getElementById('blog-post-status').className = `rounded-full px-2.5 py-1 text-xs font-medium ${
-        post.generation_status === 'generating' ? 'bg-blue-100 text-blue-800'
-            : post.generation_status === 'failed' ? 'bg-red-100 text-red-800'
+        generationStale || post.generation_status === 'failed' ? 'bg-red-100 text-red-800'
+            : post.generation_status === 'generating' ? 'bg-blue-100 text-blue-800'
                 : post.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
     }`;
     document.getElementById('publish-blog-post-btn').textContent = post.status === 'published' ? '儲存並更新發布內容' : '核准並正式發布';
     const generationInProgress = post.generation_status === 'generating';
+    const generationStale = isBlogGenerationStale(post);
     document.getElementById('save-blog-post-btn').disabled = generationInProgress;
     document.getElementById('publish-blog-post-btn').disabled = generationInProgress;
-    document.getElementById('blog-post-message').textContent = generationInProgress
-        ? '網誌正在背景生成，完成後會自動更新。'
+    document.getElementById('blog-post-message').textContent = generationStale
+        ? '背景生成已超過 3 分鐘沒有更新，可能已中斷。請重新挑選活動生成以安全取代這份卡住的草稿。'
+        : generationInProgress ? '網誌正在背景生成，完成後會自動更新。'
         : post.generation_status === 'failed' ? `生成失敗：${post.generation_error || '請重新挑選活動生成。'}` : '';
 }
 
@@ -660,7 +672,7 @@ async function fetchBlogPosts(preferredId = selectedBlogPostId) {
     const list = document.getElementById('blog-post-list');
     list.innerHTML = '<p class="py-6 text-center text-sm text-gray-500">載入網誌中...</p>';
     const { data, error } = await supabaseClient.from('blog_posts')
-        .select('id,activity_date,suggested_title,title,html_content,canva_card_text,ig_caption,hashtags,cover_image_url,status,published_at,generation_id,generation_status,generation_error')
+        .select('id,activity_date,suggested_title,title,html_content,canva_card_text,ig_caption,hashtags,cover_image_url,status,published_at,generation_id,generation_status,generation_error,updated_at')
         .order('activity_date', { ascending: false });
     if (error) {
         console.error('Could not load blog posts:', error.message);
@@ -669,7 +681,7 @@ async function fetchBlogPosts(preferredId = selectedBlogPostId) {
     }
     blogPosts = data || [];
     clearTimeout(blogGenerationRefreshTimer);
-    if (blogPosts.some(post => post.generation_status === 'generating')) {
+    if (blogPosts.some(post => post.generation_status === 'generating' && !isBlogGenerationStale(post))) {
         blogGenerationRefreshTimer = setTimeout(() => fetchBlogPosts(selectedBlogPostId), 5000);
     }
     const selected = blogPosts.find(post => post.id === preferredId && post.status === activeBlogFilter) ||

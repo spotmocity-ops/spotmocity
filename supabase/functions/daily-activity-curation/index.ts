@@ -279,7 +279,12 @@ async function generateDailyBlogContent(
     }));
     if (!activityInput.length) throw new Error('沒有當日新增活動可供生成網誌。');
 
-    const response = await fetch(`${baseUrl.href.replace(/\/+$/, '')}/chat/completions`, {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90000);
+    let response: Response;
+    let responseText: string;
+    try {
+        response = await fetch(`${baseUrl.href.replace(/\/+$/, '')}/chat/completions`, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${apiKey}`,
@@ -299,8 +304,19 @@ async function generateDailyBlogContent(
                 }
             ],
             max_tokens: 7000
-        })
-    });
+        }),
+        signal: controller.signal
+        });
+        responseText = await response.text();
+    } catch (error) {
+        if (controller.signal.aborted) {
+            throw new Error('AI 網誌生成超過 90 秒，已停止本次工作；請減少所選活動數量後再試。');
+        }
+        console.error(`${provider} daily blog request could not be completed:`, error);
+        throw new Error('無法連接 AI 網誌服務，請檢查 API Host 後再試。');
+    } finally {
+        clearTimeout(timeout);
+    }
     if (!response.ok) {
         console.error(`${provider} daily blog request failed: HTTP ${response.status}`);
         const providerName = provider === 'qwen' ? 'Qwen Cloud' : 'OpenAI 相容服務';
@@ -320,7 +336,12 @@ async function generateDailyBlogContent(
         throw new Error(`${providerName}網誌生成失敗（HTTP ${response.status}）。${hint}`);
     }
 
-    const result = await response.json();
+    let result: { choices?: Array<{ message?: { content?: unknown } }> };
+    try {
+        result = JSON.parse(responseText);
+    } catch {
+        throw new Error('AI 網誌服務回傳的內容不是有效 JSON，請減少所選活動數量後再試。');
+    }
     const content = result.choices?.[0]?.message?.content;
     if (typeof content !== 'string') throw new Error('AI 沒有回傳網誌內容。');
     const normalized = content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
