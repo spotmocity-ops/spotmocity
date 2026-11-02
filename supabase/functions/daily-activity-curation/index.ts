@@ -1120,20 +1120,20 @@ function jsonResponse(body: unknown, status = 200): Response {
     return Response.json(body, { status, headers: corsHeaders });
 }
 
-function jsonResponseWithKeepAlive(operation: () => Promise<unknown>): Response {
+function jsonLinesResponseWithKeepAlive(operation: () => Promise<unknown>): Response {
     const encoder = new TextEncoder();
     let disconnected = false;
     let heartbeat: number;
     const stream = new ReadableStream<Uint8Array>({
         start(controller) {
             heartbeat = setInterval(() => {
-                if (!disconnected) controller.enqueue(encoder.encode(' '));
+                if (!disconnected) controller.enqueue(encoder.encode('{"type":"progress"}\n'));
             }, 10000);
             void operation().then(
                 result => {
                     clearInterval(heartbeat);
                     if (disconnected) return;
-                    controller.enqueue(encoder.encode(JSON.stringify(result)));
+                    controller.enqueue(encoder.encode(`${JSON.stringify({ type: 'complete', result })}\n`));
                     controller.close();
                 },
                 error => {
@@ -1141,7 +1141,7 @@ function jsonResponseWithKeepAlive(operation: () => Promise<unknown>): Response 
                     if (disconnected) return;
                     const errorMessage = error instanceof Error ? error.message : '手動網誌生成失敗。';
                     console.error('Manual daily blog generation failed:', errorMessage);
-                    controller.enqueue(encoder.encode(JSON.stringify({ success: false, error: errorMessage })));
+                    controller.enqueue(encoder.encode(`${JSON.stringify({ type: 'error', error: errorMessage })}\n`));
                     controller.close();
                 }
             );
@@ -1154,7 +1154,7 @@ function jsonResponseWithKeepAlive(operation: () => Promise<unknown>): Response 
     return new Response(stream, {
         headers: {
             ...corsHeaders,
-            'Content-Type': 'application/json; charset=utf-8',
+            'Content-Type': 'application/x-ndjson; charset=utf-8',
             'Cache-Control': 'no-cache, no-transform'
         }
     });
@@ -1291,7 +1291,7 @@ Deno.serve(async request => {
         if (existingBlog?.status === 'published') {
             return textResponse('今日網誌已發布，不能再以手動生成覆寫。', 409);
         }
-        return jsonResponseWithKeepAlive(async () => {
+        return jsonLinesResponseWithKeepAlive(async () => {
             const generatedBlog = await generateDailyBlogContent(selectedActivities, provider, model);
             const blogFields = {
                 suggested_title: generatedBlog.title,

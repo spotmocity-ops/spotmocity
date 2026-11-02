@@ -482,6 +482,65 @@ function updateManualBlogActivitySelection(event) {
     document.getElementById('manual-blog-generator-message').textContent = '';
 }
 
+async function generateManualBlogRequest(body, onProgress) {
+    const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError) throw new Error(`無法確認管理員登入狀態：${sessionError.message}`);
+    if (!sessionData.session?.access_token) throw new Error('登入狀態已失效，請重新登入後再試。');
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/daily-activity-curation`, {
+        method: 'POST',
+        headers: {
+            apikey: supabaseKey,
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+        const errorMessage = await response.text();
+        throw new Error(errorMessage || `網誌服務連線失敗（HTTP ${response.status}）。`);
+    }
+    if (!response.body) throw new Error('瀏覽器無法讀取生成進度，請更新瀏覽器後再試。');
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let result = null;
+    let streamError = '';
+    const consumeLine = line => {
+        if (!line.trim()) return;
+        let event;
+        try {
+            event = JSON.parse(line);
+        } catch {
+            throw new Error('網誌服務回傳的進度資料無效，請重新整理網誌清單確認是否已儲存草稿。');
+        }
+        if (event.type === 'progress') onProgress();
+        else if (event.type === 'complete') result = event.result;
+        else if (event.type === 'error') streamError = event.error || '手動網誌生成失敗。';
+    };
+
+    try {
+        while (true) {
+            const { value, done } = await reader.read();
+            buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            lines.forEach(consumeLine);
+            if (done) break;
+        }
+    } catch (error) {
+        if (error instanceof Error && error.message.startsWith('網誌服務回傳的進度資料無效')) throw error;
+        throw new Error('生成連線中斷，尚未收到完成確認。請先重新整理網誌清單確認是否已儲存，避免重複呼叫 AI。');
+    } finally {
+        reader.releaseLock();
+    }
+    if (buffer.trim()) consumeLine(buffer);
+    if (streamError) throw new Error(streamError);
+    if (!result) throw new Error('生成連線已結束，但沒有收到完成確認。請先重新整理網誌清單確認是否已儲存，避免重複呼叫 AI。');
+    return result;
+}
+
 async function generateManualBlogPost() {
     const selectedIds = [...selectedManualBlogActivityIds].map(value => {
         const [source, id] = value.split(':');
@@ -505,13 +564,10 @@ async function generateManualBlogPost() {
     try {
         const provider = document.getElementById('manual-blog-provider').value;
         const model = document.getElementById('manual-blog-model').value.trim();
-        const { data, error } = await supabaseClient.functions.invoke('daily-activity-curation', {
-            body: { action: 'manual_generate_blog', activity_ids: selectedIds, provider, model }
-        });
-        if (error) {
-            const responseMessage = await error.context?.text?.().catch(() => '');
-            throw new Error(responseMessage || error.message || '無法生成網誌。');
-        }
+        const data = await generateManualBlogRequest(
+            { action: 'manual_generate_blog', activity_ids: selectedIds, provider, model },
+            () => { message.textContent = 'AI 正在生成網誌，請稍候…'; }
+        );
         if (data?.success && !data.blog_post_id) {
             throw new Error('目前部署的 daily-activity-curation Edge Function 尚未支援手動生成網誌。請部署最新函式後再試；這次請求可能已執行活動搜集。');
         }
