@@ -148,6 +148,7 @@
             display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
             margin: 28px 0;
         }
+        .origin-grid.single { grid-template-columns: 1fr; }
         .origin-card {
             border: 1px solid #e3dccd; border-radius: 18px;
             background: linear-gradient(145deg, #fff, #f8f5ed);
@@ -235,6 +236,8 @@
         .copyright { margin-top: 18px; color: rgba(255,255,255,.62); font-size: .85rem; }
 
         [data-i18n]{transition: opacity .12s ease;}
+        html[lang="zh-Hant"] .lang-en { display: none !important; }
+        html[lang="en"] .lang-zh { display: none !important; }
         @media (max-width: 900px) {
             .nav-inner { align-items: flex-start; padding: 10px 0; }
             .nav-links { display: none; }
@@ -323,38 +326,38 @@
                 </div>
 
                 <div class="origin-grid" aria-label="Programme background">
-                    <article class="origin-card zh-origin">
+                    <article class="origin-card zh-origin lang-zh">
                         <p data-i18n="originZh">「澳門親善大使文化交流之旅」多年來致力為本澳青年搭建走向世界、與國際接軌的橋樑。透過系統化的分組協作、方案實踐與跨文化交流，讓青年代表化身文化使者，在向外推廣澳門中西共融特色與多元文化的同時，亦深入走進當地社群，體驗不同地域的自然風貌、歷史底蘊與人文關懷。</p>
                     </article>
-                    <article class="origin-card en-origin">
+                    <article class="origin-card en-origin lang-en">
                         <p data-i18n="originEn">For years, the "Macao Goodwill Ambassador Cultural Exchange Programme" has been dedicated to building a bridge connecting Macao youth with the wider world and international communities. Through structured group collaboration, project execution, and cross-cultural exchange, youth representatives step into the role of cultural ambassadors—sharing Macao's Sino-Portuguese heritage and multicultural character abroad while engaging deeply with local communities to experience diverse natural landscapes, historical depth, and human warmth.</p>
                     </article>
                 </div>
 
                 <div class="info-panel" role="list">
                     <article class="info-item" role="listitem">
-                        <span class="info-label" data-i18n="organizerLabel">主辦單位</span>
-                        <span class="info-en" data-i18n="organizerEn">Organizer</span>
+                        <span class="info-label lang-zh" data-i18n="organizerLabel">主辦單位</span>
+                        <span class="info-en lang-en" data-i18n="organizerEn">Organizer</span>
                         <span class="info-value" data-i18n="organizerValue">澳門扶青社<br><small>Rotaract Club of Macau</small></span>
                     </article>
                     <article class="info-item" role="listitem">
-                        <span class="info-label" data-i18n="advisorLabel">指導單位</span>
-                        <span class="info-en" data-i18n="advisorEn">Advisor</span>
+                        <span class="info-label lang-zh" data-i18n="advisorLabel">指導單位</span>
+                        <span class="info-en lang-en" data-i18n="advisorEn">Advisor</span>
                         <span class="info-value" data-i18n="advisorValue">澳門扶輪社<br><small>Rotary Club of Macau</small></span>
                     </article>
                     <article class="info-item" role="listitem">
-                        <span class="info-label" data-i18n="eligibilityLabel">招募對象</span>
-                        <span class="info-en" data-i18n="eligibilityEn">Eligibility</span>
+                        <span class="info-label lang-zh" data-i18n="eligibilityLabel">招募對象</span>
+                        <span class="info-en lang-en" data-i18n="eligibilityEn">Eligibility</span>
                         <span class="info-value" data-i18n="eligibilityValue">18歲或以上本澳青年</span>
                     </article>
                     <article class="info-item" role="listitem">
-                        <span class="info-label" data-i18n="destinationLabel">交流目的地</span>
-                        <span class="info-en" data-i18n="destinationEn">Destination</span>
+                        <span class="info-label lang-zh" data-i18n="destinationLabel">交流目的地</span>
+                        <span class="info-en lang-en" data-i18n="destinationEn">Destination</span>
                         <span class="info-value" data-i18n="destinationValue">蒙古 / Mongolia</span>
                     </article>
                     <article class="info-item" role="listitem">
-                        <span class="info-label" data-i18n="periodLabel">整體期程</span>
-                        <span class="info-en" data-i18n="periodEn">Programme Period</span>
+                        <span class="info-label lang-zh" data-i18n="periodLabel">整體期程</span>
+                        <span class="info-en lang-en" data-i18n="periodEn">Programme Period</span>
                         <span class="info-value" data-i18n="periodValue">2027年1月16日至5月3日</span>
                     </article>
                 </div>
@@ -362,23 +365,23 @@
                 <div class="goals-grid">
                     <article class="goal-card">
                         <div class="goal-number">01</div>
-                        <h3 data-i18n="goal1Zh">展現澳門多元文化底蘊</h3>
-                        <div class="en" data-i18n="goal1En">Showcase Macao's Multicultural Heritage</div>
+                        <h3 class="lang-zh" data-i18n="goal1Zh">展現澳門多元文化底蘊</h3>
+                        <div class="en lang-en" data-i18n="goal1En">Showcase Macao's Multicultural Heritage</div>
                     </article>
                     <article class="goal-card">
                         <div class="goal-number">02</div>
-                        <h3 data-i18n="goal2Zh">深化蒙古文化體驗與理解</h3>
-                        <div class="en" data-i18n="goal2En">Deepen Cultural Understanding of Mongolia</div>
+                        <h3 class="lang-zh" data-i18n="goal2Zh">深化蒙古文化體驗與理解</h3>
+                        <div class="en lang-en" data-i18n="goal2En">Deepen Cultural Understanding of Mongolia</div>
                     </article>
                     <article class="goal-card">
                         <div class="goal-number">03</div>
-                        <h3 data-i18n="goal3Zh">落實企劃行動與跨文化交流</h3>
-                        <div class="en" data-i18n="goal3En">Execute Action Plans & Cross-Cultural Engagement</div>
+                        <h3 class="lang-zh" data-i18n="goal3Zh">落實企劃行動與跨文化交流</h3>
+                        <div class="en lang-en" data-i18n="goal3En">Execute Action Plans & Cross-Cultural Engagement</div>
                     </article>
                     <article class="goal-card">
                         <div class="goal-number">04</div>
-                        <h3 data-i18n="goal4Zh">培育青年領袖與國際視野</h3>
-                        <div class="en" data-i18n="goal4En">Cultivate Youth Leadership & Global Perspective</div>
+                        <h3 class="lang-zh" data-i18n="goal4Zh">培育青年領袖與國際視野</h3>
+                        <div class="en lang-en" data-i18n="goal4En">Cultivate Youth Leadership & Global Perspective</div>
                     </article>
                 </div>
             </div>
@@ -397,40 +400,40 @@
                         <div class="timeline-date">1/16<small>2027</small></div>
                         <div class="timeline-card">
                             <h3 data-i18n="stage1Zh">開幕儀式及破冰分組</h3>
-                            <p data-i18n="stage1ZhCopy">正式啟動計劃，認識夥伴並完成分組，了解活動規則與交流方向。</p>
-                            <div class="en" data-i18n="stage1En">Opening & Icebreaking and Grouping — Kick off the programme, meet fellow participants, form teams, and get aligned on rules and goals.</div>
+                            <p class="lang-zh" data-i18n="stage1ZhCopy">正式啟動計劃，認識夥伴並完成分組，了解活動規則與交流方向。</p>
+                            <div class="en lang-en" data-i18n="stage1En">Opening & Icebreaking and Grouping — Kick off the programme, meet fellow participants, form teams, and get aligned on rules and goals.</div>
                         </div>
                     </article>
                     <article class="timeline-item">
                         <div class="timeline-date">2/15–19<small>2027</small></div>
                         <div class="timeline-card">
                             <h3 data-i18n="stage2Zh">提交活動計劃書</h3>
-                            <p data-i18n="stage2ZhCopy">各組圍繞澳門文化主題，設定明確目標對象，構思並提交可行且具溫度的活動計劃書。</p>
-                            <div class="en" data-i18n="stage2En">Submit Activity Proposal — Teams design and submit actionable proposals centered on Macao culture for a defined target audience.</div>
+                            <p class="lang-zh" data-i18n="stage2ZhCopy">各組圍繞澳門文化主題，設定明確目標對象，構思並提交可行且具溫度的活動計劃書。</p>
+                            <div class="en lang-en" data-i18n="stage2En">Submit Activity Proposal — Teams design and submit actionable proposals centered on Macao culture for a defined target audience.</div>
                         </div>
                     </article>
                     <article class="timeline-item">
                         <div class="timeline-date">3/6–21<small>2027</small></div>
                         <div class="timeline-card">
                             <h3 data-i18n="stage3Zh">計劃實行</h3>
-                            <p data-i18n="stage3ZhCopy">針對選定對象實際推行澳門文化相關活動，在協作與執行中累積實務經驗與影響力。</p>
-                            <div class="en" data-i18n="stage3En">Project Launch — Carry out the Macao-focused activities with the target audience, building hands-on execution and teamwork experience.</div>
+                            <p class="lang-zh" data-i18n="stage3ZhCopy">針對選定對象實際推行澳門文化相關活動，在協作與執行中累積實務經驗與影響力。</p>
+                            <div class="en lang-en" data-i18n="stage3En">Project Launch — Carry out the Macao-focused activities with the target audience, building hands-on execution and teamwork experience.</div>
                         </div>
                     </article>
                     <article class="timeline-item">
                         <div class="timeline-date">3/27<small>2027</small></div>
                         <div class="timeline-card">
                             <h3 data-i18n="stage4Zh">最終演講及閉幕儀式</h3>
-                            <p data-i18n="stage4ZhCopy">各組匯報澳門活動成果與對象回饋，經評選選出優勝及特色獎項，並為本地階段作閉幕與蒙古外訪銜接。</p>
-                            <div class="en" data-i18n="stage4En">Final Sharing and Closing — Teams present Macao project outcomes and audience feedback for award selection, wrapping up the local phase and bridging into the Mongolia trip.</div>
+                            <p class="lang-zh" data-i18n="stage4ZhCopy">各組匯報澳門活動成果與對象回饋，經評選選出優勝及特色獎項，並為本地階段作閉幕與蒙古外訪銜接。</p>
+                            <div class="en lang-en" data-i18n="stage4En">Final Sharing and Closing — Teams present Macao project outcomes and audience feedback for award selection, wrapping up the local phase and bridging into the Mongolia trip.</div>
                         </div>
                     </article>
                     <article class="timeline-item">
                         <div class="timeline-date">4/29–5/3<small>2027</small></div>
                         <div class="timeline-card">
                             <h3 data-i18n="stage5Zh">外訪（蒙古）</h3>
-                            <p data-i18n="stage5ZhCopy">前往蒙古展開實地文化交流與親善互動，把澳門故事帶向當地並拓展國際視野。</p>
-                            <div class="en" data-i18n="stage5En">Mongolia Trip — Travel to Mongolia for on-site cultural exchange and goodwill interaction, sharing Macao stories and broadening global perspectives.</div>
+                            <p class="lang-zh" data-i18n="stage5ZhCopy">前往蒙古展開實地文化交流與親善互動，把澳門故事帶向當地並拓展國際視野。</p>
+                            <div class="en lang-en" data-i18n="stage5En">Mongolia Trip — Travel to Mongolia for on-site cultural exchange and goodwill interaction, sharing Macao stories and broadening global perspectives.</div>
                         </div>
                     </article>
                 </div>
@@ -480,9 +483,9 @@
                                     <label for="gender" data-i18n="genderLabel">性別 / Gender *</label>
                                     <select id="gender" name="gender" required>
                                         <option value="" data-i18n="genderChoose">請選擇 / Please select</option>
-                                        <option value="Male">Male / 男</option>
-                                        <option value="Female">Female / 女</option>
-                                        <option value="Prefer not to say">Prefer not to say / 不願透露</option>
+                                        <option value="Male" data-i18n="genderMale">男 / Male</option>
+                                        <option value="Female" data-i18n="genderFemale">女 / Female</option>
+                                        <option value="Prefer not to say" data-i18n="genderOther">不願透露 / Prefer not to say</option>
                                     </select>
                                 </div>
                                 <div class="field">
@@ -572,10 +575,10 @@
                 originZh:"「澳門親善大使文化交流之旅」多年來致力為本澳青年搭建走向世界、與國際接軌的橋樑。透過系統化的分組協作、方案實踐與跨文化交流，讓青年代表化身文化使者，在向外推廣澳門中西共融特色與多元文化的同時，亦深入走進當地社群，體驗不同地域的自然風貌、歷史底蘊與人文關懷。",
                 originEnTitle:"I. Programme Background and Origin",
                 originEn:"For years, the \"Macao Goodwill Ambassador Cultural Exchange Programme\" has been dedicated to building a bridge connecting Macao youth with the wider world and international communities. Through structured group collaboration, project execution, and cross-cultural exchange, youth representatives step into the role of cultural ambassadors—sharing Macao's Sino-Portuguese heritage and multicultural character abroad while engaging deeply with local communities to experience diverse natural landscapes, historical depth, and human warmth.",
-                organizerLabel:"主辦單位", organizerEn:"Organizer", organizerValue:"澳門扶青社<br><small>Rotaract Club of Macau</small>",
-                advisorLabel:"指導單位", advisorEn:"Advisor", advisorValue:"澳門扶輪社<br><small>Rotary Club of Macau</small>",
+                organizerLabel:"主辦單位", organizerEn:"Organizer", organizerValue:"澳門扶青社",
+                advisorLabel:"指導單位", advisorEn:"Advisor", advisorValue:"澳門扶輪社",
                 eligibilityLabel:"招募對象", eligibilityEn:"Eligibility", eligibilityValue:"18歲或以上本澳青年",
-                destinationLabel:"交流目的地", destinationEn:"Destination", destinationValue:"蒙古 / Mongolia",
+                destinationLabel:"交流目的地", destinationEn:"Destination", destinationValue:"蒙古",
                 periodLabel:"整體期程", periodEn:"Programme Period", periodValue:"2027年1月16日至2027年5月3日",
                 goal1Zh:"展現澳門多元文化底蘊", goal1En:"Showcase Macao's Multicultural Heritage",
                 goal2Zh:"深化蒙古文化體驗與理解", goal2En:"Deepen Cultural Understanding of Mongolia",
@@ -597,35 +600,36 @@
                 registerDesc:"填寫以下資料，展開屬於你的跨文化交流體驗。",
                 asideTitle:"同天共語・親善啟航", asideCopy:"招募18歲或以上本澳青年。提交報名後，主辦方將透過電郵或電話聯絡您。",
                 asideOrganizer:"澳門扶青社",
-                nameLabel:"姓名 / Full Name *", ageLabel:"出生日期（確認年滿18歲） / Date of Birth *",
-                phoneLabel:"聯絡電話 / Phone Number *", emailLabel:"電子郵件 / Email Address *",
-                motivationLabel:"報名動機與文化交流想法 / Motivation & Ideas *",
-                consentLabel:"本人已閱讀並同意活動條款及個人資料收集聲明 / I agree to the terms and privacy notice. *",
-                submitText:"提交報名 / Submit Registration",
-                    privacyNotice:"個人資料僅作報名及保險用途 / Personal information is collected for registration and insurance purposes only.",
-                    englishNameLabel:"英文全名（同身分證） / English Full Name (Same as ID card) *",
-                    chineseNameLabel:"中文全名（同身分證） / Chinese Full Name (Same as ID card) *",
-                    dobLabel:"出生日期 / Date of Birth (DD/MM/YYYY) *",
+                nameLabel:"姓名 *", ageLabel:"出生日期（確認年滿18歲） *",
+                phoneLabel:"聯絡電話 *", emailLabel:"電子郵件 *",
+                motivationLabel:"報名動機與文化交流想法 *",
+                consentLabel:"本人已閱讀並同意活動條款及個人資料收集聲明。*",
+                submitText:"提交報名",
+                    privacyNotice:"個人資料僅作報名及保險用途。",
+                    genderMale:"男", genderFemale:"女", genderOther:"不願透露",
+                    englishNameLabel:"英文全名（同身分證） *",
+                    chineseNameLabel:"中文全名（同身分證） *",
+                    dobLabel:"出生日期（DD/MM/YYYY） *",
                     ageHint:"報名者必須年滿18歲。",
-                    macauIdLabel:"有效澳門居民身分證號碼 / Valid Macau ID Number *",
+                    macauIdLabel:"有效澳門居民身分證號碼 *",
                     macauIdHint:"僅限持有效澳門身分證者參與及作保險用途。",
-                    genderLabel:"性別 / Gender *", genderChoose:"請選擇 / Please select",
-                    occupationLabel:"職業或主修科目 / Occupation / Major *",
-                    phoneLabel:"聯絡電話 / Contact No. *", wechatLabel:"WeChat ID *",
-                    emailLabel:"電子郵件 / Email *", emailHint:"請確認電郵地址正確，所有後續資訊將透過電郵發送。",
+                    genderLabel:"性別 *", genderChoose:"請選擇",
+                    occupationLabel:"職業或主修科目 *",
+                    phoneLabel:"聯絡電話 *", wechatLabel:"WeChat ID *",
+                    emailLabel:"電子郵件 *", emailHint:"請確認電郵地址正確，所有後續資訊將透過電郵發送。",
                     stageConfirmationTitle:"五個階段參與確認（必填）",
                     stageHint:"前四個階段為核心參與階段（特殊情況可事先請假報備）；第五階段蒙古外訪將另行確認。",
-                    stageCheck1:"Stage 1（2027 1/16）開幕儀式及破冰分組（核心參與階段）<small>Opening &amp; Icebreaking and Grouping (Core Phase)</small>",
-                    stageCheck2:"Stage 2（2027 2/15-19）提交活動計劑書（核心參與階段）<small>Submit Activity Proposal (Core Phase)</small>",
-                    stageCheck3:"Stage 3（2027 3/6-21）計劃實行（核心參與階段）<small>Project Launch (Core Phase)</small>",
-                    stageCheck4:"Stage 4（2027 3/27）最終演講及閉幕儀式（核心參與階段）<small>Final Sharing and Closing (Core Phase)</small>",
-                    stageCheck5:"Stage 5（2027 4/29-5/3）外訪（蒙古）— 另行確認<small>Mongolia Trip — Subject to Separate Confirmation</small>",
+                    stageCheck1:"Stage 1（2027 1/16）開幕儀式及破冰分組（核心參與階段）",
+                    stageCheck2:"Stage 2（2027 2/15-19）提交活動計劃書（核心參與階段）",
+                    stageCheck3:"Stage 3（2027 3/6-21）計劃實行（核心參與階段）",
+                    stageCheck4:"Stage 4（2027 3/27）最終演講及閉幕儀式（核心參與階段）",
+                    stageCheck5:"Stage 5（2027 4/29-5/3）外訪（蒙古）— 另行確認",
                     criteriaConsentLabel:"本人同意「資格與參與須知」：持有有效澳門居民身分證；目前非扶青社或扶輪社社員；年滿18歲；投入參與前四個核心階段；第五階段另行確認。",
                     programmeConsentLabel:"本人同意「計劃條款」：計劃分階段進行，3/27進行成果匯報、回饋及評選，並銜接後續安排；蒙古外訪名額及資助另行通知；主辦單位保留最終解釋權。",
-                    floatingRegister:"立即報名 / Register Now",
+                    floatingRegister:"立即報名",
                 confirmationTitle:"報名資料已提交成功", confirmationDesc:"感謝您的參與，我們將按所填資料與您聯絡。",
                 newRegistration:"提交另一份報名",
-                footerOrganizer:"澳門扶青社 / Rotaract Club of Macau", footerAdvisor:"指導單位：澳門扶輪社 / Rotary Club of Macau",
+                footerOrganizer:"澳門扶青社", footerAdvisor:"指導單位：澳門扶輪社",
                 copyright:"© 2027 澳門扶青社．保留所有權利"
             },
             "en": {
@@ -641,60 +645,61 @@
                 originZh:"「澳門親善大使文化交流之旅」多年來致力為本澳青年搭建走向世界、與國際接軌的橋樑。透過系統化的分組協作、方案實踐與跨文化交流，讓青年代表化身文化使者，在向外推廣澳門中西共融特色與多元文化的同時，亦深入走進當地社群，體驗不同地域的自然風貌、歷史底蘊與人文關懷。",
                 originEnTitle:"I. Programme Background and Origin",
                 originEn:"For years, the \"Macao Goodwill Ambassador Cultural Exchange Programme\" has been dedicated to building a bridge connecting Macao youth with the wider world and international communities. Through structured group collaboration, project execution, and cross-cultural exchange, youth representatives step into the role of cultural ambassadors—sharing Macao's Sino-Portuguese heritage and multicultural character abroad while engaging deeply with local communities to experience diverse natural landscapes, historical depth, and human warmth.",
-                organizerLabel:"Organizer", organizerEn:"澳門扶青社", organizerValue:"Rotaract Club of Macau",
-                advisorLabel:"Advisor", advisorEn:"澳門扶輪社", advisorValue:"Rotary Club of Macau",
-                eligibilityLabel:"Eligibility", eligibilityEn:"招募對象", eligibilityValue:"Macao youth aged 18 and above",
-                destinationLabel:"Destination", destinationEn:"交流目的地", destinationValue:"Mongolia",
-                periodLabel:"Programme Period", periodEn:"整體期程", periodValue:"Jan 16 – May 3, 2027",
-                goal1Zh:"Showcase Macao's Multicultural Heritage", goal1En:"展現澳門多元文化底蘊",
-                goal2Zh:"Deepen Cultural Understanding of Mongolia", goal2En:"深化蒙古文化體驗與理解",
-                goal3Zh:"Execute Action Plans & Cross-Cultural Engagement", goal3En:"落實企劃行動與跨文化交流",
-                goal4Zh:"Cultivate Youth Leadership & Global Perspective", goal4En:"培育青年領袖與國際視野",
+                organizerLabel:"Organizer", organizerEn:"Organizer", organizerValue:"Rotaract Club of Macau",
+                advisorLabel:"Advisor", advisorEn:"Advisor", advisorValue:"Rotary Club of Macau",
+                eligibilityLabel:"Eligibility", eligibilityEn:"Eligibility", eligibilityValue:"Macao youth aged 18 and above",
+                destinationLabel:"Destination", destinationEn:"Destination", destinationValue:"Mongolia",
+                periodLabel:"Programme Period", periodEn:"Programme Period", periodValue:"Jan 16 – May 3, 2027",
+                goal1Zh:"Showcase Macao's Multicultural Heritage", goal1En:"Showcase Macao's Multicultural Heritage",
+                goal2Zh:"Deepen Cultural Understanding of Mongolia", goal2En:"Deepen Cultural Understanding of Mongolia",
+                goal3Zh:"Execute Action Plans & Cross-Cultural Engagement", goal3En:"Execute Action Plans & Cross-Cultural Engagement",
+                goal4Zh:"Cultivate Youth Leadership & Global Perspective", goal4En:"Cultivate Youth Leadership & Global Perspective",
                 scheduleKicker:"2027 Schedule & Stages", scheduleTitle:"Five Stages Toward a Goodwill Journey",
                 scheduleDesc:"From first connections and project implementation to cross-border exchange, build action outcomes and cultural understanding.",
                 stage1Zh:"Opening & Icebreaking and Grouping", stage1ZhCopy:"Kick off the programme, meet fellow participants, form teams, and get aligned on rules and goals.",
-                stage1En:"開幕儀式及破冰分組 — 正式啟動計劃，認識夥伴並完成分組，了解活動規則與交流方向。",
+                stage1En:"Opening & Icebreaking and Grouping — Kick off the programme, meet fellow participants, form teams, and get aligned on rules and goals.",
                 stage2Zh:"Submit Activity Proposal", stage2ZhCopy:"Teams design and submit actionable proposals centered on Macao culture for a defined target audience.",
-                stage2En:"提交活動計劃書 — 各組圍繞澳門文化主題，設定明確目標對象，構思並提交可行且具溫度的活動計劃書。",
+                stage2En:"Submit Activity Proposal — Teams design and submit actionable proposals centered on Macao culture for a defined target audience.",
                 stage3Zh:"Project Launch", stage3ZhCopy:"Carry out the Macao-focused activities with the target audience, building hands-on execution and teamwork experience.",
-                stage3En:"計劃實行 — 針對選定對象實際推行澳門文化相關活動，在協作與執行中累積實務經驗與影響力。",
+                stage3En:"Project Launch — Carry out the Macao-focused activities with the target audience, building hands-on execution and teamwork experience.",
                 stage4Zh:"Final Sharing and Closing", stage4ZhCopy:"Teams present Macao project outcomes and audience feedback for award selection, wrapping up the local phase and bridging into the Mongolia trip.",
-                stage4En:"最終演講及閉幕儀式 — 各組匯報澳門活動成果與對象回饋，經評選選出優勝及特色獎項，並為本地階段作閉幕與蒙古外訪銜接。",
+                stage4En:"Final Sharing and Closing — Teams present Macao project outcomes and audience feedback for award selection, wrapping up the local phase and bridging into the Mongolia trip.",
                 stage5Zh:"Mongolia Trip", stage5ZhCopy:"Travel to Mongolia for on-site cultural exchange and goodwill interaction, sharing Macao stories and broadening global perspectives.",
-                stage5En:"外訪（蒙古） — 前往蒙古展開實地文化交流與親善互動，把澳門故事帶向當地並拓展國際視野。",
+                stage5En:"Mongolia Trip — Travel to Mongolia for on-site cultural exchange and goodwill interaction, sharing Macao stories and broadening global perspectives.",
                 registerKicker:"Online Registration", registerTitle:"Join the Goodwill Journey",
                 registerDesc:"Complete the form below to begin your cross-cultural exchange experience.",
                 asideTitle:"Under One Sky, Goodwill Sets Sail", asideCopy:"Open to Macao youth aged 18 and above. The organizer will contact you by email or phone after submission.",
                 asideOrganizer:"Rotaract Club of Macau",
-                nameLabel:"Full Name / 姓名 *", ageLabel:"Date of Birth (18+) / 出生日期 *",
-                phoneLabel:"Phone Number / 聯絡電話 *", emailLabel:"Email Address / 電子郵件 *",
-                motivationLabel:"Motivation & Cultural Exchange Ideas / 報名動機與文化交流想法 *",
-                consentLabel:"I agree to the terms and privacy notice. / 本人已閱讀並同意活動條款及個人資料收集聲明。 *",
-                submitText:"Submit Registration / 提交報名",
-                privacyNotice:"Personal information is collected for registration and insurance purposes only. / 個人資料僅作報名及保險用途。",
-                englishNameLabel:"English Full Name (Same as ID card) / 英文全名（同身分證） *",
-                chineseNameLabel:"Chinese Full Name (Same as ID card) / 中文全名（同身分證） *",
-                dobLabel:"Date of Birth (DD/MM/YYYY) / 出生日期 *",
+                nameLabel:"Full Name *", ageLabel:"Date of Birth (18+) *",
+                phoneLabel:"Phone Number *", emailLabel:"Email Address *",
+                motivationLabel:"Motivation & Cultural Exchange Ideas *",
+                consentLabel:"I agree to the terms and privacy notice. *",
+                submitText:"Submit Registration",
+                privacyNotice:"Personal information is collected for registration and insurance purposes only.",
+                genderMale:"Male", genderFemale:"Female", genderOther:"Prefer not to say",
+                englishNameLabel:"English Full Name (Same as ID card) *",
+                chineseNameLabel:"Chinese Full Name (Same as ID card) *",
+                dobLabel:"Date of Birth (DD/MM/YYYY) *",
                 ageHint:"Applicants must be 18 years of age or older.",
-                macauIdLabel:"Valid Macau ID Number / 有效澳門居民身分證號碼 *",
+                macauIdLabel:"Valid Macau ID Number *",
                 macauIdHint:"Only valid Macau ID card holders are eligible and data is collected for insurance purposes.",
-                genderLabel:"Gender / 性別 *", genderChoose:"Please select / 請選擇",
-                occupationLabel:"Occupation / Major / 職業或主修科目 *",
-                phoneLabel:"Contact No. / 聯絡電話 *", wechatLabel:"WeChat ID *",
-                emailLabel:"Email / 電子郵件 *", emailHint:"Please confirm the address, as all further information will be released via email.",
+                genderLabel:"Gender *", genderChoose:"Please select",
+                occupationLabel:"Occupation / Major *",
+                phoneLabel:"Contact No. *", wechatLabel:"WeChat ID *",
+                emailLabel:"Email *", emailHint:"Please confirm the address, as all further information will be released via email.",
                 stageConfirmationTitle:"Five-Stage Participation Confirmation (Required)",
                 stageHint:"The first four stages are core participation phases (advance leave notice is welcome for special circumstances); the fifth stage (Mongolia Trip) will be confirmed separately.",
-                stageCheck1:"Stage 1 (2027 1/16) Opening &amp; Icebreaking and Grouping (Core Phase)<small>開幕儀式及破冰分組（核心參與階段）</small>",
-                stageCheck2:"Stage 2 (2027 2/15-19) Submit Activity Proposal (Core Phase)<small>提交活動計劃書（核心參與階段）</small>",
-                stageCheck3:"Stage 3 (2027 3/6-21) Project Launch (Core Phase)<small>計劃實行（核心參與階段）</small>",
-                stageCheck4:"Stage 4 (2027 3/27) Final Sharing and Closing (Core Phase)<small>最終演講及閉幕儀式（核心參與階段）</small>",
-                stageCheck5:"Stage 5 (2027 4/29-5/3) Mongolia Trip — Subject to Separate Confirmation<small>外訪（蒙古）— 另行確認</small>",
+                stageCheck1:"Stage 1 (2027 1/16) Opening &amp; Icebreaking and Grouping (Core Phase)",
+                stageCheck2:"Stage 2 (2027 2/15-19) Submit Activity Proposal (Core Phase)",
+                stageCheck3:"Stage 3 (2027 3/6-21) Project Launch (Core Phase)",
+                stageCheck4:"Stage 4 (2027 3/27) Final Sharing and Closing (Core Phase)",
+                stageCheck5:"Stage 5 (2027 4/29-5/3) Mongolia Trip — Subject to Separate Confirmation",
                 criteriaConsentLabel:"I agree to the Criteria and Things to Know: valid Macau ID; not currently a Rotaract or Rotary member; aged 18 or above; participation in the first four core phases; the Mongolia trip will be confirmed separately.",
                 programmeConsentLabel:"I agree to the Programme Terms: staged programme; 3/27 reporting, feedback and awards; Mongolia trip eligibility and funding will be announced separately; the organizer reserves final interpretation.",
-                floatingRegister:"Register Now / 立即報名",
+                floatingRegister:"Register Now",
                 confirmationTitle:"Registration Submitted Successfully", confirmationDesc:"Thank you for your participation. We will contact you using the details provided.",
                 newRegistration:"Submit Another Registration",
-                footerOrganizer:"Rotaract Club of Macau / 澳門扶青社", footerAdvisor:"Advisor: Rotary Club of Macau / 指導單位：澳門扶輪社",
+                footerOrganizer:"Rotaract Club of Macau", footerAdvisor:"Advisor: Rotary Club of Macau",
                 copyright:"© 2027 Rotaract Club of Macau. All rights reserved."
             }
         };
@@ -702,6 +707,7 @@
         function setLanguage(lang) {
             document.documentElement.lang = lang === "en" ? "en" : "zh-Hant";
             document.querySelector(".hero h1")?.classList.toggle("long-en", lang === "en");
+            document.querySelector(".origin-grid")?.classList.add("single");
             document.querySelectorAll("[data-i18n]").forEach(el => {
                 const key = el.dataset.i18n;
                 if (translations[lang][key]) el.innerHTML = translations[lang][key];
