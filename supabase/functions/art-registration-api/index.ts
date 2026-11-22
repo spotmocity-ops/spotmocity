@@ -550,6 +550,7 @@ async function getDecryptedRegistrations(
         }
         result.push({
             id: registration.id,
+            reference_number: registration.reference_number,
             group_type: registration.group_type,
             age_group: registration.age_group,
             performance_categories: registration.performance_categories,
@@ -835,7 +836,11 @@ async function submitRegistration(
         registrationRow.team_file_path = encryptedFilePath;
     }
 
-    const { error: registrationError } = await serviceClient.from('art_registrations').insert(registrationRow);
+    const { data: insertedRegistration, error: registrationError } = await serviceClient
+        .from('art_registrations')
+        .insert(registrationRow)
+        .select('reference_number')
+        .maybeSingle();
     if (registrationError) {
         console.error('Art registration insert failed:', registrationError.code || 'unknown');
         throw new HttpError(500, 'Could not save this registration. Please try again.');
@@ -893,7 +898,9 @@ async function submitRegistration(
 
     return jsonResponse({
         ok: true,
-        reference: registrationId.slice(0, 8).toUpperCase(),
+        reference: typeof insertedRegistration?.reference_number === 'string'
+            ? insertedRegistration.reference_number
+            : registrationId.slice(0, 8).toUpperCase(),
         submittedAt: new Date().toISOString()
     }, 201, corsHeaders(request.headers.get('origin')));
 }

@@ -80,6 +80,7 @@
 
     function renderRegistration(registration) {
         const groupName = registration.group_type === 'team' ? registration.team_name : registration.program_title;
+        const referenceNumber = registration.reference_number || registration.id;
         const categories = (registration.performance_categories || []).map(formatCategory);
         if (registration.other_category) categories.push(registration.other_category);
         const stage = registration.stage_requirements || {};
@@ -131,7 +132,10 @@
                             <div class="sm:col-span-2"><dt class="text-xs text-slate-500">其他舞台需求</dt><dd class="whitespace-pre-line">${escapeHtml(registration.special_stage_requirements || '沒有')}</dd></div>
                         </dl>
                     </section>
-                    <p class="text-xs text-slate-500">資料參考編號：${escapeHtml(registration.id)} · 同意版本：${escapeHtml(registration.consent_version)}</p>
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+                        <p class="text-xs text-slate-500">資料參考編號：<strong class="font-mono text-slate-700">${escapeHtml(referenceNumber)}</strong> · 同意版本：${escapeHtml(registration.consent_version)}</p>
+                        <button type="button" data-delete-registration="${escapeHtml(registration.id)}" data-reference-number="${escapeHtml(referenceNumber)}" class="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">刪除報名</button>
+                    </div>
                 </div>
             </details>
         </article>`;
@@ -221,10 +225,26 @@
         }
     }
 
+    async function deleteRegistration(registrationId, referenceNumber) {
+        if (!confirm(`確定永久刪除資料參考編號 ${referenceNumber} 的報名、團體成員及相關檔案？此操作無法復原。`)) return;
+        try {
+            await requestApi('delete-registration', { registrationId });
+            showMessage(`資料參考編號 ${referenceNumber} 已刪除。`, true);
+            await loadRegistrations();
+        } catch (error) {
+            showMessage(error instanceof Error ? error.message : '報名刪除失敗。');
+        }
+    }
+
     refreshButton.addEventListener('click', loadRegistrations);
     stageExportButton.addEventListener('click', () => exportCsv('export-stage', 'art-stage-coordination.csv'));
     insuranceExportButton.addEventListener('click', () => exportCsv('export-insurance', 'art-insurance-roster.csv', true));
     list.addEventListener('click', event => {
+        const deleteButton = event.target.closest('[data-delete-registration]');
+        if (deleteButton) {
+            deleteRegistration(deleteButton.dataset.deleteRegistration, deleteButton.dataset.referenceNumber);
+            return;
+        }
         const button = event.target.closest('[data-download-file]');
         if (!button) return;
         downloadRegistrationFile(button.dataset.registrationId, button.dataset.downloadFile);

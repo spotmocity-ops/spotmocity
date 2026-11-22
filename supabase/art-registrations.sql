@@ -1,5 +1,6 @@
 create table if not exists public.art_registrations (
     id uuid primary key default gen_random_uuid(),
+    reference_number text,
     event_key text not null default 'public-art-2027' check (event_key = 'public-art-2027'),
     group_type text not null check (group_type in ('individual', 'team')),
     age_group text not null check (age_group in ('child', 'youth', 'adult', 'senior', 'intergenerational')),
@@ -56,6 +57,36 @@ create table if not exists public.art_registrations (
         or (accompaniment = 'live' and stage_file_name is null and stage_file_path is null)
     )
 );
+
+alter table public.art_registrations
+    add column if not exists reference_number text,
+    add column if not exists team_file_name text,
+    add column if not exists stage_file_name text,
+    add column if not exists stage_file_path text;
+
+create sequence if not exists public.art_registration_reference_seq
+    start with 202701
+    increment by 1
+    no cycle;
+
+create or replace function public.next_art_registration_reference()
+returns text
+language sql
+volatile
+as $$
+    select lpad(nextval('public.art_registration_reference_seq')::text, 7, '0');
+$$;
+
+alter table public.art_registrations
+    alter column reference_number set default public.next_art_registration_reference();
+
+update public.art_registrations
+set reference_number = public.next_art_registration_reference()
+where reference_number is null;
+
+alter table public.art_registrations
+    alter column reference_number set not null,
+    add constraint art_registration_reference_number_unique unique (reference_number);
 
 alter table public.art_registrations
     add column if not exists team_file_name text,
