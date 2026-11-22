@@ -90,6 +90,16 @@
             color: #ffe4a0; font-weight: 800; letter-spacing: .08em;
         }
         .hero h1 { margin: 16px 0 12px; max-width: 820px; font-size: clamp(2.45rem, 6vw, 5.1rem); line-height: 1.08; }
+        .hero h1.long-en { font-size: clamp(2.05rem, 4.7vw, 4.1rem); line-height: 1.12; letter-spacing: -.02em; }
+        .stage-check-grid { display: grid; gap: 10px; }
+        .stage-check {
+            display: flex; align-items: flex-start; gap: 10px;
+            border: 1px solid #e1dacb; border-radius: 12px; background: #fff; padding: 12px;
+        }
+        .stage-check input { margin-top: 5px; accent-color: var(--red); }
+        .stage-check small { display: block; color: #7d7569; }
+        .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .notice-box { border-left: 4px solid var(--gold); background: #f8f3e7; border-radius: 10px; padding: 12px 14px; margin: 16px 0; }
         .hero-tagline { margin: 18px 0 14px; color: #ffe4a0; font-size: clamp(1.2rem, 2.5vw, 1.75rem); font-weight: 900; }
         .hero-copy { max-width: 760px; margin: 0; font-size: 1.05rem; color: rgba(255,255,255,.92); }
         .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
@@ -182,11 +192,11 @@
         .field { margin-bottom: 18px; }
         .field label { display: block; margin-bottom: 7px; font-weight: 800; }
         .field label span { color: #8b8173; font-size: .82rem; }
-        .field input, .field textarea {
+        .field input, .field textarea, .field select {
             width: 100%; border: 1px solid #d6cfbf; border-radius: 12px;
             background: #fff; padding: 12px 14px; outline: none;
         }
-        .field input:focus, .field textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47,113,136,.11); }
+        .field input:focus, .field textarea:focus, .field select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47,113,136,.11); }
         .field textarea { min-height: 130px; resize: vertical; }
         .checkbox-field { display: flex; align-items: flex-start; gap: 10px; margin: 20px 0; }
         .checkbox-field input { margin-top: 5px; accent-color: var(--red); }
@@ -239,6 +249,7 @@
             .timeline-date { width: 62px; height: 62px; }
             .timeline-card { padding: 18px; }
             .form-card { padding: 18px; }
+            .field-grid { grid-template-columns: 1fr; }
             .summary div { grid-template-columns: 1fr; gap: 2px; }
             .footer-inner { display: block; }
         }
@@ -417,29 +428,79 @@
                     </aside>
                     <div>
                         <form class="form-card" id="registration-form" novalidate>
-                            <div class="field">
-                                <label for="full-name" data-i18n="nameLabel">姓名 / Full Name *</label>
-                                <input id="full-name" name="fullName" type="text" required autocomplete="name">
+                            <p class="notice-box" data-i18n="privacyNotice">個人資料僅作報名及保險用途 / Personal information is collected for registration and insurance purposes only.</p>
+                            <div class="field-grid">
+                                <div class="field">
+                                    <label for="english-name" data-i18n="englishNameLabel">英文全名（同身分證） / English Full Name (Same as ID card) *</label>
+                                    <input id="english-name" name="englishName" type="text" required autocomplete="name">
+                                </div>
+                                <div class="field">
+                                    <label for="chinese-name" data-i18n="chineseNameLabel">中文全名（同身分證） / Chinese Full Name (Same as ID card) *</label>
+                                    <input id="chinese-name" name="chineseName" type="text" required autocomplete="name">
+                                </div>
+                            </div>
+                            <div class="field-grid">
+                                <div class="field">
+                                    <label for="birth-date" data-i18n="dobLabel">出生日期 / Date of Birth (DD/MM/YYYY) *</label>
+                                    <input id="birth-date" name="birthDate" type="date" required>
+                                    <small data-i18n="ageHint">報名者必須年滿18歲。</small>
+                                </div>
+                                <div class="field">
+                                    <label for="macau-id" data-i18n="macauIdLabel">有效澳門居民身分證號碼 / Valid Macau ID Number *</label>
+                                    <input id="macau-id" name="macauId" type="text" required maxlength="20" autocomplete="off">
+                                    <small data-i18n="macauIdHint">僅限持有效澳門身分證者參與及作保險用途。</small>
+                                </div>
+                            </div>
+                            <div class="field-grid">
+                                <div class="field">
+                                    <label for="gender" data-i18n="genderLabel">性別 / Gender *</label>
+                                    <select id="gender" name="gender" required>
+                                        <option value="" data-i18n="genderChoose">請選擇 / Please select</option>
+                                        <option value="Male">Male / 男</option>
+                                        <option value="Female">Female / 女</option>
+                                        <option value="Prefer not to say">Prefer not to say / 不願透露</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label for="occupation" data-i18n="occupationLabel">職業或主修科目 / Occupation / Major *</label>
+                                    <input id="occupation" name="occupation" type="text" required>
+                                </div>
+                            </div>
+                            <div class="field-grid">
+                                <div class="field">
+                                    <label for="phone" data-i18n="phoneLabel">聯絡電話 / Contact No. *</label>
+                                    <input id="phone" name="phone" type="tel" inputmode="tel" required autocomplete="tel">
+                                </div>
+                                <div class="field">
+                                    <label for="wechat" data-i18n="wechatLabel">WeChat ID *</label>
+                                    <input id="wechat" name="wechat" type="text" required>
+                                </div>
                             </div>
                             <div class="field">
-                                <label for="birth-date" data-i18n="ageLabel">出生日期（確認年滿18歲） / Date of Birth *</label>
-                                <input id="birth-date" name="birthDate" type="date" required>
-                            </div>
-                            <div class="field">
-                                <label for="phone" data-i18n="phoneLabel">聯絡電話 / Phone Number *</label>
-                                <input id="phone" name="phone" type="tel" inputmode="tel" required autocomplete="tel">
-                            </div>
-                            <div class="field">
-                                <label for="email" data-i18n="emailLabel">電子郵件 / Email Address *</label>
+                                <label for="email" data-i18n="emailLabel">電子郵件 / Email *</label>
                                 <input id="email" name="email" type="email" required autocomplete="email">
+                                <small data-i18n="emailHint">請確認電郵地址正確，所有後續資訊將透過電郵發送。</small>
                             </div>
-                            <div class="field">
-                                <label for="motivation" data-i18n="motivationLabel">報名動機與文化交流想法 / Motivation & Ideas *</label>
-                                <textarea id="motivation" name="motivation" required></textarea>
-                            </div>
+
+                            <fieldset style="border:0;padding:0;margin:22px 0 0">
+                                <legend style="font-weight:900" data-i18n="stageConfirmationTitle">五個階段參與確認（必填）</legend>
+                                <p class="notice-box" data-i18n="stageHint">前四個階段為核心參與階段（特殊情況可事先請假報備）；第五階段蒙古外訪將另行確認。</p>
+                                <div class="stage-check-grid">
+                                    <label class="stage-check"><input type="checkbox" name="stage1" value="Confirmed" required><span data-i18n="stageCheck1">Stage 1（2027 1/16）開幕儀式及破冰分組（核心參與階段）<small>Opening &amp; Icebreaking and Grouping (Core Phase)</small></span></label>
+                                    <label class="stage-check"><input type="checkbox" name="stage2" value="Confirmed" required><span data-i18n="stageCheck2">Stage 2（2027 2/15-19）提交活動計劃書（核心參與階段）<small>Submit Activity Proposal (Core Phase)</small></span></label>
+                                    <label class="stage-check"><input type="checkbox" name="stage3" value="Confirmed" required><span data-i18n="stageCheck3">Stage 3（2027 3/6-21）計劃實行（核心參與階段）<small>Project Launch (Core Phase)</small></span></label>
+                                    <label class="stage-check"><input type="checkbox" name="stage4" value="Confirmed" required><span data-i18n="stageCheck4">Stage 4（2027 3/27）最終演講及閉幕儀式（核心參與階段）<small>Final Sharing and Closing (Core Phase)</small></span></label>
+                                    <label class="stage-check"><input type="checkbox" name="stage5" value="Acknowledged" required><span data-i18n="stageCheck5">Stage 5（2027 4/29-5/3）外訪（蒙古）— 另行確認<small>Mongolia Trip — Subject to Separate Confirmation</small></span></label>
+                                </div>
+                            </fieldset>
+
                             <label class="checkbox-field">
-                                <input id="consent" name="consent" type="checkbox" required>
-                                <span data-i18n="consentLabel">本人已閱讀並同意活動條款及個人資料收集聲明 / I agree to the terms and privacy notice. *</span>
+                                <input id="criteria-consent" name="criteriaConsent" type="checkbox" required>
+                                <span data-i18n="criteriaConsentLabel">本人同意「資格與參與須知」：持有有效澳門居民身分證；目前非扶青社或扶輪社社員；年滿18歲；投入參與前四個核心階段；第五階段另行確認。</span>
+                            </label>
+                            <label class="checkbox-field">
+                                <input id="programme-consent" name="programmeConsent" type="checkbox" required>
+                                <span data-i18n="programmeConsentLabel">本人同意「計劃條款」：計劃分階段進行，3/27進行成果匯報、回饋及評選，並銜接後續安排；蒙古外訪名額及資助另行通知；主辦單位保留最終解釋權。</span>
                             </label>
                             <button class="btn form-submit" type="submit" data-i18n="submitText">提交報名 / Submit Registration</button>
                         </form>
@@ -468,6 +529,9 @@
             <div class="copyright" data-i18n="copyright">© 2027 澳門扶青社．保留所有權利</div>
         </div>
     </footer>
+    <div style="position:fixed;right:18px;bottom:18px;z-index:45">
+        <a class="btn btn-primary" href="#register" data-i18n="floatingRegister">立即報名 / Register Now</a>
+    </div>
 
     <script>
         const translations = {
@@ -510,6 +574,27 @@
                 motivationLabel:"報名動機與文化交流想法 / Motivation & Ideas *",
                 consentLabel:"本人已閱讀並同意活動條款及個人資料收集聲明 / I agree to the terms and privacy notice. *",
                 submitText:"提交報名 / Submit Registration",
+                    privacyNotice:"個人資料僅作報名及保險用途 / Personal information is collected for registration and insurance purposes only.",
+                    englishNameLabel:"英文全名（同身分證） / English Full Name (Same as ID card) *",
+                    chineseNameLabel:"中文全名（同身分證） / Chinese Full Name (Same as ID card) *",
+                    dobLabel:"出生日期 / Date of Birth (DD/MM/YYYY) *",
+                    ageHint:"報名者必須年滿18歲。",
+                    macauIdLabel:"有效澳門居民身分證號碼 / Valid Macau ID Number *",
+                    macauIdHint:"僅限持有效澳門身分證者參與及作保險用途。",
+                    genderLabel:"性別 / Gender *", genderChoose:"請選擇 / Please select",
+                    occupationLabel:"職業或主修科目 / Occupation / Major *",
+                    phoneLabel:"聯絡電話 / Contact No. *", wechatLabel:"WeChat ID *",
+                    emailLabel:"電子郵件 / Email *", emailHint:"請確認電郵地址正確，所有後續資訊將透過電郵發送。",
+                    stageConfirmationTitle:"五個階段參與確認（必填）",
+                    stageHint:"前四個階段為核心參與階段（特殊情況可事先請假報備）；第五階段蒙古外訪將另行確認。",
+                    stageCheck1:"Stage 1（2027 1/16）開幕儀式及破冰分組（核心參與階段）<small>Opening &amp; Icebreaking and Grouping (Core Phase)</small>",
+                    stageCheck2:"Stage 2（2027 2/15-19）提交活動計劑書（核心參與階段）<small>Submit Activity Proposal (Core Phase)</small>",
+                    stageCheck3:"Stage 3（2027 3/6-21）計劃實行（核心參與階段）<small>Project Launch (Core Phase)</small>",
+                    stageCheck4:"Stage 4（2027 3/27）最終演講及閉幕儀式（核心參與階段）<small>Final Sharing and Closing (Core Phase)</small>",
+                    stageCheck5:"Stage 5（2027 4/29-5/3）外訪（蒙古）— 另行確認<small>Mongolia Trip — Subject to Separate Confirmation</small>",
+                    criteriaConsentLabel:"本人同意「資格與參與須知」：持有有效澳門居民身分證；目前非扶青社或扶輪社社員；年滿18歲；投入參與前四個核心階段；第五階段另行確認。",
+                    programmeConsentLabel:"本人同意「計劃條款」：計劃分階段進行，3/27進行成果匯報、回饋及評選，並銜接後續安排；蒙古外訪名額及資助另行通知；主辦單位保留最終解釋權。",
+                    floatingRegister:"立即報名 / Register Now",
                 confirmationTitle:"報名資料已提交成功", confirmationDesc:"感謝您的參與，我們將按所填資料與您聯絡。",
                 newRegistration:"提交另一份報名",
                 footerOrganizer:"澳門扶青社 / Rotaract Club of Macau", footerAdvisor:"指導單位：澳門扶輪社 / Rotary Club of Macau",
@@ -554,6 +639,27 @@
                 motivationLabel:"Motivation & Cultural Exchange Ideas / 報名動機與文化交流想法 *",
                 consentLabel:"I agree to the terms and privacy notice. / 本人已閱讀並同意活動條款及個人資料收集聲明。 *",
                 submitText:"Submit Registration / 提交報名",
+                privacyNotice:"Personal information is collected for registration and insurance purposes only. / 個人資料僅作報名及保險用途。",
+                englishNameLabel:"English Full Name (Same as ID card) / 英文全名（同身分證） *",
+                chineseNameLabel:"Chinese Full Name (Same as ID card) / 中文全名（同身分證） *",
+                dobLabel:"Date of Birth (DD/MM/YYYY) / 出生日期 *",
+                ageHint:"Applicants must be 18 years of age or older.",
+                macauIdLabel:"Valid Macau ID Number / 有效澳門居民身分證號碼 *",
+                macauIdHint:"Only valid Macau ID card holders are eligible and data is collected for insurance purposes.",
+                genderLabel:"Gender / 性別 *", genderChoose:"Please select / 請選擇",
+                occupationLabel:"Occupation / Major / 職業或主修科目 *",
+                phoneLabel:"Contact No. / 聯絡電話 *", wechatLabel:"WeChat ID *",
+                emailLabel:"Email / 電子郵件 *", emailHint:"Please confirm the address, as all further information will be released via email.",
+                stageConfirmationTitle:"Five-Stage Participation Confirmation (Required)",
+                stageHint:"The first four stages are core participation phases (advance leave notice is welcome for special circumstances); the fifth stage (Mongolia Trip) will be confirmed separately.",
+                stageCheck1:"Stage 1 (2027 1/16) Opening &amp; Icebreaking and Grouping (Core Phase)<small>開幕儀式及破冰分組（核心參與階段）</small>",
+                stageCheck2:"Stage 2 (2027 2/15-19) Submit Activity Proposal (Core Phase)<small>提交活動計劃書（核心參與階段）</small>",
+                stageCheck3:"Stage 3 (2027 3/6-21) Project Launch (Core Phase)<small>計劃實行（核心參與階段）</small>",
+                stageCheck4:"Stage 4 (2027 3/27) Final Sharing and Closing (Core Phase)<small>最終演講及閉幕儀式（核心參與階段）</small>",
+                stageCheck5:"Stage 5 (2027 4/29-5/3) Mongolia Trip — Subject to Separate Confirmation<small>外訪（蒙古）— 另行確認</small>",
+                criteriaConsentLabel:"I agree to the Criteria and Things to Know: valid Macau ID; not currently a Rotaract or Rotary member; aged 18 or above; participation in the first four core phases; the Mongolia trip will be confirmed separately.",
+                programmeConsentLabel:"I agree to the Programme Terms: staged programme; 3/27 reporting, feedback and awards; Mongolia trip eligibility and funding will be announced separately; the organizer reserves final interpretation.",
+                floatingRegister:"Register Now / 立即報名",
                 confirmationTitle:"Registration Submitted Successfully", confirmationDesc:"Thank you for your participation. We will contact you using the details provided.",
                 newRegistration:"Submit Another Registration",
                 footerOrganizer:"Rotaract Club of Macau / 澳門扶青社", footerAdvisor:"Advisor: Rotary Club of Macau / 指導單位：澳門扶輪社",
@@ -563,6 +669,7 @@
 
         function setLanguage(lang) {
             document.documentElement.lang = lang === "en" ? "en" : "zh-Hant";
+            document.querySelector(".hero h1")?.classList.toggle("long-en", lang === "en");
             document.querySelectorAll("[data-i18n]").forEach(el => {
                 const key = el.dataset.i18n;
                 if (translations[lang][key]) el.innerHTML = translations[lang][key];
@@ -598,18 +705,31 @@
                 alert(langSnapshot() === "en" ? "You must be 18 years of age or older." : "報名者必須年滿18歲。");
                 return;
             }
+            const macauId = document.getElementById("macau-id").value.trim();
+            if (!/^[0-9A-Za-z().\- ()]+$/.test(macauId)) {
+                alert(langSnapshot() === "en"
+                    ? "Please enter a valid Macau ID number."
+                    : "請輸入有效的澳門居民身分證號碼。");
+                return;
+            }
 
             const data = Object.fromEntries(new FormData(form).entries());
-            if (!data.consent) {
-                alert(langSnapshot() === "en" ? "Please agree to the terms and privacy notice." : "請勾選同意活動條款及個人資料收集聲明。");
+            if (!data.criteriaConsent || !data.programmeConsent) {
+                alert(langSnapshot() === "en"
+                    ? "Please agree to both the criteria and programme terms."
+                    : "請勾選資格與參與須知及計劃條款。");
                 return;
             }
 
             // Submission hook: replace this block with Google Forms, Supabase, or an API request.
             const labels = langSnapshot() === "en"
-                ? ["Full Name", "Date of Birth", "Phone", "Email", "Motivation"]
-                : ["姓名", "出生日期", "聯絡電話", "電子郵件", "報名動機"];
-            const values = [data.fullName, data.birthDate, data.phone, data.email, data.motivation];
+                ? ["English Full Name", "Chinese Full Name", "Date of Birth", "Macau ID", "Gender", "Occupation / Major", "Phone", "WeChat", "Email", "Stage 1", "Stage 2", "Stage 3", "Stage 4", "Stage 5"]
+                : ["英文全名", "中文全名", "出生日期", "澳門居民身分證號碼", "性別", "職業或主修科目", "聯絡電話", "WeChat", "電子郵件", "階段1確認", "階段2確認", "階段3確認", "階段4確認", "階段5確認"];
+            const values = [
+                data.englishName, data.chineseName, data.birthDate, data.macauId, data.gender,
+                data.occupation, data.phone, data.wechat, data.email,
+                data.stage1, data.stage2, data.stage3, data.stage4, data.stage5
+            ];
             summary.innerHTML = labels.map((label, index) =>
                 `<div><strong>${label}</strong><span>${String(values[index]).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]))}</span></div>`
             ).join("");
