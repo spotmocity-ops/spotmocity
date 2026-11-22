@@ -287,8 +287,14 @@
             .lang-switch button { padding: 6px 8px; }
             .partner-strip { gap: 10px; flex-wrap: wrap; justify-content: center; }
             .partner-strip img { max-height: 46px; max-width: 120px; }
-            .page-banner { max-height: 260px; }
-            .page-banner img { max-height: 260px; object-fit: cover; }
+            .page-banner { max-height: none; height: auto; }
+            .page-banner img {
+                width: 100%;
+                height: auto;
+                max-height: none;
+                object-fit: contain;
+                object-position: center;
+            }
             .hero { min-height: 560px; }
             .hero-inner { padding: 65px 0 58px; }
             .hero h1 { font-size: 2.15rem; }
