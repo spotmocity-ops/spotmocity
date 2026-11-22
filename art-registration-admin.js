@@ -121,7 +121,8 @@
                         <h3 class="font-semibold">舞台需求</h3>
                         <dl class="mt-2 grid gap-2 text-sm sm:grid-cols-2">
                             <div><dt class="text-xs text-slate-500">伴奏</dt><dd>${escapeHtml(accompaniment)}</dd></div>
-                            ${registration.stage_file_name ? `<div><dt class="text-xs text-slate-500">伴奏檔案</dt><dd>${escapeHtml(registration.stage_file_name)}</dd></div>` : ''}
+                            ${registration.stage_file_name ? `<div><dt class="text-xs text-slate-500">伴奏檔案</dt><dd class="break-all">${escapeHtml(registration.stage_file_name)} <button type="button" data-download-file="stage" data-registration-id="${escapeHtml(registration.id)}" class="ml-2 rounded border border-blue-300 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50">下載原檔</button></dd></div>` : ''}
+                            ${registration.team_file_name ? `<div><dt class="text-xs text-slate-500">團體 Excel 名單</dt><dd class="break-all">${escapeHtml(registration.team_file_name)} <button type="button" data-download-file="team" data-registration-id="${escapeHtml(registration.id)}" class="ml-2 rounded border border-blue-300 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50">下載原檔</button></dd></div>` : ''}
                             <div><dt class="text-xs text-slate-500">手持無線麥克風</dt><dd>${Number(stage.wirelessMicCount || 0)} 支</dd></div>
                             <div><dt class="text-xs text-slate-500">頭戴／領夾麥克風</dt><dd>${Number(stage.headsetMicCount || 0)} 支</dd></div>
                             <div><dt class="text-xs text-slate-500">樂器收音／DI</dt><dd>${escapeHtml(stage.instrumentMicDetails || '不需要')}</dd></div>
@@ -136,7 +137,7 @@
         </article>`;
     }
 
-    async function requestApi(action) {
+    async function requestApi(action, extraBody = {}) {
         const { data, error } = await supabaseClient.auth.getSession();
         if (error || !data.session?.access_token) throw new Error('管理員登入已失效，請重新登入。');
         const response = await fetch(`${supabaseUrl}/functions/v1/art-registration-api`, {
@@ -146,7 +147,7 @@
                 Authorization: `Bearer ${data.session.access_token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ action })
+            body: JSON.stringify({ action, ...extraBody })
         });
         if (!response.ok) {
             const result = await response.json().catch(() => ({}));
@@ -200,8 +201,33 @@
         }
     }
 
+    async function downloadRegistrationFile(registrationId, fileType) {
+        try {
+            const response = await requestApi('download-file', { registrationId, fileType });
+            const blob = await response.blob();
+            const disposition = response.headers.get('content-disposition') || '';
+            const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+            let filename = encodedName ? decodeURIComponent(encodedName) : fileType === 'stage' ? '舞台伴奏檔案' : '團體成員名單.xlsx';
+            filename = filename.replace(/[\\/:*?"<>|]/g, '_');
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showMessage('檔案已解密並開始下載。請妥善刪除暫存副本。', true);
+        } catch (error) {
+            showMessage(error instanceof Error ? error.message : '檔案下載失敗。');
+        }
+    }
+
     refreshButton.addEventListener('click', loadRegistrations);
     stageExportButton.addEventListener('click', () => exportCsv('export-stage', 'art-stage-coordination.csv'));
     insuranceExportButton.addEventListener('click', () => exportCsv('export-insurance', 'art-insurance-roster.csv', true));
+    list.addEventListener('click', event => {
+        const button = event.target.closest('[data-download-file]');
+        if (!button) return;
+        downloadRegistrationFile(button.dataset.registrationId, button.dataset.downloadFile);
+    });
     window.loadArtRegistrationsAdmin = loadRegistrations;
 })();

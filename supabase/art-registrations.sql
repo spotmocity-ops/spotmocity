@@ -30,6 +30,7 @@ create table if not exists public.art_registrations (
     consent_version text not null,
     submission_status text not null default 'processing' check (submission_status in ('processing', 'submitted')),
     team_file_path text,
+    team_file_name text,
     stage_file_path text,
     stage_file_name text,
     event_ends_at timestamptz not null default '2027-03-15 23:59:59+08',
@@ -55,6 +56,11 @@ create table if not exists public.art_registrations (
         or (accompaniment = 'live' and stage_file_name is null and stage_file_path is null)
     )
 );
+
+alter table public.art_registrations
+    add column if not exists team_file_name text,
+    add column if not exists stage_file_name text,
+    add column if not exists stage_file_path text;
 
 create table if not exists public.art_team_members (
     id uuid primary key default gen_random_uuid(),

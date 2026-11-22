@@ -562,6 +562,7 @@ async function getDecryptedRegistrations(
             emergency_contact_relationship: registration.emergency_contact_relationship,
             emergency_contact_phone: registration.emergency_contact_phone,
             team_name: registration.team_name,
+            team_file_name: registration.team_file_name,
             accompaniment: registration.accompaniment,
             stage_requirements: registration.stage_requirements,
             special_stage_requirements: registration.special_stage_requirements,
@@ -773,6 +774,7 @@ async function submitRegistration(
         consent_version: 'public-art-2027-v1',
         submission_status: 'processing',
         team_file_path: null as string | null,
+        team_file_name: uploadedFile?.name || null,
         stage_file_path: null as string | null,
         stage_file_name: uploadedStageFile?.name || null,
         event_ends_at: EVENT_ENDS_AT
@@ -1027,6 +1029,57 @@ Deno.serve(async request => {
         const encryptionKey = await getEncryptionKey();
         if (action === 'list') {
             return jsonResponse({ registrations: await getDecryptedRegistrations(serviceClient, encryptionKey) }, 200, headers);
+        }
+        if (action === 'download-file') {
+            const registrationId = typeof body.registrationId === 'string' ? body.registrationId.trim() : '';
+            const fileType = body.fileType;
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(registrationId)) {
+                throw new HttpError(400, 'Registration ID is invalid.');
+            }
+            if (fileType !== 'stage' && fileType !== 'team') {
+                throw new HttpError(400, 'File type is invalid.');
+            }
+            const { data: registration, error: queryError } = await serviceClient
+                .from('art_registrations')
+                .select('id,team_file_path,team_file_name,stage_file_path,stage_file_name')
+                .eq('id', registrationId)
+                .maybeSingle();
+            if (queryError) throw new HttpError(500, 'Could not locate this registration.');
+            if (!registration) throw new HttpError(404, 'Registration not found.');
+
+            const filePath = fileType === 'stage' ? registration.stage_file_path : registration.team_file_path;
+            const fileName = fileType === 'stage' ? registration.stage_file_name : registration.team_file_name;
+            if (typeof filePath !== 'string' || typeof fileName !== 'string' || !fileName) {
+                throw new HttpError(404, 'The requested file was not found.');
+            }
+            const { data: encryptedBlob, error: downloadError } = await serviceClient.storage
+                .from(FILE_BUCKET)
+                .download(filePath);
+            if (downloadError || !encryptedBlob) throw new HttpError(404, 'The requested file could not be downloaded.');
+
+            const payload = new Uint8Array(await encryptedBlob.arrayBuffer());
+            if (payload.length < 13) throw new HttpError(500, 'The stored file is invalid.');
+            const iv = payload.slice(0, 12);
+            const ciphertext = payload.slice(12);
+            const decrypted = await crypto.subtle.decrypt(
+                {
+                    name: 'AES-GCM',
+                    iv,
+                    additionalData: encoder.encode(`${registrationId}:${fileType}-file`)
+                },
+                encryptionKey,
+                ciphertext
+            );
+            const safeName = fileName.replace(/[^\p{L}\p{N}._()\- ]/gu, '_').slice(0, 180);
+            const downloadHeaders = {
+                ...headers,
+                'Content-Type': 'application/octet-stream',
+                'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(safeName)}`
+            };
+            return new Response(decrypted, {
+                status: 200,
+                headers: downloadHeaders
+            });
         }
         if (action === 'delete-registration') {
             const registrationId = typeof body.registrationId === 'string' ? body.registrationId.trim() : '';
