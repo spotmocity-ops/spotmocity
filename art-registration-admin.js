@@ -84,6 +84,11 @@
         const categories = (registration.performance_categories || []).map(formatCategory);
         if (registration.other_category) categories.push(registration.other_category);
         const stage = registration.stage_requirements || {};
+        const impromptuDanceLabels = {
+            personal: '一定要！個人參加',
+            team: `全隊參加：${stage.impromptuDanceTeamCount || ''}`,
+            none: '先不用，專注才藝節目'
+        };
         const accompaniment = registration.accompaniment === 'audio'
             ? '播放音訊'
             : registration.accompaniment === 'video' ? '播放背景影片' : '純現場原聲';
@@ -123,6 +128,7 @@
                         <h3 class="font-semibold">舞台需求</h3>
                         <dl class="mt-2 grid gap-2 text-sm sm:grid-cols-2">
                             <div><dt class="text-xs text-slate-500">伴奏</dt><dd>${escapeHtml(accompaniment)}</dd></div>
+                            <div><dt class="text-xs text-slate-500">百人即興共舞</dt><dd>${escapeHtml(impromptuDanceLabels[stage.impromptuDanceOption] || '未提供')}</dd></div>
                             ${registration.stage_file_name ? `<div><dt class="text-xs text-slate-500">伴奏檔案</dt><dd class="break-all">${escapeHtml(registration.stage_file_name)} <button type="button" data-download-file="stage" data-registration-id="${escapeHtml(registration.id)}" class="ml-2 rounded border border-blue-300 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50">下載原檔</button></dd></div>` : ''}
                             ${registration.team_file_name ? `<div><dt class="text-xs text-slate-500">團體 Excel 名單</dt><dd class="break-all">${escapeHtml(registration.team_file_name)} <button type="button" data-download-file="team" data-registration-id="${escapeHtml(registration.id)}" class="ml-2 rounded border border-blue-300 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50">下載原檔</button></dd></div>` : ''}
                             <div><dt class="text-xs text-slate-500">手持無線麥克風</dt><dd>${Number(stage.wirelessMicCount || 0)} 支</dd></div>

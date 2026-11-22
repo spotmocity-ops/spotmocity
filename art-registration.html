@@ -261,6 +261,18 @@
                     </div>
                 </fieldset>
                 <fieldset>
+                    <legend class="mb-2 text-sm font-bold">表演者專屬彩蛋：百人即興大共舞 <span class="text-red-600">*</span></legend>
+                    <p class="mb-3 text-sm leading-6 text-slate-600">無需提前排練、0 舞蹈基礎也適合！壓軸時段將由領舞導師現場帶動簡單好玩的即興律動，與 100 位表演者一齊熱血大合照！</p>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-2 rounded-lg border p-3 text-sm"><input type="radio" name="impromptu-dance" value="personal" required class="mt-1 accent-blue-700">一定要！算我一份（個人報名請勾選此項）</label>
+                        <label class="flex items-start gap-2 rounded-lg border p-3 text-sm"><input type="radio" name="impromptu-dance" value="team" required class="mt-1 accent-blue-700">我們全隊一齊跳！（團體報名請勾選此項，並於下題填寫參與人數）</label>
+                        <label class="flex items-start gap-2 rounded-lg border p-3 text-sm"><input type="radio" name="impromptu-dance" value="none" required class="mt-1 accent-blue-700">先不用，我專注完成自己的才藝節目就好</label>
+                    </div>
+                    <label id="impromptu-dance-count-row" class="mt-3 hidden block text-sm font-bold">貴團隊預計有幾位成員參與百人即興共舞？ <span class="text-red-600">*</span>
+                        <input id="impromptu-dance-team-count" type="text" maxlength="100" placeholder="例如：全隊 8 人參加" class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
+                    </label>
+                </fieldset>
+                <fieldset>
                     <legend class="mb-2 text-sm font-bold">麥克風與樂器需求</legend>
                     <div class="space-y-3">
                         <div class="rounded-lg border p-3">

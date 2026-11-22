@@ -350,9 +350,18 @@ function parseRegistration(value: unknown) {
         : [];
     if (members.length > MAX_TEAM_MEMBERS) throw new HttpError(400, `A team may contain at most ${MAX_TEAM_MEMBERS} members.`);
     const stage = requireRecord(input.stageRequirements, 'stage requirements');
+    const impromptuDanceOption = stage.impromptuDanceOption;
+    if (!['personal', 'team', 'none'].includes(String(impromptuDanceOption))) {
+        throw new HttpError(400, 'Select an impromptu dance option.');
+    }
+    const impromptuDanceTeamCount = impromptuDanceOption === 'team'
+        ? requiredText(stage.impromptuDanceTeamCount, 'Impromptu dance team participant count', 100)
+        : '';
     const wirelessMicCount = parseInteger(stage.wirelessMicCount ?? 0, 'Wireless microphone count', 0, 100);
     const headsetMicCount = parseInteger(stage.headsetMicCount ?? 0, 'Headset microphone count', 0, 100);
     const stageRequirements = {
+        impromptuDanceOption: String(impromptuDanceOption),
+        impromptuDanceTeamCount,
         wirelessMicCount,
         headsetMicCount,
         instrumentMicDetails: optionalText(stage.instrumentMicDetails, 'Instrument microphone details', 500),
@@ -593,6 +602,7 @@ function stageCsvRows(registrations: JsonRecord[]): unknown[][] {
         '演出時長（秒）',
         '伴奏需求',
         '伴奏檔案',
+        '百人即興共舞',
         '手持無線麥克風數量',
         '頭戴／領夾麥克風數量',
         '樂器收音／DI需求',
@@ -613,6 +623,11 @@ function stageCsvRows(registrations: JsonRecord[]): unknown[][] {
             registration.duration_seconds,
             registration.accompaniment === 'audio' ? '播放音訊' : registration.accompaniment === 'video' ? '播放背景影片' : '現場原聲',
             registration.stage_file_name || '',
+            stage.impromptuDanceOption === 'personal'
+                ? '個人參加'
+                : stage.impromptuDanceOption === 'team'
+                    ? `全隊參加：${stage.impromptuDanceTeamCount || ''}`
+                    : '不參加',
             stage.wirelessMicCount || 0,
             stage.headsetMicCount || 0,
             stage.instrumentMicDetails || '',

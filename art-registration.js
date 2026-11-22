@@ -158,6 +158,15 @@
     );
     toggleAccompanimentFiles();
 
+    const impromptuDanceCountRow = document.getElementById('impromptu-dance-count-row');
+    const impromptuDanceTeamCount = document.getElementById('impromptu-dance-team-count');
+    form.querySelectorAll('[name="impromptu-dance"]').forEach(input => input.addEventListener('change', () => {
+        const isTeam = selectedValue('impromptu-dance') === 'team';
+        impromptuDanceCountRow.classList.toggle('hidden', !isTeam);
+        impromptuDanceTeamCount.required = isTeam;
+        if (!isTeam) impromptuDanceTeamCount.value = '';
+    }));
+
     document.querySelectorAll('[name="group-type"]').forEach(input => input.addEventListener('change', toggleGroupFields));
     addMemberButton.addEventListener('click', addTeamMember);
     rosterFile.addEventListener('change', () => {
@@ -243,6 +252,8 @@
             teamMembers: rosterFile.files.length ? [] : collectMembers(),
             accompaniment: selectedValue('accompaniment'),
             stageRequirements: {
+                impromptuDanceOption: selectedValue('impromptu-dance'),
+                impromptuDanceTeamCount: impromptuDanceTeamCount.value.trim(),
                 wirelessMicCount: document.getElementById('wireless-mic-toggle').checked
                     ? Number(document.getElementById('wireless-mic-count').value)
                     : 0,
@@ -350,6 +361,8 @@
             otherCategoryRow.classList.add('hidden');
             document.getElementById('audio-file-row').classList.add('hidden');
             document.getElementById('video-file-row').classList.add('hidden');
+            impromptuDanceCountRow.classList.add('hidden');
+            impromptuDanceTeamCount.required = false;
             audioFile.required = false;
             videoFile.required = false;
             ['wireless-mic-row', 'headset-mic-row', 'instrument-mic-row', 'large-props-row'].forEach(id =>
