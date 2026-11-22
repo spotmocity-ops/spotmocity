@@ -2,6 +2,7 @@ create table if not exists public.art_registrations (
     id uuid primary key default gen_random_uuid(),
     reference_number text,
     event_key text not null default 'public-art-2027' check (event_key = 'public-art-2027'),
+    registration_plan text not null default 'talent' check (registration_plan in ('talent', 'crowd-dance')),
     group_type text not null check (group_type in ('individual', 'team')),
     age_group text not null check (age_group in ('child', 'youth', 'adult', 'senior', 'intergenerational')),
     performance_categories text[] not null check (cardinality(performance_categories) > 0),
@@ -60,6 +61,7 @@ create table if not exists public.art_registrations (
 
 alter table public.art_registrations
     add column if not exists reference_number text,
+    add column if not exists registration_plan text not null default 'talent',
     add column if not exists team_file_name text,
     add column if not exists stage_file_name text,
     add column if not exists stage_file_path text;
@@ -85,8 +87,21 @@ set reference_number = public.next_art_registration_reference()
 where reference_number is null;
 
 alter table public.art_registrations
-    alter column reference_number set not null,
-    add constraint art_registration_reference_number_unique unique (reference_number);
+    alter column reference_number set not null;
+
+do $$
+begin
+    if not exists (
+        select 1
+        from pg_constraint
+        where conname = 'art_registration_reference_number_unique'
+          and conrelid = 'public.art_registrations'::regclass
+    ) then
+        alter table public.art_registrations
+            add constraint art_registration_reference_number_unique unique (reference_number);
+    end if;
+end
+$$;
 
 alter table public.art_registrations
     add column if not exists team_file_name text,

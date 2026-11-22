@@ -14,6 +14,13 @@
     const maxDate = new Date().toISOString().slice(0, 10);
     document.getElementById('contact-birth-date').max = maxDate;
 
+    if (new URLSearchParams(window.location.search).get('plan') === 'crowd-dance') {
+        const crowdDanceOption = form.querySelector('[name="registration-plan"][value="crowd-dance"]');
+        if (crowdDanceOption) {
+            crowdDanceOption.checked = true;
+        }
+    }
+
     let memberIdSequence = 0;
     let submitting = false;
 
@@ -203,6 +210,7 @@
 
     function collectPayload() {
         const groupType = selectedValue('group-type');
+        const registrationPlan = selectedValue('registration-plan');
         const selectedCategories = [...form.querySelectorAll('[name="category"]:checked')].map(input => input.value);
         const contact = {
             chineseName: form.elements.namedItem('contact-chinese-name').value.trim(),
@@ -216,6 +224,7 @@
         };
         return {
             groupType,
+            registrationPlan,
             ageGroup: selectedValue('age-group'),
             performanceCategories: selectedCategories,
             otherCategory: otherCategory.value.trim(),

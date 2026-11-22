@@ -301,6 +301,10 @@ function parseRegistration(value: unknown) {
     const input = requireRecord(value, 'registration');
     const groupType = input.groupType;
     if (groupType !== 'individual' && groupType !== 'team') throw new HttpError(400, 'Select an individual or team entry.');
+    const registrationPlan = input.registrationPlan;
+    if (registrationPlan !== 'talent' && registrationPlan !== 'crowd-dance') {
+        throw new HttpError(400, 'Select a registration plan.');
+    }
     const ageGroup = input.ageGroup;
     if (!['child', 'youth', 'adult', 'senior', 'intergenerational'].includes(String(ageGroup))) {
         throw new HttpError(400, 'Select an age group.');
@@ -358,6 +362,7 @@ function parseRegistration(value: unknown) {
 
     return {
         groupType,
+        registrationPlan,
         ageGroup: String(ageGroup),
         categories,
         otherCategory,
@@ -551,6 +556,7 @@ async function getDecryptedRegistrations(
         result.push({
             id: registration.id,
             reference_number: registration.reference_number,
+            registration_plan: registration.registration_plan,
             group_type: registration.group_type,
             age_group: registration.age_group,
             performance_categories: registration.performance_categories,
@@ -746,6 +752,7 @@ async function submitRegistration(
     const registrationRow = {
         id: registrationId,
         event_key: EVENT_KEY,
+        registration_plan: input.registrationPlan,
         group_type: input.groupType,
         age_group: input.ageGroup,
         performance_categories: input.categories,

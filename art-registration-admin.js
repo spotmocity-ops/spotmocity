@@ -91,6 +91,7 @@
             renderPerson(member, `團體成員 ${index + 1}`)
         ).join('');
         const contact = registration.contact || {};
+        const registrationPlan = registration.registration_plan === 'crowd-dance' ? '小城百人共舞' : '才藝表演';
         return `<article class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
             <details>
                 <summary class="cursor-pointer list-none p-4 hover:bg-slate-50">
@@ -101,7 +102,7 @@
                         </span>
                         <span class="text-xs text-slate-500">${escapeHtml(formatDateTime(registration.submitted_at))}</span>
                     </span>
-                    <span class="mt-2 block text-sm text-slate-600">${escapeHtml(registration.program_title)} · ${escapeHtml(formatAgeGroup(registration.age_group))} · ${Number(registration.performer_count)} 人</span>
+                    <span class="mt-2 block text-sm text-slate-600">${escapeHtml(registrationPlan)} · ${escapeHtml(registration.program_title)} · ${escapeHtml(formatAgeGroup(registration.age_group))} · ${Number(registration.performer_count)} 人</span>
                 </summary>
                 <div class="space-y-4 border-t p-4">
                     <section>
