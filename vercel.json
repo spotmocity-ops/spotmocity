@@ -1,0 +1,25 @@
+{
+  "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/racm.22ndgwa.html",
+      "destination": "/racm.22ndgwa",
+      "permanent": false
+    },
+    {
+      "source": "/macaospotlightday.html",
+      "destination": "/macaospotlightday",
+      "permanent": false
+    },
+    {
+      "source": "/art-registration.html",
+      "destination": "/art-registration",
+      "permanent": false
+    },
+    {
+      "source": "/art-performance.html",
+      "destination": "/macaospotlightday",
+      "permanent": false
+    }
+  ]
+}
