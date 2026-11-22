@@ -144,6 +144,19 @@
         .info-value { display: block; margin-top: 12px; font-weight: 800; line-height: 1.45; }
 
         .goals-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 28px; }
+        .origin-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+            margin: 28px 0;
+        }
+        .origin-card {
+            border: 1px solid #e3dccd; border-radius: 18px;
+            background: linear-gradient(145deg, #fff, #f8f5ed);
+            padding: 28px;
+        }
+        .origin-card h3 { margin: 0 0 12px; color: var(--red-dark); }
+        .origin-card p { margin: 0; line-height: 1.85; }
+        .origin-card.en-origin { border-top: 4px solid var(--blue); }
+        .origin-card.zh-origin { border-top: 4px solid var(--gold); }
         .goal-card {
             min-height: 210px; position: relative; overflow: hidden;
             border: 1px solid #e6dfd2; border-radius: 18px; background: #fff;
@@ -230,6 +243,7 @@
             .logo-placeholder { display: none; }
             .info-panel { grid-template-columns: repeat(2, 1fr); }
             .goals-grid { grid-template-columns: repeat(2, 1fr); }
+            .origin-grid { grid-template-columns: 1fr 1fr; }
             .form-layout { grid-template-columns: 1fr; }
             .form-aside { position: static; }
         }
@@ -244,6 +258,7 @@
             .section { padding: 58px 0; }
             .info-panel { grid-template-columns: 1fr; }
             .goals-grid { grid-template-columns: 1fr; }
+            .origin-grid { grid-template-columns: 1fr; }
             .timeline::before { left: 42px; }
             .timeline-item { grid-template-columns: 84px 1fr; gap: 8px; }
             .timeline-date { width: 62px; height: 62px; }
@@ -305,6 +320,17 @@
                     <div class="section-kicker" data-i18n="aboutKicker">About the Programme</div>
                     <h2 data-i18n="aboutTitle">跨文化交流，讓親善走得更遠</h2>
                     <p data-i18n="aboutDesc">以澳門文化為起點，在蒙古建立深度理解、友誼連結與青年行動。</p>
+                </div>
+
+                <div class="origin-grid" aria-label="Programme background">
+                    <article class="origin-card zh-origin">
+                        <h3 data-i18n="originZhTitle">一、計劃背景與緣起</h3>
+                        <p data-i18n="originZh">「澳門親善大使文化交流之旅」多年來致力為本澳青年搭建走向世界、與國際接軌的橋樑。透過系統化的分組協作、方案實踐與跨文化交流，讓青年代表化身文化使者，在向外推廣澳門中西共融特色與多元文化的同時，亦深入走進當地社群，體驗不同地域的自然風貌、歷史底蘊與人文關懷。</p>
+                    </article>
+                    <article class="origin-card en-origin">
+                        <h3 data-i18n="originEnTitle">I. Programme Background and Origin</h3>
+                        <p data-i18n="originEn">For years, the "Macao Goodwill Ambassador Cultural Exchange Programme" has been dedicated to building a bridge connecting Macao youth with the wider world and international communities. Through structured group collaboration, project execution, and cross-cultural exchange, youth representatives step into the role of cultural ambassadors—sharing Macao's Sino-Portuguese heritage and multicultural character abroad while engaging deeply with local communities to experience diverse natural landscapes, historical depth, and human warmth.</p>
+                    </article>
                 </div>
 
                 <div class="info-panel" role="list">
@@ -544,6 +570,10 @@
                 ctaRegister:"立即報名", ctaLearn:"了解更多", logoPlaceholder:"徽章<br>Logo 區域",
                 aboutKicker:"計劃簡介", aboutTitle:"跨文化交流，讓親善走得更遠",
                 aboutDesc:"以澳門文化為起點，在蒙古建立深度理解、友誼連結與青年行動。",
+                originZhTitle:"一、計劃背景與緣起",
+                originZh:"「澳門親善大使文化交流之旅」多年來致力為本澳青年搭建走向世界、與國際接軌的橋樑。透過系統化的分組協作、方案實踐與跨文化交流，讓青年代表化身文化使者，在向外推廣澳門中西共融特色與多元文化的同時，亦深入走進當地社群，體驗不同地域的自然風貌、歷史底蘊與人文關懷。",
+                originEnTitle:"I. Programme Background and Origin",
+                originEn:"For years, the \"Macao Goodwill Ambassador Cultural Exchange Programme\" has been dedicated to building a bridge connecting Macao youth with the wider world and international communities. Through structured group collaboration, project execution, and cross-cultural exchange, youth representatives step into the role of cultural ambassadors—sharing Macao's Sino-Portuguese heritage and multicultural character abroad while engaging deeply with local communities to experience diverse natural landscapes, historical depth, and human warmth.",
                 organizerLabel:"主辦單位", organizerEn:"Organizer", organizerValue:"澳門扶青社<br><small>Rotaract Club of Macau</small>",
                 advisorLabel:"指導單位", advisorEn:"Advisor", advisorValue:"澳門扶輪社<br><small>Rotary Club of Macau</small>",
                 eligibilityLabel:"招募對象", eligibilityEn:"Eligibility", eligibilityValue:"18歲或以上本澳青年",
@@ -609,6 +639,10 @@
                 ctaRegister:"Register Now", ctaLearn:"Learn More", logoPlaceholder:"Badge<br>Logo Area",
                 aboutKicker:"About the Programme", aboutTitle:"Cross-Cultural Exchange, Extended by Goodwill",
                 aboutDesc:"Beginning with Macao culture, build deeper understanding, friendship and youth-led action in Mongolia.",
+                originZhTitle:"I. 計劃背景與緣起 / Programme Background and Origin",
+                originZh:"「澳門親善大使文化交流之旅」多年來致力為本澳青年搭建走向世界、與國際接軌的橋樑。透過系統化的分組協作、方案實踐與跨文化交流，讓青年代表化身文化使者，在向外推廣澳門中西共融特色與多元文化的同時，亦深入走進當地社群，體驗不同地域的自然風貌、歷史底蘊與人文關懷。",
+                originEnTitle:"I. Programme Background and Origin",
+                originEn:"For years, the \"Macao Goodwill Ambassador Cultural Exchange Programme\" has been dedicated to building a bridge connecting Macao youth with the wider world and international communities. Through structured group collaboration, project execution, and cross-cultural exchange, youth representatives step into the role of cultural ambassadors—sharing Macao's Sino-Portuguese heritage and multicultural character abroad while engaging deeply with local communities to experience diverse natural landscapes, historical depth, and human warmth.",
                 organizerLabel:"Organizer", organizerEn:"澳門扶青社", organizerValue:"Rotaract Club of Macau",
                 advisorLabel:"Advisor", advisorEn:"澳門扶輪社", advisorValue:"Rotary Club of Macau",
                 eligibilityLabel:"Eligibility", eligibilityEn:"招募對象", eligibilityValue:"Macao youth aged 18 and above",
