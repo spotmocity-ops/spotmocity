@@ -530,6 +530,9 @@
                     endTime: item.event_end_time || item.event_end_date || '',
                     description: item.description || '',
                     promoCopy: item.promo_copy || '',
+                    relatedLinks: Array.isArray(item.related_links) ? item.related_links : [],
+                    sourceUrl: item.source_url || '',
+                    sourceTitle: item.source_title || '',
                     loc: item.location || '地點待公布',
                     mapUrl: item.map_url || '',
                     fee: item.fee || (Number(item.total_amount) > 0 ? `MOP ${item.total_amount}` : '免費'),
@@ -663,6 +666,25 @@
             }
         }
 
+        function linkifyPlainText(value) {
+            const text = String(value || '');
+            const urlPattern = /(https?:\/\/[^\s]+)/gi;
+            let result = '';
+            let lastIndex = 0;
+            for (const match of text.matchAll(urlPattern)) {
+                result += escapeHtml(text.slice(lastIndex, match.index));
+                const originalUrl = match[0];
+                const trailingPunctuation = originalUrl.match(/[),.;!?]+$/)?.[0] || '';
+                const url = originalUrl.slice(0, originalUrl.length - trailingPunctuation.length);
+                const safeUrl = safeExternalUrl(url);
+                result += safeUrl
+                    ? `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline">${escapeHtml(url)}</a>${escapeHtml(trailingPunctuation)}`
+                    : escapeHtml(originalUrl);
+                lastIndex = match.index + originalUrl.length;
+            }
+            return result + escapeHtml(text.slice(lastIndex));
+        }
+
         function getMapUrl(value, location) {
             if (value) {
                 try {
@@ -679,6 +701,26 @@
             }
             return location && location !== '地點待公布'
                 ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`
+                : '';
+        }
+
+        function getMapEmbedUrl(value, location) {
+            if (value) {
+                try {
+                    const url = new URL(value);
+                    const host = url.hostname.toLowerCase();
+                    if (url.protocol === 'https:' && (host === 'google.com' || host.endsWith('.google.com'))) {
+                        if (url.pathname.includes('/maps/embed') || url.searchParams.has('output')) {
+                            url.searchParams.set('output', 'embed');
+                            return url.href;
+                        }
+                    }
+                } catch {
+                    // Use the location-based embed fallback below.
+                }
+            }
+            return location && location !== '地點待公布'
+                ? `https://maps.google.com/maps?q=${encodeURIComponent(location)}&t=&z=15&ie=UTF8&iwloc=&output=embed`
                 : '';
         }
 
@@ -792,7 +834,7 @@
             const mapUrl = getMapUrl(service.mapUrl, service.loc);
             const signupUrl = safeExternalUrl(service.url);
             return `<div class="space-y-3">
-                ${details ? `<section><h4 class="text-sm font-semibold text-gray-800 mb-1">活動詳情</h4><p class="whitespace-pre-line text-sm leading-6 text-gray-700">${escapeHtml(details)}</p></section>` : ''}
+                ${details ? `<section><h4 class="text-sm font-semibold text-gray-800 mb-1">活動詳情</h4><p class="whitespace-pre-line text-sm leading-6 text-gray-700">${linkifyPlainText(details)}</p></section>` : ''}
                 ${detailRows.length ? `<dl class="grid gap-2 sm:grid-cols-2">${detailRows.map(([label, value]) => `<div class="rounded-lg bg-gray-50 p-3"><dt class="text-xs text-gray-500">${escapeHtml(label)}</dt><dd class="mt-1 text-sm text-gray-800">${escapeHtml(value)}</dd></div>`).join('')}</dl>` : ''}
                 ${promotionImages.length ? `<section><h4 class="text-sm font-semibold text-gray-800 mb-2">宣傳圖片</h4><div class="grid grid-cols-2 gap-3">${promotionImages.map((url, index) => `<button type="button" data-full-image="${escapeHtml(url)}" data-full-image-alt="宣傳圖片 ${index + 1}" aria-label="放大查看宣傳圖片 ${index + 1}" class="block w-full cursor-zoom-in"><img src="${escapeHtml(url)}" alt="宣傳圖片 ${index + 1}（點擊查看完整圖片）" loading="lazy" class="w-full max-h-56 rounded-lg border object-contain bg-gray-50"></button>`).join('')}</div></section>` : ''}
                 <div class="flex flex-wrap gap-4 text-sm">
@@ -1341,7 +1383,7 @@
             filtered.forEach(act => {
                 const serviceCategoryLabel = getLifeServiceCategoryLabel(act);
                 list.innerHTML += `
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition" onclick="openModal(${act.id})">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer hover:shadow-md transition" data-open-activity="${act.id}" role="button" tabindex="0" aria-label="查看 ${escapeHtml(act.title)} 活動詳情">
                         <img src="${escapeHtml(act.img)}" alt="${escapeHtml(act.title)}" class="w-full h-48 object-cover" style="object-position:${act.posterDisplayHorizontalPosition}% ${act.posterDisplayPosition}%;transform:scale(${act.posterDisplayScale / 100});">
                         <div class="p-4">
                             <div class="flex items-center justify-between gap-2">
@@ -1350,6 +1392,7 @@
                             </div>
                             <p class="text-sm text-gray-500 mt-1">${escapeHtml(act.org)}</p>
                             <p class="text-sm text-gray-500 mt-1">${escapeHtml(formatActivityPeriod(act.time, act.endTime))}</p>
+                            <p class="mt-1 text-sm text-gray-500">${act.eventFormat === 'online' ? '💻 線上活動' : `📍 ${escapeHtml(act.loc)}`}</p>
                             <p class="text-xs text-gray-500 mt-1">${escapeHtml(act.cats.map(value => categoryNames[value] || value).join('、'))}${act.subcats.length ? ` · ${escapeHtml(act.subcats.map(value => subcategoryNames[value] || value).join('、'))}` : ''}</p>
                             <p class="text-sm text-gray-600 mt-2 line-clamp-2">${escapeHtml(act.description || '活動免費參加')}</p>
                             <div class="flex flex-wrap gap-2 mt-3">
@@ -1369,6 +1412,20 @@
             const subcategory = category.subcategories.find(item => item.id === activity.lifeServiceSubcategory);
             return `生活服務：${category.name}${subcategory ? ` · ${subcategory.name}` : ''}`;
         }
+
+        document.getElementById('activity-list').addEventListener('click', event => {
+            const card = event.target.closest('[data-open-activity]');
+            if (!card) return;
+            openModal(Number(card.dataset.openActivity));
+        });
+
+        document.getElementById('activity-list').addEventListener('keydown', event => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            const card = event.target.closest('[data-open-activity]');
+            if (!card) return;
+            event.preventDefault();
+            openModal(Number(card.dataset.openActivity));
+        });
 
         function filterCategory(cat) {
             activeCategory = cat;
@@ -1599,10 +1656,23 @@
             const videoEmbedUrl = getVideoEmbedUrl(act.videoUrl);
             const videoLink = safeExternalUrl(act.videoUrl);
             const mapLink = act.eventFormat === 'online' ? '' : getMapUrl(act.mapUrl, act.loc);
+            const mapEmbedUrl = act.eventFormat === 'online' ? '' : getMapEmbedUrl(act.mapUrl, act.loc);
+            const relatedLinks = (Array.isArray(act.relatedLinks) ? act.relatedLinks : []).map(link => ({
+                label: String(link?.label || '').trim(),
+                url: safeExternalUrl(link?.url)
+            })).filter(link => link.label && link.url);
+            const sourceLink = safeExternalUrl(act.sourceUrl);
+            if (sourceLink && !relatedLinks.some(link => link.url === sourceLink)) {
+                relatedLinks.push({
+                    label: String(act.sourceTitle || '').trim() || '活動官方來源',
+                    url: sourceLink
+                });
+            }
             const serviceCategory = act.isLifeService ? homepageServiceCategories.find(category => category.id === act.lifeServiceCategory) : null;
-            const serviceSubcategory = serviceCategory?.subcategories.find(item => item.id === act.lifeServiceSubcategory);
-            const serviceSummary = act.lifeServiceSummary && act.lifeServiceSummary !== act.description ? act.lifeServiceSummary : '';
-            const serviceDetails = act.lifeServiceDetails && act.lifeServiceDetails !== act.description && act.lifeServiceDetails !== serviceSummary ? act.lifeServiceDetails : '';
+            const activityCategoryLabels = act.cats
+                .filter(value => value !== 'life_services')
+                .map(value => categoryNames[value] || value)
+                .join('、');
 
             content.innerHTML = `
                 ${posterUrl ? `<button type="button" data-full-image="${escapeHtml(posterUrl)}" data-full-image-alt="${escapeHtml(act.title)} 活動海報" aria-label="放大查看活動海報" class="block w-full mb-4 cursor-zoom-in"><img src="${escapeHtml(posterUrl)}" alt="${escapeHtml(act.title)} 活動海報（點擊查看完整圖片）" class="w-full max-h-[420px] object-contain bg-gray-50 rounded-xl"></button>` : ''}
@@ -1612,15 +1682,9 @@
                     <span class="text-xs ${act.eventFormat === 'online' ? 'bg-sky-100 text-sky-800' : 'bg-emerald-100 text-emerald-800'} px-2 py-1 rounded-full font-semibold">${act.eventFormat === 'online' ? '線上' : '線下'}</span>
                 </div>
                 <p class="text-sm text-gray-600 mb-2">主辦單位：${escapeHtml(act.org)}</p>
-                <p class="text-sm text-gray-600 mb-4">分類：${escapeHtml(act.cats.map(value => categoryNames[value] || value).join('、'))}${act.subcats.length ? ` · ${escapeHtml(act.subcats.map(value => subcategoryNames[value] || value).join('、'))}` : ''}${serviceCategory ? ` · ${escapeHtml(getLifeServiceCategoryLabel(act))}` : ''}</p>
-                ${act.description ? `<p class="text-gray-700 leading-7 whitespace-pre-line mb-5">${escapeHtml(act.description)}</p>` : ''}
-                ${act.promoCopy ? `<section class="mb-5 rounded-xl border border-blue-200 bg-blue-50 p-4"><p class="text-blue-800 leading-7 whitespace-pre-line">${escapeHtml(act.promoCopy)}</p></section>` : ''}
-                ${act.isLifeService ? `<section class="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                    <h3 class="font-semibold text-amber-900">生活服務與資源對接</h3>
-                    ${serviceCategory ? `<p class="mt-1 text-sm text-gray-700">分類：${escapeHtml(serviceCategory.name)}${serviceSubcategory ? ` · ${escapeHtml(serviceSubcategory.name)}` : ''}</p>` : ''}
-                    ${serviceSummary ? `<p class="mt-2 text-sm text-gray-700 whitespace-pre-line">${escapeHtml(serviceSummary)}</p>` : ''}
-                    ${serviceDetails ? `<p class="mt-2 text-sm text-gray-700 whitespace-pre-line">${escapeHtml(serviceDetails)}</p>` : ''}
-                </section>` : ''}
+                ${activityCategoryLabels || act.subcats.length ? `<p class="text-sm text-gray-600 mb-4">${activityCategoryLabels ? `分類：${escapeHtml(activityCategoryLabels)}` : ''}${act.subcats.length ? `${activityCategoryLabels ? ' · ' : '分類：'}${escapeHtml(act.subcats.map(value => subcategoryNames[value] || value).join('、'))}` : ''}${serviceCategory ? ` · ${escapeHtml(getLifeServiceCategoryLabel(act))}` : ''}</p>` : ''}
+                ${act.description ? `<p class="text-gray-700 leading-7 whitespace-pre-line mb-5">${linkifyPlainText(act.description)}</p>` : ''}
+                ${act.promoCopy ? `<section class="mb-5 rounded-xl border border-blue-200 bg-blue-50 p-4"><p class="text-blue-800 leading-7 whitespace-pre-line">${linkifyPlainText(act.promoCopy)}</p></section>` : ''}
 
                 <div class="space-y-3 mb-6 text-sm bg-gray-50 p-5 rounded-xl border border-gray-100">
                     <p class="flex items-start gap-2"><span class="font-bold text-gray-700 w-20 shrink-0">⏰ 活動期：</span><span class="text-gray-600">${escapeHtml(formatActivityPeriod(act.time, act.endTime))}</span></p>
@@ -1629,7 +1693,7 @@
                     <p class="flex items-start gap-2"><span class="font-bold text-gray-700 w-20 shrink-0">費用：</span><span class="${act.fee === '免費' ? 'text-emerald-700' : 'text-blue-700'} font-semibold">${escapeHtml(act.fee)}</span></p>
                 </div>
 
-                ${mapLink ? `<section class="mb-6"><h3 class="font-semibold mb-2">活動地圖</h3><iframe src="https://www.google.com/maps?q=${encodeURIComponent(act.loc)}&output=embed" title="${escapeHtml(act.title)} 活動地圖" class="w-full h-56 sm:h-64 rounded-xl border border-gray-200" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></section>` : ''}
+                ${mapEmbedUrl ? `<section class="mb-6"><h3 class="font-semibold mb-2">活動地圖</h3><div class="overflow-hidden rounded-xl border border-gray-200 bg-gray-50"><iframe src="${escapeHtml(mapEmbedUrl)}" title="${escapeHtml(act.title)} 活動地圖" class="block w-full h-56 sm:h-64" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe><p class="border-t border-gray-200 px-3 py-2 text-sm text-gray-600">${mapLink ? `<a href="${escapeHtml(mapLink)}" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-700 underline">地圖無法載入？在新分頁開啟</a>` : ''}</p></div></section>` : ''}
 
                 <div class="flex flex-wrap gap-2 mb-6">
                     ${act.email ? `<a href="mailto:${escapeHtml(act.email)}" class="bg-blue-50 text-blue-800 px-3 py-2 rounded-lg text-sm">Email 主辦方</a>` : ''}
@@ -1640,6 +1704,7 @@
                     ${act.url && safeExternalUrl(act.url) ? `<a href="${escapeHtml(safeExternalUrl(act.url))}" target="_blank" rel="noopener noreferrer" class="bg-gray-100 text-gray-800 px-3 py-2 rounded-lg text-sm">報名連結</a>` : ''}
                 </div>
 
+                ${relatedLinks.length ? `<section class="mb-6"><h3 class="font-semibold mb-3">相關連結</h3><div class="flex flex-wrap gap-2">${relatedLinks.map(link => `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="bg-blue-50 text-blue-800 px-3 py-2 rounded-lg text-sm">${escapeHtml(link.label)}</a>`).join('')}</div></section>` : ''}
                 ${promotionImages.length ? `<section class="mb-6"><h3 class="font-semibold mb-3">活動宣傳圖片</h3><div class="grid grid-cols-2 gap-3">${promotionImages.map((url, index) => `<button type="button" data-full-image="${escapeHtml(url)}" data-full-image-alt="宣傳圖片 ${index + 1}" aria-label="放大查看宣傳圖片 ${index + 1}" class="block w-full cursor-zoom-in"><img src="${escapeHtml(url)}" alt="宣傳圖片 ${index + 1}（點擊查看完整圖片）" loading="lazy" class="w-full h-40 object-cover rounded-lg border"></button>`).join('')}</div></section>` : ''}
                 ${videoEmbedUrl ? `<section class="mb-6"><h3 class="font-semibold mb-3">活動影片</h3><div class="aspect-video overflow-hidden rounded-xl bg-black"><iframe src="${escapeHtml(videoEmbedUrl)}" title="${escapeHtml(act.title)} 活動影片" class="w-full h-full" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>${videoLink ? `<p class="mt-2 text-sm"><a href="${escapeHtml(videoLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline">影片無法播放？在 YouTube／Vimeo 開啟</a></p>` : ''}</section>` : videoLink ? `<p class="mb-6"><a href="${escapeHtml(videoLink)}" target="_blank" rel="noopener noreferrer" class="text-blue-700 underline">開啟活動影片</a></p>` : ''}
             `;
