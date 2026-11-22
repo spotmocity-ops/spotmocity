@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#8d2f36">
+    <title>第二十二屆澳門親善大使文化交流之旅</title>
+    <style>
+        :root {
+            --red: #8d2f36;
+            --red-dark: #651d24;
+            --gold: #d9ad57;
+            --gold-light: #f6e7bd;
+            --stone: #9a9387;
+            --stone-light: #ece8df;
+            --blue: #2f7188;
+            --teal: #69aeb0;
+            --ink: #263238;
+            --paper: #fbfaf7;
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            color: var(--ink);
+            background: var(--paper);
+            font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+            line-height: 1.7;
+        }
+        a { color: inherit; text-decoration: none; }
+        button, input, textarea { font: inherit; }
+        .container { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+        .navbar {
+            position: sticky; top: 0; z-index: 50;
+            border-bottom: 1px solid rgba(38,50,56,.08);
+            background: rgba(251,250,247,.94);
+            backdrop-filter: blur(14px);
+        }
+        .nav-inner {
+            min-height: 76px; display: flex; align-items: center;
+            justify-content: space-between; gap: 20px;
+        }
+        .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .brand-mark {
+            width: 48px; height: 48px; flex: 0 0 48px;
+            display: grid; place-items: center;
+            border: 3px solid var(--gold); border-radius: 50%;
+            background: radial-gradient(circle, var(--gold-light) 0 16%, var(--red) 17% 72%, #fff 73%);
+            color: #fff; font-weight: 900; box-shadow: 0 8px 24px rgba(141,47,54,.16);
+        }
+        .brand-text { font-weight: 800; line-height: 1.25; max-width: 380px; }
+        .nav-actions { display: flex; align-items: center; gap: 18px; }
+        .nav-links { display: flex; align-items: center; gap: 18px; font-weight: 700; }
+        .nav-links a { position: relative; font-size: .92rem; }
+        .nav-links a::after {
+            content: ""; position: absolute; left: 0; right: 100%; bottom: -6px;
+            height: 2px; background: var(--gold); transition: right .25s ease;
+        }
+        .nav-links a:hover::after { right: 0; }
+        .lang-switch {
+            display: inline-flex; padding: 3px; border: 1px solid #ddd4c3;
+            border-radius: 999px; background: #fff;
+        }
+        .lang-switch button {
+            border: 0; border-radius: 999px; background: transparent;
+            padding: 7px 10px; cursor: pointer; color: #6d675f; font-weight: 800;
+        }
+        .lang-switch button.active { background: var(--red); color: #fff; }
+
+        .hero {
+            position: relative; overflow: hidden; min-height: 610px;
+            display: grid; align-items: center;
+            color: #fff;
+            background:
+                linear-gradient(120deg, rgba(101,29,36,.96), rgba(141,47,54,.82) 48%, rgba(47,113,136,.75)),
+                linear-gradient(135deg, #a94d4c 0 35%, #d9ad57 35% 43%, #5b9a9d 43% 72%, #6b6257 72%);
+        }
+        .hero::before {
+            content: ""; position: absolute; inset: 0; opacity: .16;
+            background-image:
+                radial-gradient(circle at 15% 20%, #fff 0 2px, transparent 3px),
+                radial-gradient(circle at 75% 30%, #fff 0 2px, transparent 3px),
+                linear-gradient(30deg, transparent 48%, rgba(255,255,255,.2) 49% 51%, transparent 52%);
+            background-size: 130px 130px, 170px 170px, 100px 100px;
+        }
+        .hero-inner { position: relative; z-index: 1; padding: 90px 0 82px; }
+        .hero-grid { display: grid; grid-template-columns: 1.45fr .55fr; align-items: center; gap: 48px; }
+        .eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            color: #ffe4a0; font-weight: 800; letter-spacing: .08em;
+        }
+        .hero h1 { margin: 16px 0 12px; max-width: 820px; font-size: clamp(2.45rem, 6vw, 5.1rem); line-height: 1.08; }
+        .hero-tagline { margin: 18px 0 14px; color: #ffe4a0; font-size: clamp(1.2rem, 2.5vw, 1.75rem); font-weight: 900; }
+        .hero-copy { max-width: 760px; margin: 0; font-size: 1.05rem; color: rgba(255,255,255,.92); }
+        .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+        .btn {
+            display: inline-flex; justify-content: center; align-items: center;
+            min-height: 48px; padding: 12px 22px; border-radius: 999px;
+            border: 1px solid transparent; font-weight: 900; cursor: pointer;
+            transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-primary { background: var(--gold); color: var(--red-dark); box-shadow: 0 12px 30px rgba(217,173,87,.24); }
+        .btn-secondary { border-color: rgba(255,255,255,.55); color: #fff; background: rgba(255,255,255,.08); }
+        .logo-placeholder {
+            width: 220px; height: 220px; margin-left: auto;
+            display: grid; place-items: center; border-radius: 50%;
+            border: 4px solid rgba(255,228,160,.82);
+            background: rgba(255,255,255,.12);
+            box-shadow: 0 25px 60px rgba(50,25,28,.28), inset 0 0 0 12px rgba(255,255,255,.08);
+        }
+        .logo-placeholder-inner {
+            width: 170px; height: 170px; border-radius: 50%;
+            display: grid; place-items: center; text-align: center;
+            border: 1px dashed rgba(255,255,255,.75);
+            color: rgba(255,255,255,.82); font-weight: 800;
+        }
+
+        section { scroll-margin-top: 100px; }
+        .section { padding: 82px 0; }
+        .section-heading { text-align: center; max-width: 760px; margin: 0 auto 38px; }
+        .section-kicker { color: var(--red); font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+        .section-heading h2 { margin: 8px 0 12px; font-size: clamp(1.8rem, 4vw, 3rem); line-height: 1.18; }
+        .section-heading p { margin: 0; color: #667074; }
+
+        .info-panel {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 1px; overflow: hidden; border: 1px solid #ded8ca;
+            border-radius: 18px; background: #ded8ca;
+        }
+        .info-item { min-height: 150px; background: #fff; padding: 22px 18px; }
+        .info-label { display: block; color: var(--red); font-size: .78rem; font-weight: 900; }
+        .info-en { display: block; color: #8a8175; font-size: .72rem; margin-top: 2px; }
+        .info-value { display: block; margin-top: 12px; font-weight: 800; line-height: 1.45; }
+
+        .goals-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 28px; }
+        .goal-card {
+            min-height: 210px; position: relative; overflow: hidden;
+            border: 1px solid #e6dfd2; border-radius: 18px; background: #fff;
+            padding: 24px; transition: transform .25s ease, box-shadow .25s ease;
+        }
+        .goal-card:hover { transform: translateY(-6px); box-shadow: 0 18px 36px rgba(70,67,56,.10); }
+        .goal-number { color: var(--gold); font-size: 2.2rem; font-weight: 900; line-height: 1; }
+        .goal-card h3 { margin: 18px 0 6px; font-size: 1.08rem; }
+        .goal-card .en { color: #80796d; font-size: .86rem; line-height: 1.5; }
+
+        .schedule-section { background: linear-gradient(180deg, #f2ede3, #fbfaf7); }
+        .timeline { position: relative; max-width: 900px; margin: 0 auto; }
+        .timeline::before {
+            content: ""; position: absolute; left: 96px; top: 22px; bottom: 22px;
+            width: 2px; background: linear-gradient(var(--red), var(--gold), var(--teal));
+        }
+        .timeline-item {
+            display: grid; grid-template-columns: 96px 1fr; gap: 28px;
+            position: relative; margin: 18px 0;
+        }
+        .timeline-date {
+            position: relative; z-index: 1; width: 72px; height: 72px;
+            display: grid; place-items: center; align-content: center;
+            border-radius: 50%; background: var(--red); color: #fff;
+            box-shadow: 0 10px 24px rgba(141,47,54,.20);
+            text-align: center; font-weight: 900; line-height: 1.15;
+        }
+        .timeline-date small { display: block; font-size: .68rem; color: #f7df9d; }
+        .timeline-card {
+            border: 1px solid #e2dacb; border-radius: 16px; background: #fff;
+            padding: 22px 24px; box-shadow: 0 12px 30px rgba(70,67,56,.06);
+        }
+        .timeline-card h3 { margin: 0 0 8px; }
+        .timeline-card .en { color: #777168; font-size: .9rem; margin-top: 8px; }
+
+        .registration-section { background: #fff; }
+        .form-layout { display: grid; grid-template-columns: .75fr 1.25fr; gap: 32px; align-items: start; }
+        .form-aside {
+            position: sticky; top: 104px; border-radius: 22px;
+            padding: 30px; color: #fff;
+            background: linear-gradient(145deg, var(--red), var(--blue));
+        }
+        .form-aside h3 { margin: 0 0 12px; font-size: 1.7rem; }
+        .form-aside p { color: rgba(255,255,255,.86); }
+        .form-card { border: 1px solid #e4decf; border-radius: 22px; background: var(--paper); padding: 30px; }
+        .field { margin-bottom: 18px; }
+        .field label { display: block; margin-bottom: 7px; font-weight: 800; }
+        .field label span { color: #8b8173; font-size: .82rem; }
+        .field input, .field textarea {
+            width: 100%; border: 1px solid #d6cfbf; border-radius: 12px;
+            background: #fff; padding: 12px 14px; outline: none;
+        }
+        .field input:focus, .field textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47,113,136,.11); }
+        .field textarea { min-height: 130px; resize: vertical; }
+        .checkbox-field { display: flex; align-items: flex-start; gap: 10px; margin: 20px 0; }
+        .checkbox-field input { margin-top: 5px; accent-color: var(--red); }
+        .form-submit { width: 100%; border: 0; color: #fff; background: var(--red); }
+        .form-submit:disabled { cursor: not-allowed; opacity: .55; }
+        .confirmation {
+            display: none; min-height: 430px; text-align: center;
+            place-items: center; border: 1px solid #d9cfba; border-radius: 22px;
+            background: linear-gradient(145deg, #fff, #f6f1e6); padding: 32px;
+        }
+        .confirmation.visible { display: grid; }
+        .confirmation-icon {
+            width: 84px; height: 84px; margin: 0 auto 18px; display: grid; place-items: center;
+            border-radius: 50%; background: var(--gold-light); color: var(--red); font-size: 2.4rem;
+        }
+        .summary { max-width: 620px; margin: 18px auto 0; text-align: left; }
+        .summary div { display: grid; grid-template-columns: 140px 1fr; gap: 10px; border-bottom: 1px solid #eadfc7; padding: 8px 0; }
+        .summary strong { color: var(--red-dark); }
+
+        footer { background: #263238; color: #fff; padding: 38px 0; }
+        .footer-inner { display: flex; justify-content: space-between; gap: 24px; }
+        .footer-inner strong { color: #f6d486; }
+        .copyright { margin-top: 18px; color: rgba(255,255,255,.62); font-size: .85rem; }
+
+        [data-i18n]{transition: opacity .12s ease;}
+        @media (max-width: 900px) {
+            .nav-inner { align-items: flex-start; padding: 10px 0; }
+            .nav-links { display: none; }
+            .brand-text { max-width: 260px; font-size: .88rem; }
+            .hero-grid { grid-template-columns: 1fr; }
+            .logo-placeholder { display: none; }
+            .info-panel { grid-template-columns: repeat(2, 1fr); }
+            .goals-grid { grid-template-columns: repeat(2, 1fr); }
+            .form-layout { grid-template-columns: 1fr; }
+            .form-aside { position: static; }
+        }
+        @media (max-width: 580px) {
+            .container { width: min(100% - 24px, 1120px); }
+            .brand-mark { width: 42px; height: 42px; flex-basis: 42px; }
+            .lang-switch button { padding: 6px 8px; }
+            .hero { min-height: 560px; }
+            .hero-inner { padding: 65px 0 58px; }
+            .hero h1 { font-size: 2.15rem; }
+            .hero-actions .btn { width: 100%; }
+            .section { padding: 58px 0; }
+            .info-panel { grid-template-columns: 1fr; }
+            .goals-grid { grid-template-columns: 1fr; }
+            .timeline::before { left: 42px; }
+            .timeline-item { grid-template-columns: 84px 1fr; gap: 8px; }
+            .timeline-date { width: 62px; height: 62px; }
+            .timeline-card { padding: 18px; }
+            .form-card { padding: 18px; }
+            .summary div { grid-template-columns: 1fr; gap: 2px; }
+            .footer-inner { display: block; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar" aria-label="Main navigation">
+        <div class="container nav-inner">
+            <a class="brand" href="#top" aria-label="Home">
+                <span class="brand-mark">22</span>
+                <span class="brand-text" data-i18n="navBrand">第二十二屆澳門親善大使文化交流之旅</span>
+            </a>
+            <div class="nav-actions">
+                <div class="nav-links">
+                    <a href="#about" data-i18n="navAbout">計劃簡介</a>
+                    <a href="#schedule" data-i18n="navSchedule">活動時程</a>
+                    <a href="#register" data-i18n="navRegister">立即報名</a>
+                </div>
+                <div class="lang-switch" aria-label="Language">
+                    <button type="button" class="active" data-lang="zh-Hant">繁中</button>
+                    <button type="button" data-lang="en">EN</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero" id="top">
+        <div class="container hero-inner">
+            <div class="hero-grid">
+                <div>
+                    <div class="eyebrow" data-i18n="heroEyebrow">澳門 · 文化交流 · 青年友誼</div>
+                    <h1 data-i18n="heroTitle">第二十二屆澳門親善大使文化交流之旅</h1>
+                    <p class="hero-tagline" data-i18n="heroTagline">同天共語・親善啟航</p>
+                    <p class="hero-copy" data-i18n="heroIntro">
+                        本屆邁入第二十二屆，由澳門扶青社主辦、澳門扶輪社指導，招募18歲或以上青年參與，以「同天共語・親善啟航」為主題，帶領澳門青年走進草原與歷史交織的蒙古，展開一場兼具深度探索、方案實踐與青年友誼連結的親善之旅。
+                    </p>
+                    <div class="hero-actions">
+                        <a class="btn btn-primary" href="#register" data-i18n="ctaRegister">立即報名</a>
+                        <a class="btn btn-secondary" href="#about" data-i18n="ctaLearn">了解更多</a>
+                    </div>
+                </div>
+                <div class="logo-placeholder" aria-label="Activity logo placeholder">
+                    <div class="logo-placeholder-inner" data-i18n="logoPlaceholder">徽章<br>Logo 區域</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="section" id="about">
+            <div class="container">
+                <div class="section-heading">
+                    <div class="section-kicker" data-i18n="aboutKicker">About the Programme</div>
+                    <h2 data-i18n="aboutTitle">跨文化交流，讓親善走得更遠</h2>
+                    <p data-i18n="aboutDesc">以澳門文化為起點，在蒙古建立深度理解、友誼連結與青年行動。</p>
+                </div>
+
+                <div class="info-panel" role="list">
+                    <article class="info-item" role="listitem">
+                        <span class="info-label" data-i18n="organizerLabel">主辦單位</span>
+                        <span class="info-en" data-i18n="organizerEn">Organizer</span>
+                        <span class="info-value" data-i18n="organizerValue">澳門扶青社<br><small>Rotaract Club of Macau</small></span>
+                    </article>
+                    <article class="info-item" role="listitem">
+                        <span class="info-label" data-i18n="advisorLabel">指導單位</span>
+                        <span class="info-en" data-i18n="advisorEn">Advisor</span>
+                        <span class="info-value" data-i18n="advisorValue">澳門扶輪社<br><small>Rotary Club of Macau</small></span>
+                    </article>
+                    <article class="info-item" role="listitem">
+                        <span class="info-label" data-i18n="eligibilityLabel">招募對象</span>
+                        <span class="info-en" data-i18n="eligibilityEn">Eligibility</span>
+                        <span class="info-value" data-i18n="eligibilityValue">18歲或以上本澳青年</span>
+                    </article>
+                    <article class="info-item" role="listitem">
+                        <span class="info-label" data-i18n="destinationLabel">交流目的地</span>
+                        <span class="info-en" data-i18n="destinationEn">Destination</span>
+                        <span class="info-value" data-i18n="destinationValue">蒙古 / Mongolia</span>
+                    </article>
+                    <article class="info-item" role="listitem">
+                        <span class="info-label" data-i18n="periodLabel">整體期程</span>
+                        <span class="info-en" data-i18n="periodEn">Programme Period</span>
+                        <span class="info-value" data-i18n="periodValue">2027年1月16日至5月3日</span>
+                    </article>
+                </div>
+
+                <div class="goals-grid">
+                    <article class="goal-card">
+                        <div class="goal-number">01</div>
+                        <h3 data-i18n="goal1Zh">展現澳門多元文化底蘊</h3>
+                        <div class="en" data-i18n="goal1En">Showcase Macao's Multicultural Heritage</div>
+                    </article>
+                    <article class="goal-card">
+                        <div class="goal-number">02</div>
+                        <h3 data-i18n="goal2Zh">深化蒙古文化體驗與理解</h3>
+                        <div class="en" data-i18n="goal2En">Deepen Cultural Understanding of Mongolia</div>
+                    </article>
+                    <article class="goal-card">
+                        <div class="goal-number">03</div>
+                        <h3 data-i18n="goal3Zh">落實企劃行動與跨文化交流</h3>
+                        <div class="en" data-i18n="goal3En">Execute Action Plans & Cross-Cultural Engagement</div>
+                    </article>
+                    <article class="goal-card">
+                        <div class="goal-number">04</div>
+                        <h3 data-i18n="goal4Zh">培育青年領袖與國際視野</h3>
+                        <div class="en" data-i18n="goal4En">Cultivate Youth Leadership & Global Perspective</div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section schedule-section" id="schedule">
+            <div class="container">
+                <div class="section-heading">
+                    <div class="section-kicker" data-i18n="scheduleKicker">2027 Schedule & Stages</div>
+                    <h2 data-i18n="scheduleTitle">五個階段，啟動親善旅程</h2>
+                    <p data-i18n="scheduleDesc">由破冰相識、方案實行，到跨境交流，逐步累積行動成果與跨文化理解。</p>
+                </div>
+
+                <div class="timeline">
+                    <article class="timeline-item">
+                        <div class="timeline-date">1/16<small>2027</small></div>
+                        <div class="timeline-card">
+                            <h3 data-i18n="stage1Zh">開幕儀式及破冰分組</h3>
+                            <p data-i18n="stage1ZhCopy">正式啟動計劃，認識夥伴並完成分組，了解活動規則與交流方向。</p>
+                            <div class="en" data-i18n="stage1En">Opening & Icebreaking and Grouping — Kick off the programme, meet fellow participants, form teams, and get aligned on rules and goals.</div>
+                        </div>
+                    </article>
+                    <article class="timeline-item">
+                        <div class="timeline-date">2/15–19<small>2027</small></div>
+                        <div class="timeline-card">
+                            <h3 data-i18n="stage2Zh">提交活動計劃書</h3>
+                            <p data-i18n="stage2ZhCopy">各組圍繞澳門文化主題，設定明確目標對象，構思並提交可行且具溫度的活動計劃書。</p>
+                            <div class="en" data-i18n="stage2En">Submit Activity Proposal — Teams design and submit actionable proposals centered on Macao culture for a defined target audience.</div>
+                        </div>
+                    </article>
+                    <article class="timeline-item">
+                        <div class="timeline-date">3/6–21<small>2027</small></div>
+                        <div class="timeline-card">
+                            <h3 data-i18n="stage3Zh">計劃實行</h3>
+                            <p data-i18n="stage3ZhCopy">針對選定對象實際推行澳門文化相關活動，在協作與執行中累積實務經驗與影響力。</p>
+                            <div class="en" data-i18n="stage3En">Project Launch — Carry out the Macao-focused activities with the target audience, building hands-on execution and teamwork experience.</div>
+                        </div>
+                    </article>
+                    <article class="timeline-item">
+                        <div class="timeline-date">3/27<small>2027</small></div>
+                        <div class="timeline-card">
+                            <h3 data-i18n="stage4Zh">最終演講及閉幕儀式</h3>
+                            <p data-i18n="stage4ZhCopy">各組匯報澳門活動成果與對象回饋，經評選選出優勝及特色獎項，並為本地階段作閉幕與蒙古外訪銜接。</p>
+                            <div class="en" data-i18n="stage4En">Final Sharing and Closing — Teams present Macao project outcomes and audience feedback for award selection, wrapping up the local phase and bridging into the Mongolia trip.</div>
+                        </div>
+                    </article>
+                    <article class="timeline-item">
+                        <div class="timeline-date">4/29–5/3<small>2027</small></div>
+                        <div class="timeline-card">
+                            <h3 data-i18n="stage5Zh">外訪（蒙古）</h3>
+                            <p data-i18n="stage5ZhCopy">前往蒙古展開實地文化交流與親善互動，把澳門故事帶向當地並拓展國際視野。</p>
+                            <div class="en" data-i18n="stage5En">Mongolia Trip — Travel to Mongolia for on-site cultural exchange and goodwill interaction, sharing Macao stories and broadening global perspectives.</div>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section registration-section" id="register">
+            <div class="container">
+                <div class="section-heading">
+                    <div class="section-kicker" data-i18n="registerKicker">Registration</div>
+                    <h2 data-i18n="registerTitle">立即加入親善之旅</h2>
+                    <p data-i18n="registerDesc">填寫以下資料，展開屬於你的跨文化交流體驗。</p>
+                </div>
+                <div class="form-layout" id="form-layout">
+                    <aside class="form-aside">
+                        <h3 data-i18n="asideTitle">同天共語・親善啟航</h3>
+                        <p data-i18n="asideCopy">招募18歲或以上本澳青年。提交報名後，主辦方將透過電郵或電話聯絡您。</p>
+                        <p><strong data-i18n="asideOrganizer">澳門扶青社</strong></p>
+                    </aside>
+                    <div>
+                        <form class="form-card" id="registration-form" novalidate>
+                            <div class="field">
+                                <label for="full-name" data-i18n="nameLabel">姓名 / Full Name *</label>
+                                <input id="full-name" name="fullName" type="text" required autocomplete="name">
+                            </div>
+                            <div class="field">
+                                <label for="birth-date" data-i18n="ageLabel">出生日期（確認年滿18歲） / Date of Birth *</label>
+                                <input id="birth-date" name="birthDate" type="date" required>
+                            </div>
+                            <div class="field">
+                                <label for="phone" data-i18n="phoneLabel">聯絡電話 / Phone Number *</label>
+                                <input id="phone" name="phone" type="tel" inputmode="tel" required autocomplete="tel">
+                            </div>
+                            <div class="field">
+                                <label for="email" data-i18n="emailLabel">電子郵件 / Email Address *</label>
+                                <input id="email" name="email" type="email" required autocomplete="email">
+                            </div>
+                            <div class="field">
+                                <label for="motivation" data-i18n="motivationLabel">報名動機與文化交流想法 / Motivation & Ideas *</label>
+                                <textarea id="motivation" name="motivation" required></textarea>
+                            </div>
+                            <label class="checkbox-field">
+                                <input id="consent" name="consent" type="checkbox" required>
+                                <span data-i18n="consentLabel">本人已閱讀並同意活動條款及個人資料收集聲明 / I agree to the terms and privacy notice. *</span>
+                            </label>
+                            <button class="btn form-submit" type="submit" data-i18n="submitText">提交報名 / Submit Registration</button>
+                        </form>
+
+                        <div class="confirmation" id="confirmation" role="status" aria-live="polite">
+                            <div>
+                                <div class="confirmation-icon">✓</div>
+                                <h3 data-i18n="confirmationTitle">報名資料已提交成功</h3>
+                                <p data-i18n="confirmationDesc">感謝您的參與，我們將按所填資料與您聯絡。</p>
+                                <div class="summary" id="summary"></div>
+                                <button type="button" class="btn btn-primary" id="new-registration" style="margin-top:20px" data-i18n="newRegistration">提交另一份報名</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container footer-inner">
+            <div>
+                <div><strong data-i18n="footerOrganizer">澳門扶青社 / Rotaract Club of Macau</strong></div>
+                <div data-i18n="footerAdvisor">指導單位：澳門扶輪社 / Rotary Club of Macau</div>
+            </div>
+            <div class="copyright" data-i18n="copyright">© 2027 澳門扶青社．保留所有權利</div>
+        </div>
+    </footer>
+
+    <script>
+        const translations = {
+            "zh-Hant": {
+                navBrand:"第二十二屆澳門親善大使文化交流之旅", navAbout:"計劃簡介", navSchedule:"活動時程", navRegister:"立即報名",
+                heroEyebrow:"澳門 · 文化交流 · 青年友誼",
+                heroTitle:"第二十二屆澳門親善大使文化交流之旅",
+                heroTagline:"同天共語・親善啟航",
+                heroIntro:"本屆邁入第二十二屆，由澳門扶青社主辦、澳門扶輪社指導，招募18歲或以上青年參與，以「同天共語・親善啟航」為主題，帶領澳門青年走進草原與歷史交織的蒙古，展開一場兼具深度探索、方案實踐與青年友誼連結的親善之旅。",
+                ctaRegister:"立即報名", ctaLearn:"了解更多", logoPlaceholder:"徽章<br>Logo 區域",
+                aboutKicker:"計劃簡介", aboutTitle:"跨文化交流，讓親善走得更遠",
+                aboutDesc:"以澳門文化為起點，在蒙古建立深度理解、友誼連結與青年行動。",
+                organizerLabel:"主辦單位", organizerEn:"Organizer", organizerValue:"澳門扶青社<br><small>Rotaract Club of Macau</small>",
+                advisorLabel:"指導單位", advisorEn:"Advisor", advisorValue:"澳門扶輪社<br><small>Rotary Club of Macau</small>",
+                eligibilityLabel:"招募對象", eligibilityEn:"Eligibility", eligibilityValue:"18歲或以上本澳青年",
+                destinationLabel:"交流目的地", destinationEn:"Destination", destinationValue:"蒙古 / Mongolia",
+                periodLabel:"整體期程", periodEn:"Programme Period", periodValue:"2027年1月16日至2027年5月3日",
+                goal1Zh:"展現澳門多元文化底蘊", goal1En:"Showcase Macao's Multicultural Heritage",
+                goal2Zh:"深化蒙古文化體驗與理解", goal2En:"Deepen Cultural Understanding of Mongolia",
+                goal3Zh:"落實企劃行動與跨文化交流", goal3En:"Execute Action Plans & Cross-Cultural Engagement",
+                goal4Zh:"培育青年領袖與國際視野", goal4En:"Cultivate Youth Leadership & Global Perspective",
+                scheduleKicker:"2027 活動時程", scheduleTitle:"五個階段，啟動親善旅程",
+                scheduleDesc:"由破冰相識、方案實行，到跨境交流，逐步累積行動成果與跨文化理解。",
+                stage1Zh:"開幕儀式及破冰分組", stage1ZhCopy:"正式啟動計劃，認識夥伴並完成分組，了解活動規則與交流方向。",
+                stage1En:"Opening & Icebreaking and Grouping — Kick off the programme, meet fellow participants, form teams, and get aligned on rules and goals.",
+                stage2Zh:"提交活動計劃書", stage2ZhCopy:"各組圍繞澳門文化主題，設定明確目標對象，構思並提交可行且具溫度的活動計劃書。",
+                stage2En:"Submit Activity Proposal — Teams design and submit actionable proposals centered on Macao culture for a defined target audience.",
+                stage3Zh:"計劃實行", stage3ZhCopy:"針對選定對象實際推行澳門文化相關活動，在協作與執行中累積實務經驗與影響力。",
+                stage3En:"Project Launch — Carry out the Macao-focused activities with the target audience, building hands-on execution and teamwork experience.",
+                stage4Zh:"最終演講及閉幕儀式", stage4ZhCopy:"各組匯報澳門活動成果與對象回饋，經評選選出優勝及特色獎項，並為本地階段作閉幕與蒙古外訪銜接。",
+                stage4En:"Final Sharing and Closing — Teams present Macao project outcomes and audience feedback for award selection, wrapping up the local phase and bridging into the Mongolia trip.",
+                stage5Zh:"外訪（蒙古）", stage5ZhCopy:"前往蒙古展開實地文化交流與親善互動，把澳門故事帶向當地並拓展國際視野。",
+                stage5En:"Mongolia Trip — Travel to Mongolia for on-site cultural exchange and goodwill interaction, sharing Macao stories and broadening global perspectives.",
+                registerKicker:"線上報名", registerTitle:"立即加入親善之旅",
+                registerDesc:"填寫以下資料，展開屬於你的跨文化交流體驗。",
+                asideTitle:"同天共語・親善啟航", asideCopy:"招募18歲或以上本澳青年。提交報名後，主辦方將透過電郵或電話聯絡您。",
+                asideOrganizer:"澳門扶青社",
+                nameLabel:"姓名 / Full Name *", ageLabel:"出生日期（確認年滿18歲） / Date of Birth *",
+                phoneLabel:"聯絡電話 / Phone Number *", emailLabel:"電子郵件 / Email Address *",
+                motivationLabel:"報名動機與文化交流想法 / Motivation & Ideas *",
+                consentLabel:"本人已閱讀並同意活動條款及個人資料收集聲明 / I agree to the terms and privacy notice. *",
+                submitText:"提交報名 / Submit Registration",
+                confirmationTitle:"報名資料已提交成功", confirmationDesc:"感謝您的參與，我們將按所填資料與您聯絡。",
+                newRegistration:"提交另一份報名",
+                footerOrganizer:"澳門扶青社 / Rotaract Club of Macau", footerAdvisor:"指導單位：澳門扶輪社 / Rotary Club of Macau",
+                copyright:"© 2027 澳門扶青社．保留所有權利"
+            },
+            "en": {
+                navBrand:"22nd Macao Goodwill Ambassador Cultural Exchange", navAbout:"About", navSchedule:"Schedule", navRegister:"Register",
+                heroEyebrow:"MACAO · CULTURAL EXCHANGE · YOUTH FRIENDSHIP",
+                heroTitle:"The 22nd Macao Goodwill Ambassador Cultural Exchange Programme",
+                heroTagline:"Under One Sky, Goodwill Sets Sail",
+                heroIntro:"Entering its 22nd edition, organized by the Rotaract Club of Macau under the guidance of the Rotary Club of Macau for youth aged 18 and above. Under the theme \"Under One Sky, Goodwill Sets Sail,\" it leads Macao youth into Mongolia—where vast steppes meet rich history—for a goodwill journey combining deep cultural exploration, project execution, and youth friendship.",
+                ctaRegister:"Register Now", ctaLearn:"Learn More", logoPlaceholder:"Badge<br>Logo Area",
+                aboutKicker:"About the Programme", aboutTitle:"Cross-Cultural Exchange, Extended by Goodwill",
+                aboutDesc:"Beginning with Macao culture, build deeper understanding, friendship and youth-led action in Mongolia.",
+                organizerLabel:"Organizer", organizerEn:"澳門扶青社", organizerValue:"Rotaract Club of Macau",
+                advisorLabel:"Advisor", advisorEn:"澳門扶輪社", advisorValue:"Rotary Club of Macau",
+                eligibilityLabel:"Eligibility", eligibilityEn:"招募對象", eligibilityValue:"Macao youth aged 18 and above",
+                destinationLabel:"Destination", destinationEn:"交流目的地", destinationValue:"Mongolia",
+                periodLabel:"Programme Period", periodEn:"整體期程", periodValue:"Jan 16 – May 3, 2027",
+                goal1Zh:"Showcase Macao's Multicultural Heritage", goal1En:"展現澳門多元文化底蘊",
+                goal2Zh:"Deepen Cultural Understanding of Mongolia", goal2En:"深化蒙古文化體驗與理解",
+                goal3Zh:"Execute Action Plans & Cross-Cultural Engagement", goal3En:"落實企劃行動與跨文化交流",
+                goal4Zh:"Cultivate Youth Leadership & Global Perspective", goal4En:"培育青年領袖與國際視野",
+                scheduleKicker:"2027 Schedule & Stages", scheduleTitle:"Five Stages Toward a Goodwill Journey",
+                scheduleDesc:"From first connections and project implementation to cross-border exchange, build action outcomes and cultural understanding.",
+                stage1Zh:"Opening & Icebreaking and Grouping", stage1ZhCopy:"Kick off the programme, meet fellow participants, form teams, and get aligned on rules and goals.",
+                stage1En:"開幕儀式及破冰分組 — 正式啟動計劃，認識夥伴並完成分組，了解活動規則與交流方向。",
+                stage2Zh:"Submit Activity Proposal", stage2ZhCopy:"Teams design and submit actionable proposals centered on Macao culture for a defined target audience.",
+                stage2En:"提交活動計劃書 — 各組圍繞澳門文化主題，設定明確目標對象，構思並提交可行且具溫度的活動計劃書。",
+                stage3Zh:"Project Launch", stage3ZhCopy:"Carry out the Macao-focused activities with the target audience, building hands-on execution and teamwork experience.",
+                stage3En:"計劃實行 — 針對選定對象實際推行澳門文化相關活動，在協作與執行中累積實務經驗與影響力。",
+                stage4Zh:"Final Sharing and Closing", stage4ZhCopy:"Teams present Macao project outcomes and audience feedback for award selection, wrapping up the local phase and bridging into the Mongolia trip.",
+                stage4En:"最終演講及閉幕儀式 — 各組匯報澳門活動成果與對象回饋，經評選選出優勝及特色獎項，並為本地階段作閉幕與蒙古外訪銜接。",
+                stage5Zh:"Mongolia Trip", stage5ZhCopy:"Travel to Mongolia for on-site cultural exchange and goodwill interaction, sharing Macao stories and broadening global perspectives.",
+                stage5En:"外訪（蒙古） — 前往蒙古展開實地文化交流與親善互動，把澳門故事帶向當地並拓展國際視野。",
+                registerKicker:"Online Registration", registerTitle:"Join the Goodwill Journey",
+                registerDesc:"Complete the form below to begin your cross-cultural exchange experience.",
+                asideTitle:"Under One Sky, Goodwill Sets Sail", asideCopy:"Open to Macao youth aged 18 and above. The organizer will contact you by email or phone after submission.",
+                asideOrganizer:"Rotaract Club of Macau",
+                nameLabel:"Full Name / 姓名 *", ageLabel:"Date of Birth (18+) / 出生日期 *",
+                phoneLabel:"Phone Number / 聯絡電話 *", emailLabel:"Email Address / 電子郵件 *",
+                motivationLabel:"Motivation & Cultural Exchange Ideas / 報名動機與文化交流想法 *",
+                consentLabel:"I agree to the terms and privacy notice. / 本人已閱讀並同意活動條款及個人資料收集聲明。 *",
+                submitText:"Submit Registration / 提交報名",
+                confirmationTitle:"Registration Submitted Successfully", confirmationDesc:"Thank you for your participation. We will contact you using the details provided.",
+                newRegistration:"Submit Another Registration",
+                footerOrganizer:"Rotaract Club of Macau / 澳門扶青社", footerAdvisor:"Advisor: Rotary Club of Macau / 指導單位：澳門扶輪社",
+                copyright:"© 2027 Rotaract Club of Macau. All rights reserved."
+            }
+        };
+
+        function setLanguage(lang) {
+            document.documentElement.lang = lang === "en" ? "en" : "zh-Hant";
+            document.querySelectorAll("[data-i18n]").forEach(el => {
+                const key = el.dataset.i18n;
+                if (translations[lang][key]) el.innerHTML = translations[lang][key];
+            });
+            document.querySelectorAll("[data-lang]").forEach(button => {
+                button.classList.toggle("active", button.dataset.lang === lang);
+            });
+            try { localStorage.setItem("racm-language", lang); } catch (e) {}
+        }
+
+        document.querySelectorAll("[data-lang]").forEach(button => {
+            button.addEventListener("click", () => setLanguage(button.dataset.lang));
+        });
+
+        const savedLang = (() => { try { return localStorage.getItem("racm-language"); } catch (e) { return null; } })();
+        if (savedLang === "en") setLanguage("en");
+
+        const today = new Date();
+        const maxBirthDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate()).toISOString().slice(0, 10);
+        document.getElementById("birth-date").max = maxBirthDate;
+
+        const form = document.getElementById("registration-form");
+        const confirmation = document.getElementById("confirmation");
+        const summary = document.getElementById("summary");
+        const langSnapshot = () => document.documentElement.lang === "en" ? "en" : "zh-Hant";
+
+        form.addEventListener("submit", async event => {
+            event.preventDefault();
+            if (!form.reportValidity()) return;
+
+            const birthDate = document.getElementById("birth-date").value;
+            if (!birthDate || birthDate > maxBirthDate) {
+                alert(langSnapshot() === "en" ? "You must be 18 years of age or older." : "報名者必須年滿18歲。");
+                return;
+            }
+
+            const data = Object.fromEntries(new FormData(form).entries());
+            if (!data.consent) {
+                alert(langSnapshot() === "en" ? "Please agree to the terms and privacy notice." : "請勾選同意活動條款及個人資料收集聲明。");
+                return;
+            }
+
+            // Submission hook: replace this block with Google Forms, Supabase, or an API request.
+            const labels = langSnapshot() === "en"
+                ? ["Full Name", "Date of Birth", "Phone", "Email", "Motivation"]
+                : ["姓名", "出生日期", "聯絡電話", "電子郵件", "報名動機"];
+            const values = [data.fullName, data.birthDate, data.phone, data.email, data.motivation];
+            summary.innerHTML = labels.map((label, index) =>
+                `<div><strong>${label}</strong><span>${String(values[index]).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]))}</span></div>`
+            ).join("");
+
+            form.style.display = "none";
+            confirmation.classList.add("visible");
+            confirmation.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+
+        document.getElementById("new-registration").addEventListener("click", () => {
+            form.reset();
+            summary.innerHTML = "";
+            confirmation.classList.remove("visible");
+            form.style.display = "block";
+            document.getElementById("full-name").focus();
+        });
+    </script>
+</body>
+</html>
