@@ -566,6 +566,7 @@ async function getDecryptedRegistrations(
             id: registration.id,
             reference_number: registration.reference_number,
             registration_plan: registration.registration_plan,
+            review_status: registration.review_status || 'pending',
             group_type: registration.group_type,
             age_group: registration.age_group,
             performance_categories: registration.performance_categories,
@@ -1109,6 +1110,25 @@ Deno.serve(async request => {
                 status: 200,
                 headers: downloadHeaders
             });
+        }
+        if (action === 'set-review-status') {
+            const registrationId = typeof body.registrationId === 'string' ? body.registrationId.trim() : '';
+            const reviewStatus = body.reviewStatus;
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(registrationId)) {
+                throw new HttpError(400, 'Registration ID is invalid.');
+            }
+            if (!['pending', 'included', 'excluded'].includes(String(reviewStatus))) {
+                throw new HttpError(400, 'Review status is invalid.');
+            }
+            const { error: statusError } = await serviceClient
+                .from('art_registrations')
+                .update({ review_status: String(reviewStatus) })
+                .eq('id', registrationId);
+            if (statusError) {
+                console.error('Registration status update failed:', statusError.code || 'unknown');
+                throw new HttpError(500, 'Could not update the registration status.');
+            }
+            return jsonResponse({ updated: true, registrationId, reviewStatus }, 200, headers);
         }
         if (action === 'delete-registration') {
             const registrationId = typeof body.registrationId === 'string' ? body.registrationId.trim() : '';

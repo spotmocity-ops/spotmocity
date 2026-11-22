@@ -7,6 +7,8 @@
     if (!list || !message || !refreshButton || !stageExportButton || !insuranceExportButton) return;
 
     let loading = false;
+    let activeFilter = 'all';
+    let allRegistrations = [];
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -81,6 +83,13 @@
     function renderRegistration(registration) {
         const groupName = registration.group_type === 'team' ? registration.team_name : registration.program_title;
         const referenceNumber = registration.reference_number || registration.id;
+        const reviewStatus = registration.review_status || 'pending';
+        const statusLabel = reviewStatus === 'included' ? '已納入' : reviewStatus === 'excluded' ? '不納入' : '待處理';
+        const statusClass = reviewStatus === 'included'
+            ? 'bg-green-100 text-green-800'
+            : reviewStatus === 'excluded'
+                ? 'bg-red-100 text-red-800'
+                : 'bg-slate-100 text-slate-700';
         const categories = (registration.performance_categories || []).map(formatCategory);
         if (registration.other_category) categories.push(registration.other_category);
         const stage = registration.stage_requirements || {};
@@ -104,6 +113,7 @@
                         <span>
                             <strong class="text-base">${escapeHtml(groupName)}</strong>
                             <span class="ml-2 rounded-full bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-800">${registration.group_type === 'team' ? '團體組' : '個人組'}</span>
+                            <span class="ml-2 rounded-full px-2 py-1 text-xs font-semibold ${statusClass}">${statusLabel}</span>
                         </span>
                         <span class="text-xs text-slate-500">${escapeHtml(formatDateTime(registration.submitted_at))}</span>
                     </span>
@@ -141,7 +151,11 @@
                     </section>
                     <div class="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
                         <p class="text-xs text-slate-500">資料參考編號：<strong class="font-mono text-slate-700">${escapeHtml(referenceNumber)}</strong> · 同意版本：${escapeHtml(registration.consent_version)}</p>
-                        <button type="button" data-delete-registration="${escapeHtml(registration.id)}" data-reference-number="${escapeHtml(referenceNumber)}" class="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">刪除報名</button>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" data-review-status="included" data-registration-id="${escapeHtml(registration.id)}" data-reference-number="${escapeHtml(referenceNumber)}" class="rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-semibold text-green-800 hover:bg-green-100">納入</button>
+                            <button type="button" data-review-status="excluded" data-registration-id="${escapeHtml(registration.id)}" data-reference-number="${escapeHtml(referenceNumber)}" class="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50">不納入</button>
+                            <button type="button" data-delete-registration="${escapeHtml(registration.id)}" data-reference-number="${escapeHtml(referenceNumber)}" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">刪除報名</button>
+                        </div>
                     </div>
                 </div>
             </details>
@@ -177,8 +191,12 @@
             const response = await requestApi('list');
             const result = await response.json();
             const registrations = Array.isArray(result.registrations) ? result.registrations : [];
-            list.innerHTML = registrations.length
-                ? registrations.map(renderRegistration).join('')
+            allRegistrations = registrations;
+            const filtered = activeFilter === 'all'
+                ? allRegistrations
+                : allRegistrations.filter(registration => (registration.review_status || 'pending') === activeFilter);
+            list.innerHTML = filtered.length
+                ? filtered.map(renderRegistration).join('')
                 : '<p class="rounded-lg bg-white p-6 text-center text-sm text-slate-500">目前沒有報名資料。</p>';
         } catch (error) {
             list.innerHTML = '';
@@ -243,10 +261,43 @@
         }
     }
 
+    async function setReviewStatus(registrationId, referenceNumber, reviewStatus) {
+        const label = reviewStatus === 'included' ? '納入' : '不納入';
+        if (!confirm(`確定將資料參考編號 ${referenceNumber} 設為「${label}」？`)) return;
+        try {
+            await requestApi('set-review-status', { registrationId, reviewStatus });
+            showMessage(`資料參考編號 ${referenceNumber} 已設為「${label}」。`, true);
+            await loadRegistrations();
+        } catch (error) {
+            showMessage(error instanceof Error ? error.message : '報名狀態更新失敗。');
+        }
+    }
+
     refreshButton.addEventListener('click', loadRegistrations);
     stageExportButton.addEventListener('click', () => exportCsv('export-stage', 'art-stage-coordination.csv'));
     insuranceExportButton.addEventListener('click', () => exportCsv('export-insurance', 'art-insurance-roster.csv', true));
+    document.getElementById('art-registration-filter')?.addEventListener('click', event => {
+        const button = event.target.closest('[data-art-filter]');
+        if (!button) return;
+        activeFilter = button.dataset.artFilter;
+        document.querySelectorAll('[data-art-filter]').forEach(filterButton => {
+            const active = filterButton === button;
+            filterButton.classList.toggle('bg-slate-900', activeFilter === 'all' && active);
+            filterButton.classList.toggle('text-white', activeFilter === 'all' && active);
+        });
+        const filtered = activeFilter === 'all'
+            ? allRegistrations
+            : allRegistrations.filter(registration => (registration.review_status || 'pending') === activeFilter);
+        list.innerHTML = filtered.length
+            ? filtered.map(renderRegistration).join('')
+            : '<p class="rounded-lg bg-white p-6 text-center text-sm text-slate-500">目前沒有符合此篩選的報名資料。</p>';
+    });
     list.addEventListener('click', event => {
+        const reviewButton = event.target.closest('[data-review-status]');
+        if (reviewButton) {
+            setReviewStatus(reviewButton.dataset.registrationId, reviewButton.dataset.referenceNumber, reviewButton.dataset.reviewStatus);
+            return;
+        }
         const deleteButton = event.target.closest('[data-delete-registration]');
         if (deleteButton) {
             deleteRegistration(deleteButton.dataset.deleteRegistration, deleteButton.dataset.referenceNumber);

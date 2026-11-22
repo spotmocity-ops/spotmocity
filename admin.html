@@ -108,6 +108,12 @@
                 <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                     投保名單包含解密後的證件號碼及出生日期。只可交予獲授權的主辦／保險人員，並須在活動結束後 14 日內完成使用。
                 </div>
+                <div id="art-registration-filter" class="mb-4 flex flex-wrap gap-2" aria-label="報名審核篩選">
+                    <button type="button" data-art-filter="all" class="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">全部</button>
+                    <button type="button" data-art-filter="pending" class="rounded-lg border bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">待處理</button>
+                    <button type="button" data-art-filter="included" class="rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-semibold text-green-800 hover:bg-green-100">已納入</button>
+                    <button type="button" data-art-filter="excluded" class="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800 hover:bg-red-100">不納入</button>
+                </div>
                 <div id="art-registration-admin-message" class="mb-4 hidden rounded-lg p-3 text-sm" role="status" aria-live="polite"></div>
                 <div id="art-registration-admin-list" class="space-y-4">
                     <p class="rounded-lg bg-white p-6 text-center text-sm text-slate-500">選擇此分頁以載入報名資料。</p>

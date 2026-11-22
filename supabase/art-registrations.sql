@@ -31,6 +31,7 @@ create table if not exists public.art_registrations (
     consent_agreed boolean not null check (consent_agreed),
     consent_version text not null,
     submission_status text not null default 'processing' check (submission_status in ('processing', 'submitted')),
+    review_status text not null default 'pending' check (review_status in ('pending', 'included', 'excluded')),
     team_file_path text,
     team_file_name text,
     stage_file_path text,
@@ -62,9 +63,25 @@ create table if not exists public.art_registrations (
 alter table public.art_registrations
     add column if not exists reference_number text,
     add column if not exists registration_plan text not null default 'talent',
+    add column if not exists review_status text not null default 'pending',
     add column if not exists team_file_name text,
     add column if not exists stage_file_name text,
     add column if not exists stage_file_path text;
+
+do $$
+begin
+    if not exists (
+        select 1
+        from pg_constraint
+        where conname = 'art_registration_review_status_check'
+          and conrelid = 'public.art_registrations'::regclass
+    ) then
+        alter table public.art_registrations
+            add constraint art_registration_review_status_check
+            check (review_status in ('pending', 'included', 'excluded'));
+    end if;
+end
+$$;
 
 create sequence if not exists public.art_registration_reference_seq
     start with 202701
