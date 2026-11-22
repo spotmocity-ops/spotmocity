@@ -235,9 +235,28 @@
                 </fieldset>
             </section>
 
+            <section class="space-y-5 rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-5 shadow-sm md:p-7" aria-labelledby="impromptu-heading">
+                <div>
+                    <p class="text-sm font-semibold text-orange-700">第三部分</p>
+                    <h2 id="impromptu-heading" class="text-xl font-bold">表演者專屬彩蛋：百人即興大共舞</h2>
+                </div>
+                <fieldset>
+                    <legend class="mb-2 text-sm font-bold">你想一起加入壓軸的「百人即興大共舞」嗎？（免費參加） <span class="text-red-600">*</span></legend>
+                    <p class="mb-3 text-sm leading-6 text-slate-600">無需提前排練、0 舞蹈基礎也適合！壓軸時段將由領舞導師現場帶動簡單好玩的即興律動，與 100 位表演者一齊熱血大合照！</p>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-2 rounded-lg border border-orange-200 bg-white p-3 text-sm"><input type="radio" name="impromptu-dance" value="personal" required class="mt-1 accent-orange-600">一定要！算我一份（個人報名請勾選此項）</label>
+                        <label class="flex items-start gap-2 rounded-lg border border-orange-200 bg-white p-3 text-sm"><input type="radio" name="impromptu-dance" value="team" required class="mt-1 accent-orange-600">我們全隊一齊跳！（團體報名請勾選此項，並於下題填寫參與人數）</label>
+                        <label class="flex items-start gap-2 rounded-lg border border-orange-200 bg-white p-3 text-sm"><input type="radio" name="impromptu-dance" value="none" required class="mt-1 accent-orange-600">先不用，我專注完成自己的才藝節目就好</label>
+                    </div>
+                    <label id="impromptu-dance-count-row" class="mt-3 hidden block text-sm font-bold">貴團隊預計有幾位成員參與百人即興共舞？ <span class="text-red-600">*</span>
+                        <input id="impromptu-dance-team-count" type="text" maxlength="100" placeholder="例如：全隊 8 人參加" class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
+                    </label>
+                </fieldset>
+            </section>
+
             <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7" aria-labelledby="stage-heading">
                 <div>
-                    <p class="text-sm font-semibold text-blue-700">第三部分</p>
+                    <p class="text-sm font-semibold text-blue-700">第四部分</p>
                     <h2 id="stage-heading" class="text-xl font-bold">舞台與技術需求</h2>
                 </div>
                 <fieldset>
@@ -259,18 +278,6 @@
                             <span class="mt-1 block font-normal text-slate-500">只接受 MP4，檔案上限 100 MB。</span>
                         </label>
                     </div>
-                </fieldset>
-                <fieldset>
-                    <legend class="mb-2 text-sm font-bold">表演者專屬彩蛋：百人即興大共舞 <span class="text-red-600">*</span></legend>
-                    <p class="mb-3 text-sm leading-6 text-slate-600">無需提前排練、0 舞蹈基礎也適合！壓軸時段將由領舞導師現場帶動簡單好玩的即興律動，與 100 位表演者一齊熱血大合照！</p>
-                    <div class="space-y-2">
-                        <label class="flex items-start gap-2 rounded-lg border p-3 text-sm"><input type="radio" name="impromptu-dance" value="personal" required class="mt-1 accent-blue-700">一定要！算我一份（個人報名請勾選此項）</label>
-                        <label class="flex items-start gap-2 rounded-lg border p-3 text-sm"><input type="radio" name="impromptu-dance" value="team" required class="mt-1 accent-blue-700">我們全隊一齊跳！（團體報名請勾選此項，並於下題填寫參與人數）</label>
-                        <label class="flex items-start gap-2 rounded-lg border p-3 text-sm"><input type="radio" name="impromptu-dance" value="none" required class="mt-1 accent-blue-700">先不用，我專注完成自己的才藝節目就好</label>
-                    </div>
-                    <label id="impromptu-dance-count-row" class="mt-3 hidden block text-sm font-bold">貴團隊預計有幾位成員參與百人即興共舞？ <span class="text-red-600">*</span>
-                        <input id="impromptu-dance-team-count" type="text" maxlength="100" placeholder="例如：全隊 8 人參加" class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
-                    </label>
                 </fieldset>
                 <fieldset>
                     <legend class="mb-2 text-sm font-bold">麥克風與樂器需求</legend>
@@ -309,7 +316,7 @@
 
             <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7" aria-labelledby="declaration-heading">
                 <div>
-                    <p class="text-sm font-semibold text-blue-700">第四部分</p>
+                    <p class="text-sm font-semibold text-blue-700">第五部分</p>
                     <h2 id="declaration-heading" class="text-xl font-bold">聲明、個人資料收集及提交</h2>
                 </div>
                 <div class="space-y-3 rounded-xl bg-slate-50 p-4 text-sm leading-6">
