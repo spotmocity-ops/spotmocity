@@ -358,7 +358,7 @@ async function checkLogin() {
 
 function applyAdminRoleVisibility() {
     if (activeAdminRole !== 'registration') return;
-    const allowedTabs = ['art-registrations', 'racm-registrations'];
+    const allowedTabs = ['racm-registrations'];
     const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
     tabs.forEach(name => {
         const tabButton = document.getElementById(`tab-${name}`);
@@ -367,12 +367,12 @@ function applyAdminRoleVisibility() {
         if (view) view.classList.toggle('hidden', !allowedTabs.includes(name));
     });
     const headerTitle = document.querySelector('#admin-app header h1');
-    if (headerTitle) headerTitle.textContent = '2027全澳聚光日 報名管理後台';
+    if (headerTitle) headerTitle.textContent = '親善大使文化交流之旅 報名管理後台';
     switchTab('racm-registrations');
 }
 
 function switchTab(tab) {
-    if (activeAdminRole === 'registration' && tab !== 'art-registrations' && tab !== 'racm-registrations') {
+    if (activeAdminRole === 'registration' && tab !== 'racm-registrations') {
         tab = 'racm-registrations';
     }
     const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
