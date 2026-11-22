@@ -308,7 +308,7 @@ async function loginAdmin(event) {
         showApp();
         applyAdminRoleVisibility();
         if (activeAdminRole === 'registration') {
-            switchTab('art-registrations');
+            switchTab('racm-registrations');
         } else {
             await fetchSettings();
             await fetchSubmissions();
@@ -347,8 +347,8 @@ async function checkLogin() {
     showApp();
     applyAdminRoleVisibility();
     if (activeAdminRole === 'registration') {
-        window.location.hash = 'art-registrations';
-        switchTab('art-registrations');
+        window.location.hash = 'racm-registrations';
+        switchTab('racm-registrations');
     } else {
         await fetchSettings();
         await fetchSubmissions();
@@ -358,24 +358,24 @@ async function checkLogin() {
 
 function applyAdminRoleVisibility() {
     if (activeAdminRole !== 'registration') return;
-    const allowedTab = 'art-registrations';
-    const tabs = ['approvals', 'art-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
+    const allowedTabs = ['art-registrations', 'racm-registrations'];
+    const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
     tabs.forEach(name => {
         const tabButton = document.getElementById(`tab-${name}`);
         const view = document.getElementById(`view-${name}`);
-        if (tabButton) tabButton.classList.toggle('hidden', name !== allowedTab);
-        if (view) view.classList.toggle('hidden', name !== allowedTab);
+        if (tabButton) tabButton.classList.toggle('hidden', !allowedTabs.includes(name));
+        if (view) view.classList.toggle('hidden', !allowedTabs.includes(name));
     });
     const headerTitle = document.querySelector('#admin-app header h1');
     if (headerTitle) headerTitle.textContent = '2027全澳聚光日 報名管理後台';
-    switchTab(allowedTab);
+    switchTab('racm-registrations');
 }
 
 function switchTab(tab) {
-    if (activeAdminRole === 'registration' && tab !== 'art-registrations') {
-        tab = 'art-registrations';
+    if (activeAdminRole === 'registration' && tab !== 'art-registrations' && tab !== 'racm-registrations') {
+        tab = 'racm-registrations';
     }
-    const tabs = ['approvals', 'art-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
+    const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
     for (const name of tabs) {
         const active = name === tab;
         document.getElementById(`view-${name}`).classList.toggle('hidden', !active);
@@ -384,6 +384,7 @@ function switchTab(tab) {
     }
     if (tab === 'calendar') renderCalendarEditor();
     if (tab === 'art-registrations') window.loadArtRegistrationsAdmin();
+    if (tab === 'racm-registrations') window.loadRacmRegistrationsAdmin();
     if (tab === 'feedback') fetchActivityFeedback();
     if (tab === 'activity-curation') fetchCuratedActivityDrafts();
     if (tab === 'blog-review') {
@@ -4408,6 +4409,7 @@ function bindEvents() {
     });
     document.getElementById('tab-approvals').addEventListener('click', () => switchTab('approvals'));
     document.getElementById('tab-art-registrations').addEventListener('click', () => switchTab('art-registrations'));
+    document.getElementById('tab-racm-registrations').addEventListener('click', () => switchTab('racm-registrations'));
     document.getElementById('tab-calendar').addEventListener('click', () => switchTab('calendar'));
     document.getElementById('tab-feedback').addEventListener('click', () => switchTab('feedback'));
     document.getElementById('tab-home-content').addEventListener('click', () => switchTab('home-content'));

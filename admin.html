@@ -81,6 +81,7 @@
             <div class="max-w-7xl mx-auto px-4 flex flex-wrap gap-x-6 gap-y-2 mt-2 text-sm">
                 <button id="tab-approvals" class="pb-2 tab-active">待審批與對帳</button>
                 <button id="tab-art-registrations" class="pb-2 text-gray-400 hover:text-white">2027全澳聚光日報名</button>
+                <button id="tab-racm-registrations" class="pb-2 text-gray-400 hover:text-white">親善大使報名</button>
                 <button id="tab-calendar" class="pb-2 text-gray-400 hover:text-white">日曆編輯</button>
                 <button id="tab-feedback" class="pb-2 text-gray-400 hover:text-white">回饋管理</button>
                 <button id="tab-home-content" class="pb-2 text-gray-400 hover:text-white">首頁內容管理</button>
@@ -93,6 +94,27 @@
         </header>
 
         <main class="max-w-7xl mx-auto px-4 py-6">
+            <div id="view-racm-registrations" class="hidden">
+                <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-800">親善大使文化交流之旅報名管理</h2>
+                        <p class="mt-1 text-sm text-slate-600">可檢視、納入、不納入、匯出及刪除報名資料。</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="racm-registration-refresh" type="button" class="rounded-lg border bg-white px-3 py-2 text-sm font-semibold hover:bg-gray-50">重新整理</button>
+                        <button id="racm-registration-export" type="button" class="rounded-lg bg-amber-700 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-800">匯出已納入名單（CSV）</button>
+                    </div>
+                </div>
+                <div id="racm-registration-filter" class="mb-4 flex flex-wrap gap-2">
+                    <button type="button" data-racm-filter="all" class="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white">全部</button>
+                    <button type="button" data-racm-filter="pending" class="rounded-lg border bg-white px-3 py-2 text-sm font-semibold">待處理</button>
+                    <button type="button" data-racm-filter="included" class="rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-semibold text-green-800">已納入</button>
+                    <button type="button" data-racm-filter="excluded" class="rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800">不納入</button>
+                </div>
+                <div id="racm-registration-admin-message" class="mb-4 hidden rounded-lg p-3 text-sm"></div>
+                <div id="racm-registration-admin-list" class="space-y-4"></div>
+            </div>
+
             <div id="view-art-registrations" class="hidden">
                 <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -684,6 +706,7 @@
     <script src="smart-layout.js?v=20261029-page"></script>
     <script src="admin.js?v=20261103-blog-generation-cancellation"></script>
     <script src="art-registration-admin.js?v=20261122"></script>
+    <script src="racm-registration-admin.js?v=20261123"></script>
     <script src="site-backgrounds.js"></script>
 </body>
 </html>

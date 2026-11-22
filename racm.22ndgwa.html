@@ -800,15 +800,57 @@
                 return;
             }
 
-            // Submission hook: replace this block with Google Forms, Supabase, or an API request.
+            const stageValues = {
+                stage1: data.stage1 === "Confirmed",
+                stage2: data.stage2 === "Confirmed",
+                stage3: data.stage3 === "Confirmed",
+                stage4: data.stage4 === "Confirmed",
+                stage5: data.stage5 === "Acknowledged"
+            };
             const labels = langSnapshot() === "en"
-                ? ["English Full Name", "Chinese Full Name", "Date of Birth", "Macau ID", "Gender", "Occupation / Major", "Phone", "WeChat", "Email", "Stage 1", "Stage 2", "Stage 3", "Stage 4", "Stage 5"]
-                : ["英文全名", "中文全名", "出生日期", "澳門居民身分證號碼", "性別", "職業或主修科目", "聯絡電話", "WeChat", "電子郵件", "階段1確認", "階段2確認", "階段3確認", "階段4確認", "階段5確認"];
+                ? ["Reference Number", "English Full Name", "Chinese Full Name", "Date of Birth", "Macau ID", "Gender", "Occupation / Major", "Phone", "WeChat", "Email", "Stage 1", "Stage 2", "Stage 3", "Stage 4", "Stage 5"]
+                : ["報名編號", "英文全名", "中文全名", "出生日期", "澳門居民身分證號碼", "性別", "職業或主修科目", "聯絡電話", "WeChat", "電子郵件", "階段1確認", "階段2確認", "階段3確認", "階段4確認", "階段5確認"];
             const values = [
-                data.englishName, data.chineseName, data.birthDate, data.macauId, data.gender,
+                "", data.englishName, data.chineseName, data.birthDate, data.macauId, data.gender,
                 data.occupation, data.phone, data.wechat, data.email,
                 data.stage1, data.stage2, data.stage3, data.stage4, data.stage5
             ];
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = langSnapshot() === "en" ? "Submitting..." : "正在提交...";
+            try {
+                const response = await fetch("https://owvsfvunlqudrhdsuqvk.supabase.co/functions/v1/art-registration-api", {
+                    method: "POST",
+                    headers: {
+                        "apikey": "sb_publishable_4kBnCjtv4c7j-sb8l3BrUw_j63egBDR",
+                        "Authorization": "Bearer sb_publishable_4kBnCjtv4c7j-sb8l3BrUw_j63egBDR",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        action: "racm-submit",
+                        englishName: data.englishName,
+                        chineseName: data.chineseName,
+                        birthDate: data.birthDate,
+                        macauId: data.macauId,
+                        gender: data.gender,
+                        occupation: data.occupation,
+                        phone: data.phone,
+                        wechatId: data.wechat,
+                        email: data.email,
+                        ...stageValues,
+                        criteriaConsent: data.criteriaConsent === "on",
+                        programmeConsent: data.programmeConsent === "on"
+                    })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.error || "Registration submission failed.");
+                values[0] = result.reference;
+            } catch (error) {
+                submitButton.disabled = false;
+                submitButton.textContent = langSnapshot() === "en" ? "Submit Registration" : "提交報名";
+                alert(error instanceof Error ? error.message : "Registration submission failed.");
+                return;
+            }
             summary.innerHTML = labels.map((label, index) =>
                 `<div><strong>${label}</strong><span>${String(values[index]).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]))}</span></div>`
             ).join("");
@@ -823,7 +865,7 @@
             summary.innerHTML = "";
             confirmation.classList.remove("visible");
             form.style.display = "block";
-            document.getElementById("full-name").focus();
+            document.getElementById("english-name").focus();
         });
     </script>
 </body>

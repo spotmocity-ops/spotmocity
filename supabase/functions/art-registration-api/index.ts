@@ -1056,6 +1056,82 @@ Deno.serve(async request => {
             return await purgeExpiredRegistrations(serviceClient);
         }
 
+        if (action === 'racm-submit') {
+            if (Date.now() > Date.parse('2027-05-03T23:59:59+08:00')) {
+                throw new HttpError(409, '報名已截止。');
+            }
+            const englishName = requiredText(body.englishName, 'English full name', 160);
+            const chineseName = requiredText(body.chineseName, 'Chinese full name', 120);
+            const birthDate = parseBirthDate(body.birthDate, 'Birth date');
+            const maxBirthDate = new Date();
+            maxBirthDate.setUTCFullYear(maxBirthDate.getUTCFullYear() - 18);
+            if (birthDate > maxBirthDate.toISOString().slice(0, 10)) {
+                throw new HttpError(400, 'Applicant must be at least 18 years old.');
+            }
+            const macauId = requiredText(body.macauId, 'Macau ID number', 20);
+            if (!/^[0-9A-Za-z().\- ()]+$/.test(macauId)) {
+                throw new HttpError(400, 'Macau ID number is invalid.');
+            }
+            const gender = body.gender;
+            if (gender !== 'Male' && gender !== 'Female' && gender !== 'Prefer not to say') {
+                throw new HttpError(400, 'Gender is invalid.');
+            }
+            const occupation = requiredText(body.occupation, 'Occupation or major', 160);
+            const phone = requiredText(body.phone, 'Contact number', 8);
+            if (!/^[0-9]{8}$/.test(phone)) throw new HttpError(400, 'Contact number must contain 8 digits.');
+            const wechatId = requiredText(body.wechatId, 'WeChat ID', 160);
+            const email = requiredText(body.email, 'Email', 254).toLowerCase();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, 'Email is invalid.');
+            const stages = [body.stage1, body.stage2, body.stage3, body.stage4, body.stage5];
+            if (!stages.every(value => value === true)) {
+                throw new HttpError(400, 'Please confirm all five stages.');
+            }
+            if (body.criteriaConsent !== true || body.programmeConsent !== true) {
+                throw new HttpError(400, 'Both programme consent declarations are required.');
+            }
+
+            const key = await getEncryptionKey();
+            const registrationId = crypto.randomUUID();
+            const birthEncrypted = await encryptValue(birthDate, key, `${registrationId}:racm-birth-date`);
+            const macauIdEncrypted = await encryptValue(macauId, key, `${registrationId}:racm-macau-id`);
+            const { data: inserted, error: insertError } = await serviceClient
+                .from('racm_registrations')
+                .insert({
+                    id: registrationId,
+                    english_name: englishName,
+                    chinese_name: chineseName,
+                    birth_date_ciphertext: birthEncrypted.ciphertext,
+                    birth_date_iv: birthEncrypted.iv,
+                    macau_id_ciphertext: macauIdEncrypted.ciphertext,
+                    macau_id_iv: macauIdEncrypted.iv,
+                    gender,
+                    occupation,
+                    phone,
+                    wechat_id: wechatId,
+                    email,
+                    stage1: true,
+                    stage2: true,
+                    stage3: true,
+                    stage4: true,
+                    stage5: true,
+                    criteria_consent: true,
+                    programme_consent: true
+                })
+                .select('reference_number')
+                .maybeSingle();
+            if (insertError) {
+                console.error('RACM registration insert failed:', insertError.code || 'unknown');
+                throw new HttpError(500, 'Could not save the registration.');
+            }
+            return jsonResponse({
+                ok: true,
+                reference: typeof inserted?.reference_number === 'string'
+                    ? inserted.reference_number
+                    : registrationId.slice(0, 8).toUpperCase(),
+                submittedAt: new Date().toISOString()
+            }, 201, headers);
+        }
+
         if (!apiKey) throw new HttpError(500, 'Supabase public API key is not available.');
         await verifyAdmin(request, supabaseUrl, apiKey);
         const encryptionKey = await getEncryptionKey();
@@ -1112,6 +1188,110 @@ Deno.serve(async request => {
                 status: 200,
                 headers: downloadHeaders
             });
+        }
+        if (action === 'racm-list') {
+            const key = await getEncryptionKey();
+            const registrations: JsonRecord[] = [];
+            for (let offset = 0; ; offset += PAGE_SIZE) {
+                const { data, error } = await serviceClient
+                    .from('racm_registrations')
+                    .select('*')
+                    .order('submitted_at', { ascending: false })
+                    .range(offset, offset + PAGE_SIZE - 1);
+                if (error) throw new HttpError(500, 'Could not load RACM registrations.');
+                registrations.push(...(data || []));
+                if (!data || data.length < PAGE_SIZE) break;
+            }
+            const decrypted = [];
+            for (const registration of registrations) {
+                decrypted.push({
+                    ...registration,
+                    birth_date: await decryptValue(
+                        String(registration.birth_date_ciphertext),
+                        String(registration.birth_date_iv),
+                        key,
+                        `${registration.id}:racm-birth-date`
+                    ),
+                    macau_id: await decryptValue(
+                        String(registration.macau_id_ciphertext),
+                        String(registration.macau_id_iv),
+                        key,
+                        `${registration.id}:racm-macau-id`
+                    )
+                });
+            }
+            return jsonResponse({ registrations: decrypted }, 200, headers);
+        }
+        if (action === 'racm-set-review') {
+            const registrationId = typeof body.registrationId === 'string' ? body.registrationId.trim() : '';
+            const reviewStatus = body.reviewStatus;
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(registrationId)) {
+                throw new HttpError(400, 'Registration ID is invalid.');
+            }
+            if (!['pending', 'included', 'excluded'].includes(String(reviewStatus))) {
+                throw new HttpError(400, 'Review status is invalid.');
+            }
+            const { error } = await serviceClient
+                .from('racm_registrations')
+                .update({ review_status: String(reviewStatus) })
+                .eq('id', registrationId);
+            if (error) throw new HttpError(500, 'Could not update RACM registration status.');
+            return jsonResponse({ updated: true, reviewStatus }, 200, headers);
+        }
+        if (action === 'racm-delete') {
+            const registrationId = typeof body.registrationId === 'string' ? body.registrationId.trim() : '';
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(registrationId)) {
+                throw new HttpError(400, 'Registration ID is invalid.');
+            }
+            const { error } = await serviceClient.from('racm_registrations').delete().eq('id', registrationId);
+            if (error) throw new HttpError(500, 'Could not delete RACM registration.');
+            return jsonResponse({ deleted: true }, 200, headers);
+        }
+        if (action === 'racm-export') {
+            const key = await getEncryptionKey();
+            const { data, error } = await serviceClient
+                .from('racm_registrations')
+                .select('*')
+                .eq('review_status', 'included')
+                .order('submitted_at', { ascending: false });
+            if (error) throw new HttpError(500, 'Could not export RACM registrations.');
+            const rows: unknown[][] = [[
+                '報名編號','英文全名','中文全名','出生日期','澳門居民身分證','性別','職業或主修科目','聯絡電話','WeChat','Email',
+                'Stage 1','Stage 2','Stage 3','Stage 4','Stage 5','提交時間'
+            ]];
+            for (const registration of data || []) {
+                const birthDate = await decryptValue(
+                    String(registration.birth_date_ciphertext),
+                    String(registration.birth_date_iv),
+                    key,
+                    `${registration.id}:racm-birth-date`
+                );
+                const macauId = await decryptValue(
+                    String(registration.macau_id_ciphertext),
+                    String(registration.macau_id_iv),
+                    key,
+                    `${registration.id}:racm-macau-id`
+                );
+                rows.push([
+                    registration.reference_number,
+                    registration.english_name,
+                    registration.chinese_name,
+                    birthDate,
+                    macauId,
+                    registration.gender,
+                    registration.occupation,
+                    registration.phone,
+                    registration.wechat_id,
+                    registration.email,
+                    registration.stage1 ? '確認' : '',
+                    registration.stage2 ? '確認' : '',
+                    registration.stage3 ? '確認' : '',
+                    registration.stage4 ? '確認' : '',
+                    registration.stage5 ? '確認' : '',
+                    registration.submitted_at
+                ]);
+            }
+            return csvResponse(rows, 'racm-registrations-included.csv', headers);
         }
         if (action === 'set-review-status') {
             const registrationId = typeof body.registrationId === 'string' ? body.registrationId.trim() : '';
