@@ -1028,6 +1028,35 @@ Deno.serve(async request => {
         if (action === 'list') {
             return jsonResponse({ registrations: await getDecryptedRegistrations(serviceClient, encryptionKey) }, 200, headers);
         }
+        if (action === 'delete-registration') {
+            const registrationId = typeof body.registrationId === 'string' ? body.registrationId.trim() : '';
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(registrationId)) {
+                throw new HttpError(400, 'Registration ID is invalid.');
+            }
+            const { data: registration, error: queryError } = await serviceClient
+                .from('art_registrations')
+                .select('id,team_file_path,stage_file_path')
+                .eq('id', registrationId)
+                .maybeSingle();
+            if (queryError) {
+                console.error('Registration deletion lookup failed:', queryError.code || 'unknown');
+                throw new HttpError(500, 'Could not locate this registration.');
+            }
+            if (!registration) throw new HttpError(404, 'Registration not found.');
+            await removeStoredFiles(serviceClient, [
+                typeof registration.team_file_path === 'string' ? registration.team_file_path : null,
+                typeof registration.stage_file_path === 'string' ? registration.stage_file_path : null
+            ]);
+            const { error: deleteError } = await serviceClient
+                .from('art_registrations')
+                .delete()
+                .eq('id', registrationId);
+            if (deleteError) {
+                console.error('Registration deletion failed:', deleteError.code || 'unknown');
+                throw new HttpError(500, 'Could not delete this registration.');
+            }
+            return jsonResponse({ deleted: true, registrationId }, 200, headers);
+        }
         if (action === 'export-stage') {
             const registrations = await fetchAllRegistrations(serviceClient);
             return csvResponse(stageCsvRows(registrations), 'art-stage-coordination.csv', headers);

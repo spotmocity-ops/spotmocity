@@ -123,10 +123,14 @@ values (
     'art-registration-files',
     'art-registration-files',
     false,
-    5242880,
+    104857600,
     array[
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/octet-stream'
+        'application/octet-stream',
+        'audio/mpeg',
+        'audio/wav',
+        'audio/x-wav',
+        'video/mp4'
     ]
 )
 on conflict (id) do update
