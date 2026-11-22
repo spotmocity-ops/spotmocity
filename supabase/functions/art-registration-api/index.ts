@@ -463,9 +463,11 @@ async function verifyAdmin(request: Request, supabaseUrl: string, apiKey: string
     });
     const { data: userData, error: userError } = await authClient.auth.getUser(token);
     if (userError || !userData.user) throw new HttpError(401, 'Administrator sign-in is invalid or expired.');
-    const { data: isAdmin, error: roleError } = await authClient.rpc('is_admin');
+    const { data: role, error: roleError } = await authClient.rpc('get_admin_role');
     if (roleError) throw new HttpError(500, 'Administrator permission check failed.');
-    if (isAdmin !== true) throw new HttpError(403, 'Administrator permission is required.');
+    if (role !== 'full' && role !== 'registration') {
+        throw new HttpError(403, 'Administrator permission is required.');
+    }
 }
 
 async function fetchAllRegistrations(serviceClient: ReturnType<typeof createClient>): Promise<JsonRecord[]> {

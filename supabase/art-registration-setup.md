@@ -42,6 +42,22 @@ supabase secrets set ART_REGISTRATION_ENCRYPTION_KEY="貼上 base64 金鑰" ART_
 
    Function 關閉 Gateway JWT 強制驗證，因公開表單須可提交；Function 本身仍驗證管理員 JWT 與 `public.is_admin()` 權限。請勿在前端加入 Service Role Key 或加密金鑰。
 
+## 報名管理員帳號
+
+1. 在 Supabase Authentication 建立使用者並設定 Email／Password。
+2. 執行 [`admin-registration-role.sql`](./admin-registration-role.sql)，新增 `full` 與 `registration` 兩種角色。
+3. 在 Supabase SQL Editor 將使用者設為報名管理員：
+
+   ```sql
+   insert into public.admin_users (user_id, role)
+   select id, 'registration'
+   from auth.users
+   where email = '報名管理員電郵'
+   on conflict (user_id) do update set role = 'registration';
+   ```
+
+4. 報名管理員登入後只能看報名分頁、狀態、檔案下載及刪除操作。原有帳號若未設定角色，會預設為 `full`。
+
 ## 報名資料處理
 
 - 證件號碼、出生日期及團體 Excel 檔在 Edge Function 以 AES-256-GCM 加密後才寫入資料庫／私有 Storage。

@@ -264,8 +264,17 @@ function getEventMediaPath(value) {
 
 async function checkAdminRole() {
     const { data, error } = await supabaseClient.rpc('is_admin');
-    return { isAdmin: !error && data === true, error };
+    if (error) return { isAdmin: false, role: 'none', error };
+    if (!data) return { isAdmin: false, role: 'none', error: null };
+    const { data: roleData, error: roleError } = await supabaseClient.rpc('get_admin_role');
+    return {
+        isAdmin: true,
+        role: roleError ? 'none' : (roleData || 'full'),
+        error: roleError
+    };
 }
+
+let activeAdminRole = 'full';
 
 async function loginAdmin(event) {
     event.preventDefault();
@@ -295,10 +304,16 @@ async function loginAdmin(event) {
             return;
         }
 
+        activeAdminRole = roleCheck.role;
         showApp();
-        await fetchSettings();
-        await fetchSubmissions();
-        if (window.location.hash === '#art-registrations') switchTab('art-registrations');
+        applyAdminRoleVisibility();
+        if (activeAdminRole === 'registration') {
+            switchTab('art-registrations');
+        } else {
+            await fetchSettings();
+            await fetchSubmissions();
+            if (window.location.hash === '#art-registrations') switchTab('art-registrations');
+        }
     } catch (error) {
         alert('登入失敗：' + (error?.message || '無法連線至 Supabase'));
     }
@@ -328,13 +343,38 @@ async function checkLogin() {
         return;
     }
 
+    activeAdminRole = roleCheck.role;
     showApp();
-    await fetchSettings();
-    await fetchSubmissions();
-    if (window.location.hash === '#art-registrations') switchTab('art-registrations');
+    applyAdminRoleVisibility();
+    if (activeAdminRole === 'registration') {
+        window.location.hash = 'art-registrations';
+        switchTab('art-registrations');
+    } else {
+        await fetchSettings();
+        await fetchSubmissions();
+        if (window.location.hash === '#art-registrations') switchTab('art-registrations');
+    }
+}
+
+function applyAdminRoleVisibility() {
+    if (activeAdminRole !== 'registration') return;
+    const allowedTab = 'art-registrations';
+    const tabs = ['approvals', 'art-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
+    tabs.forEach(name => {
+        const tabButton = document.getElementById(`tab-${name}`);
+        const view = document.getElementById(`view-${name}`);
+        if (tabButton) tabButton.classList.toggle('hidden', name !== allowedTab);
+        if (view) view.classList.toggle('hidden', name !== allowedTab);
+    });
+    const headerTitle = document.querySelector('#admin-app header h1');
+    if (headerTitle) headerTitle.textContent = '2027全澳聚光日 報名管理後台';
+    switchTab(allowedTab);
 }
 
 function switchTab(tab) {
+    if (activeAdminRole === 'registration' && tab !== 'art-registrations') {
+        tab = 'art-registrations';
+    }
     const tabs = ['approvals', 'art-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
     for (const name of tabs) {
         const active = name === tab;
