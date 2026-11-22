@@ -8,4 +8,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.hero-image-assistant]
+
+[functions.art-registration-api]
 verify_jwt = false

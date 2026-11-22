@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>2027全澳聚光日-小城舞台，人人開Show｜SpotMo 澳聚光</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-50 font-sans text-slate-800">
+    <header class="bg-white shadow-sm">
+        <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
+            <a href="index.html" class="font-bold text-blue-800">SpotMoCity 澳聚光</a>
+            <a href="index.html" class="text-sm font-semibold text-blue-700 hover:underline">返回首頁</a>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-5xl space-y-8 px-4 py-8">
+        <div>
+            <p class="text-sm font-semibold text-blue-700">SpotMo 活動報名</p>
+            <h1 class="mt-1 text-3xl font-bold text-slate-900">2027全澳聚光日-小城舞台，人人開Show</h1>
+            <p class="mt-2 text-slate-600">歡迎個人及團體報名，展示多元藝術表演。</p>
+        </div>
+
+        <section class="grid gap-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:p-7" aria-labelledby="event-details-heading">
+            <div class="flex min-h-64 items-center justify-center rounded-xl border border-dashed border-blue-300 bg-blue-50 p-6 text-center">
+                <div>
+                    <span class="text-5xl" aria-hidden="true">🎭</span>
+                    <p class="mt-3 font-semibold text-blue-900">活動海報稍後公布</p>
+                </div>
+            </div>
+            <div>
+                <h2 id="event-details-heading" class="text-xl font-bold">活動詳情及章程</h2>
+                <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                    <div class="rounded-lg bg-slate-50 p-3">
+                        <dt class="text-slate-500">活動日期</dt>
+                        <dd class="mt-1 font-semibold">2027 年 3 月 14–15 日</dd>
+                    </div>
+                    <div class="rounded-lg bg-slate-50 p-3">
+                        <dt class="text-slate-500">報名截止</dt>
+                        <dd class="mt-1 font-semibold">2027 年 2 月 15 日</dd>
+                    </div>
+                    <div class="rounded-lg bg-slate-50 p-3">
+                        <dt class="text-slate-500">地點</dt>
+                        <dd class="mt-1 font-semibold">澳門戶外表演區</dd>
+                    </div>
+                    <div class="rounded-lg bg-slate-50 p-3">
+                        <dt class="text-slate-500">活動時段</dt>
+                        <dd class="mt-1 font-semibold">稍後公布</dd>
+                    </div>
+                </dl>
+                <div class="mt-4 space-y-2 text-sm leading-6">
+                    <p><strong>主辦：</strong>粵港澳大灣區中老年藝術協會</p>
+                    <p><strong>協辦：</strong>澳門扶青社</p>
+                    <p><strong>查詢：</strong>聯絡方式待公布</p>
+                    <p><strong>錄取方式：</strong>不設甄選；報名資料由主辦方核對，收到確認後方作實。</p>
+                    <p><strong>惡劣天氣安排：</strong>如遇惡劣天氣，活動安排將按澳門氣象局指引及主辦方公告為準；具體延期或取消安排待公布。</p>
+                    <p><strong>表演規則：</strong>個人組限時 3 分鐘內，團體組限時 5 分鐘內；參加者須確保表演內容及使用素材不侵犯他人權利，並按主辦方通知配合舞台統籌。</p>
+                </div>
+            </div>
+            <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950 md:col-span-2" role="note">
+                <strong>重要免責聲明</strong>
+                <p class="mt-1">SpotMo 僅提供資訊發佈及代收報名資料服務，非主辦機構；所有活動安排、舞台統籌及團體保險均由主辦社團全權負責。</p>
+            </div>
+        </section>
+
+        <form id="art-registration-form" class="space-y-8" novalidate>
+            <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7" aria-labelledby="entry-heading">
+                <div>
+                    <p class="text-sm font-semibold text-blue-700">第一部分</p>
+                    <h2 id="entry-heading" class="text-xl font-bold">報名組別、表演形式及節目資料</h2>
+                </div>
+
+                <fieldset>
+                    <legend class="mb-2 text-sm font-bold">參賽／表演形式 <span class="text-red-600">*</span></legend>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="flex cursor-pointer items-start gap-3 rounded-xl border p-4 hover:bg-blue-50">
+                            <input type="radio" name="group-type" value="individual" required class="mt-1 accent-blue-700">
+                            <span><strong>個人組</strong><span class="block text-sm text-slate-500">1 人</span></span>
+                        </label>
+                        <label class="flex cursor-pointer items-start gap-3 rounded-xl border p-4 hover:bg-blue-50">
+                            <input type="radio" name="group-type" value="team" required class="mt-1 accent-blue-700">
+                            <span><strong>團體組</strong><span class="block text-sm text-slate-500">2 人或以上</span></span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend class="mb-2 text-sm font-bold">年齡分組 <span class="text-red-600">*</span></legend>
+                    <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        <label class="flex items-center gap-2 rounded-lg border p-3"><input type="radio" name="age-group" value="child" required class="accent-blue-700">兒童組（12 歲或以下）</label>
+                        <label class="flex items-center gap-2 rounded-lg border p-3"><input type="radio" name="age-group" value="youth" required class="accent-blue-700">青少年組（13–17 歲）</label>
+                        <label class="flex items-center gap-2 rounded-lg border p-3"><input type="radio" name="age-group" value="adult" required class="accent-blue-700">公開／成人組（18–59 歲）</label>
+                        <label class="flex items-center gap-2 rounded-lg border p-3"><input type="radio" name="age-group" value="senior" required class="accent-blue-700">長青組（60 歲或以上）</label>
+                        <label class="flex items-center gap-2 rounded-lg border p-3 sm:col-span-2"><input type="radio" name="age-group" value="intergenerational" required class="accent-blue-700">親子／跨代混合組（不限年齡）</label>
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend class="mb-2 text-sm font-bold">藝術表演類別（可多選） <span class="text-red-600">*</span></legend>
+                    <div class="grid gap-2 sm:grid-cols-2">
+                        <label class="flex items-center gap-2 rounded-lg border p-3"><input type="checkbox" name="category" value="music" class="accent-blue-700">音樂</label>
+                        <label class="flex items-center gap-2 rounded-lg border p-3"><input type="checkbox" name="category" value="dance" class="accent-blue-700">舞蹈</label>
+                        <label class="flex items-center gap-2 rounded-lg border p-3"><input type="checkbox" name="category" value="drama" class="accent-blue-700">戲劇／曲藝</label>
+                        <label class="flex items-center gap-2 rounded-lg border p-3"><input type="checkbox" name="category" value="visual" class="accent-blue-700">雜技／魔術／其他視覺藝術表演</label>
+                        <label class="flex items-center gap-2 rounded-lg border p-3"><input type="checkbox" name="category" value="other" class="accent-blue-700">其他</label>
+                    </div>
+                    <label id="other-category-row" class="mt-3 hidden text-sm font-medium">請補充其他表演類別
+                        <input id="other-category" type="text" maxlength="120" class="mt-1 w-full rounded-lg border px-3 py-2">
+                    </label>
+                </fieldset>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <label class="text-sm font-bold">節目／作品名稱 <span class="text-red-600">*</span>
+                        <input name="program-title" type="text" maxlength="200" required class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
+                    </label>
+                    <label class="text-sm font-bold">演出人數 <span class="text-red-600">*</span>
+                        <input id="performer-count" name="performer-count" type="number" min="1" max="1000" value="1" required class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
+                    </label>
+                    <fieldset class="sm:col-span-2">
+                        <legend class="text-sm font-bold">預計演出時長 <span class="text-red-600">*</span> <span id="duration-limit-label" class="font-normal text-slate-500">個人組限時 3 分鐘內；團體組限時 5 分鐘內</span></legend>
+                        <div class="mt-1 flex max-w-sm items-center gap-2">
+                            <input id="duration-minutes" type="number" min="0" max="3" value="0" required aria-label="演出分鐘" class="w-24 rounded-lg border px-3 py-2">
+                            <span>分</span>
+                            <input id="duration-seconds" type="number" min="0" max="59" value="0" required aria-label="演出秒數" class="w-24 rounded-lg border px-3 py-2">
+                            <span>秒</span>
+                        </div>
+                    </fieldset>
+                    <label class="text-sm font-bold sm:col-span-2">節目簡介（供司儀及場刊使用，最多 100 字） <span class="text-red-600">*</span>
+                        <textarea id="program-description" name="program-description" rows="3" maxlength="100" required class="mt-1 w-full rounded-lg border px-3 py-2 font-normal"></textarea>
+                        <span class="mt-1 block text-right text-xs font-normal text-slate-500"><span id="description-count">0</span>/100</span>
+                    </label>
+                </div>
+            </section>
+
+            <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7" aria-labelledby="contact-heading">
+                <div>
+                    <p class="text-sm font-semibold text-blue-700">第二部分</p>
+                    <h2 id="contact-heading" class="text-xl font-bold">參賽者／主要聯絡人及團體資料</h2>
+                    <p class="mt-1 text-sm text-slate-600">個人組請填表演者資料；團體組請填隊長／主要聯絡人資料。未滿 18 歲者請填寫監護人緊急聯絡資料。</p>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <label class="text-sm font-bold">證件中文姓名 <span class="text-red-600">*</span>
+                        <input name="contact-chinese-name" autocomplete="name" maxlength="120" required class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
+                    </label>
+                    <label class="text-sm font-bold">證件外文姓名／英文拼音 <span class="text-red-600">*</span>
+                        <input name="contact-english-name" autocomplete="name" maxlength="160" required class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
+                    </label>
+                    <fieldset>
+                        <legend class="text-sm font-bold">性別 <span class="text-red-600">*</span></legend>
+                        <div class="mt-2 flex gap-4">
+                            <label class="flex items-center gap-2"><input type="radio" name="contact-gender" value="male" required class="accent-blue-700">男</label>
+                            <label class="flex items-center gap-2"><input type="radio" name="contact-gender" value="female" required class="accent-blue-700">女</label>
+                        </div>
+                    </fieldset>
+                    <label class="text-sm font-bold">出生日期 <span class="text-red-600">*</span>
+                        <input id="contact-birth-date" name="contact-birth-date" type="date" required class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
+                    </label>
+                    <label class="text-sm font-bold">證件類型 <span class="text-red-600">*</span>
+                        <select name="contact-document-type" required class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
+                            <option value="">請選擇</option>
+                            <option value="macau_id">澳門居民身份證</option>
+                            <option value="hong_kong_id">香港居民身份證</option>
+                            <option value="passport">護照</option>
+                            <option value="two_way_permit">往來港澳通行證</option>
+                        </select>
+                    </label>
+                    <label class="text-sm font-bold">證件號碼 <span class="text-red-600">*</span>
+                        <input name="contact-document-number" autocomplete="off" maxlength="80" required placeholder="例如：1234567(8)" class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
+                        <span class="mt-1 block font-normal text-slate-500">證件號碼由伺服器加密後儲存。</span>
+                    </label>
+                    <label class="text-sm font-bold">聯絡電話 <span class="text-red-600">*</span>
+                        <input name="contact-phone" type="tel" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" required placeholder="8 位數字" class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
+                        <span class="mt-1 block font-normal text-slate-500">可接收 WhatsApp／WeChat／SMS。</span>
+                    </label>
+                    <label class="text-sm font-bold">電子郵件 Email <span class="text-red-600">*</span>
+                        <input name="contact-email" type="email" autocomplete="email" maxlength="254" required class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
+                    </label>
+                </div>
+
+                <fieldset class="rounded-xl border border-slate-200 p-4">
+                    <legend class="px-1 text-sm font-bold">緊急聯絡人（未滿 18 歲請填監護人）</legend>
+                    <div class="grid gap-4 sm:grid-cols-3">
+                        <label class="text-sm font-medium">姓名 <span class="text-red-600">*</span>
+                            <input name="emergency-name" maxlength="120" required class="mt-1 w-full rounded-lg border px-3 py-2">
+                        </label>
+                        <label class="text-sm font-medium">關係 <span class="text-red-600">*</span>
+                            <input name="emergency-relationship" maxlength="80" required placeholder="例如：父親／母親／朋友" class="mt-1 w-full rounded-lg border px-3 py-2">
+                        </label>
+                        <label class="text-sm font-medium">電話 <span class="text-red-600">*</span>
+                            <input name="emergency-phone" type="tel" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" required class="mt-1 w-full rounded-lg border px-3 py-2">
+                        </label>
+                    </div>
+                </fieldset>
+
+                <fieldset id="team-fields" class="hidden space-y-4 rounded-xl border border-blue-200 bg-blue-50/50 p-4" disabled>
+                    <legend class="px-1 text-sm font-bold text-blue-900">團體組資料</legend>
+                    <label class="block text-sm font-bold">團體名稱 <span class="text-red-600">*</span>
+                        <input id="team-name" name="team-name" maxlength="160" required class="mt-1 w-full rounded-lg border px-3 py-2 font-normal">
+                    </label>
+                    <div>
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h3 class="font-semibold">團體成員名單</h3>
+                                <p class="text-xs text-slate-600">每位表演成員都需填寫投保資料。單團最多 1,000 人。</p>
+                            </div>
+                            <button id="add-team-member" type="button" class="rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-100">＋ 新增成員</button>
+                        </div>
+                        <div id="team-member-list" class="mt-3 space-y-3"></div>
+                    </div>
+                    <div class="rounded-lg border border-dashed border-blue-300 bg-white p-4">
+                        <p class="text-sm font-semibold">大型團體可上傳 Excel 成員名單</p>
+                        <p class="mt-1 text-xs text-slate-600">只接受 .xlsx，最多 5 MB；檔案會先加密，再存入 Supabase 私有儲存區。上傳名單與手動新增成員不可同時使用。</p>
+                        <div class="mt-3 flex flex-wrap items-center gap-3">
+                            <a href="team-members-template.csv" download class="text-sm font-semibold text-blue-700 underline">下載 Excel 可開啟的名單範本（CSV）</a>
+                            <input id="team-roster-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="block w-full text-sm sm:w-auto">
+                        </div>
+                        <p class="mt-2 text-xs text-slate-600">請用 Excel 開啟 CSV 範本，填妥後另存為 .xlsx 格式再上傳。</p>
+                    </div>
+                </fieldset>
+            </section>
+
+            <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7" aria-labelledby="stage-heading">
+                <div>
+                    <p class="text-sm font-semibold text-blue-700">第三部分</p>
+                    <h2 id="stage-heading" class="text-xl font-bold">舞台與技術需求</h2>
+                </div>
+                <fieldset>
+                    <legend class="mb-2 text-sm font-bold">伴奏音樂／背景影片 <span class="text-red-600">*</span></legend>
+                    <div class="grid gap-2 sm:grid-cols-3">
+                        <label class="flex items-start gap-2 rounded-lg border p-3"><input type="radio" name="accompaniment" value="audio" required class="mt-1 accent-blue-700"><span>需要播放音訊檔案<span class="block text-xs text-slate-500">MP3／WAV</span></span></label>
+                        <label class="flex items-start gap-2 rounded-lg border p-3"><input type="radio" name="accompaniment" value="video" required class="mt-1 accent-blue-700"><span>需要播放背景影片<span class="block text-xs text-slate-500">MP4</span></span></label>
+                        <label class="flex items-start gap-2 rounded-lg border p-3"><input type="radio" name="accompaniment" value="live" required class="mt-1 accent-blue-700"><span>純現場原聲／無需播放</span></label>
+                    </div>
+                    <div id="audio-file-row" class="mt-3 hidden rounded-lg border border-blue-200 bg-blue-50/40 p-4">
+                        <label class="block text-sm font-bold">上傳伴奏音訊檔案 <span class="text-red-600">*</span>
+                            <input id="accompaniment-audio-file" type="file" accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav" class="mt-2 block w-full text-sm">
+                            <span class="mt-1 block font-normal text-slate-500">只接受 MP3／WAV，檔案上限 50 MB。</span>
+                        </label>
+                    </div>
+                    <div id="video-file-row" class="mt-3 hidden rounded-lg border border-blue-200 bg-blue-50/40 p-4">
+                        <label class="block text-sm font-bold">上傳背景影片檔案 <span class="text-red-600">*</span>
+                            <input id="accompaniment-video-file" type="file" accept=".mp4,video/mp4" class="mt-2 block w-full text-sm">
+                            <span class="mt-1 block font-normal text-slate-500">只接受 MP4，檔案上限 100 MB。</span>
+                        </label>
+                    </div>
+                </fieldset>
+                <fieldset>
+                    <legend class="mb-2 text-sm font-bold">麥克風與樂器需求</legend>
+                    <div class="space-y-3">
+                        <div class="rounded-lg border p-3">
+                            <label class="flex items-center gap-2 text-sm font-medium"><input id="wireless-mic-toggle" type="checkbox" class="accent-blue-700">手持無線麥克風</label>
+                            <label id="wireless-mic-row" class="mt-2 hidden max-w-xs text-sm">數量
+                                <input id="wireless-mic-count" type="number" min="1" max="100" value="1" class="mt-1 w-full rounded-lg border px-3 py-2">
+                            </label>
+                        </div>
+                        <div class="rounded-lg border p-3">
+                            <label class="flex items-center gap-2 text-sm font-medium"><input id="headset-mic-toggle" type="checkbox" class="accent-blue-700">頭戴式／領夾式麥克風</label>
+                            <label id="headset-mic-row" class="mt-2 hidden max-w-xs text-sm">數量
+                                <input id="headset-mic-count" type="number" min="1" max="100" value="1" class="mt-1 w-full rounded-lg border px-3 py-2">
+                            </label>
+                        </div>
+                        <div class="rounded-lg border p-3">
+                            <label class="flex items-center gap-2 text-sm font-medium"><input id="instrument-mic-toggle" type="checkbox" class="accent-blue-700">樂器收音麥克風／DI Box</label>
+                            <label id="instrument-mic-row" class="mt-2 hidden text-sm">樂器名稱及數量
+                                <input id="instrument-mic-details" type="text" maxlength="500" class="mt-1 w-full rounded-lg border px-3 py-2">
+                            </label>
+                        </div>
+                        <label class="flex items-center gap-2 rounded-lg border p-3 text-sm"><input id="piano-required" type="checkbox" class="accent-blue-700">需要場地提供鋼琴／電子琴</label>
+                        <div class="rounded-lg border p-3">
+                            <label class="flex items-center gap-2 text-sm font-medium"><input id="large-props-toggle" type="checkbox" class="accent-blue-700">需自備大型樂器或大型道具</label>
+                            <label id="large-props-row" class="mt-2 hidden text-sm">尺寸與數量
+                                <input id="large-props-details" type="text" maxlength="500" class="mt-1 w-full rounded-lg border px-3 py-2">
+                            </label>
+                        </div>
+                    </div>
+                </fieldset>
+                <label class="block text-sm font-bold">其他特別舞台需求（選填）
+                    <textarea id="special-stage-requirements" maxlength="2000" rows="3" placeholder="例如：燈光暗場進場、椅子數量等" class="mt-1 w-full rounded-lg border px-3 py-2 font-normal"></textarea>
+                </label>
+            </section>
+
+            <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7" aria-labelledby="declaration-heading">
+                <div>
+                    <p class="text-sm font-semibold text-blue-700">第四部分</p>
+                    <h2 id="declaration-heading" class="text-xl font-bold">聲明、個人資料收集及提交</h2>
+                </div>
+                <div class="space-y-3 rounded-xl bg-slate-50 p-4 text-sm leading-6">
+                    <p>本人／本團體同意遵守活動章程及主辦方的現場安排，並確認表演內容、音樂、影片及其他素材不侵犯任何第三方權利。</p>
+                    <p>本人／本團體同意活動主辦及協辦單位在活動期間拍攝、錄影，並在活動宣傳及紀錄用途使用相關影像。</p>
+                    <p>依澳門《個人資料保護法》，本人明白並同意 SpotMo 為代收報名資料服務而收集本表資料，並將資料轉交主辦社團及保險公司作活動聯絡、投保及活動安排之用。證件號碼及出生日期會加密儲存；活動結束後 14 日內自系統資料表及私有儲存區刪除所有可識別個人資料，僅保留匿名統計。雲端服務備份則依服務供應商的備份保留政策到期清除。</p>
+                    <p>本人／本團體明白 SpotMo 並非主辦機構，活動安排、舞台統籌及團體保險由主辦社團負責。未滿 18 歲者須提供監護人緊急聯絡資料。</p>
+                </div>
+                <label class="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold leading-6">
+                    <input id="consent-agreed" type="checkbox" class="mt-1 h-4 w-4 shrink-0 accent-blue-700">
+                    <span>本人／本團體已詳細閱讀並完全同意上述所有章程、免責聲明、參賽同意書及個人資料收集聲明。<span class="text-red-600">*</span></span>
+                </label>
+                <div class="hidden" aria-hidden="true">
+                    <label>請勿填寫此欄<input id="website" name="website" type="text" tabindex="-1" autocomplete="off"></label>
+                </div>
+                <div id="registration-message" class="hidden rounded-lg p-4 text-sm" role="status" aria-live="polite"></div>
+                <div class="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-xs text-slate-500">提交時間由系統自動記錄。報名尚待主辦方確認。</p>
+                    <button id="submit-registration" type="submit" disabled class="rounded-lg bg-blue-700 px-6 py-3 font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300">提交報名</button>
+                </div>
+            </section>
+        </form>
+
+        <footer class="pb-6 text-center text-xs text-slate-500">
+            <a href="index.html" class="font-semibold text-blue-700 hover:underline">SpotMoCity 澳聚光</a>
+            <span class="mx-1">·</span>
+            活動內容及安排由主辦單位負責
+        </footer>
+    </main>
+
+    <script src="art-registration.js?v=20261122"></script>
+</body>
+</html>

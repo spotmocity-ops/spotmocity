@@ -43,6 +43,27 @@
                     <input id="admin-password" type="password" autocomplete="current-password" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" required>
                 </div>
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">登入管理後台</button>
+                <button id="forgot-password-btn" type="button" class="w-full text-sm font-semibold text-blue-700 hover:underline">忘記密碼？寄送重設連結</button>
+                <p id="login-message" class="hidden rounded-lg p-3 text-sm" role="status" aria-live="polite"></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="password-reset-screen" class="hidden min-h-screen flex items-center justify-center px-4">
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
+            <h1 class="text-2xl font-bold text-gray-800">設定新密碼</h1>
+            <p class="mt-1 text-sm text-gray-500">請輸入至少 8 個字元的新密碼。</p>
+            <form id="password-reset-form" class="mt-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">新密碼</label>
+                    <input id="new-admin-password" type="password" autocomplete="new-password" minlength="8" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">再次輸入新密碼</label>
+                    <input id="confirm-admin-password" type="password" autocomplete="new-password" minlength="8" class="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">更新密碼並登入</button>
+                <p id="password-reset-message" class="hidden rounded-lg p-3 text-sm" role="status" aria-live="polite"></p>
             </form>
         </div>
     </div>
@@ -59,6 +80,7 @@
             </div>
             <div class="max-w-7xl mx-auto px-4 flex flex-wrap gap-x-6 gap-y-2 mt-2 text-sm">
                 <button id="tab-approvals" class="pb-2 tab-active">待審批與對帳</button>
+                <button id="tab-art-registrations" class="pb-2 text-gray-400 hover:text-white">2027全澳聚光日報名</button>
                 <button id="tab-calendar" class="pb-2 text-gray-400 hover:text-white">日曆編輯</button>
                 <button id="tab-feedback" class="pb-2 text-gray-400 hover:text-white">回饋管理</button>
                 <button id="tab-home-content" class="pb-2 text-gray-400 hover:text-white">首頁內容管理</button>
@@ -71,6 +93,27 @@
         </header>
 
         <main class="max-w-7xl mx-auto px-4 py-6">
+            <div id="view-art-registrations" class="hidden">
+                <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-800">2027全澳聚光日-小城舞台，人人開Show 報名管理</h2>
+                        <p class="mt-1 text-sm text-slate-600">此頁包含參賽者個人資料，僅供已登入管理員處理投保及活動安排。</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="art-registration-refresh" type="button" class="rounded-lg border bg-white px-3 py-2 text-sm font-semibold hover:bg-gray-50">重新整理</button>
+                        <button id="art-registration-export-stage" type="button" class="rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800">匯出舞台技術統籌表（CSV）</button>
+                        <button id="art-registration-export-insurance" type="button" class="rounded-lg bg-amber-700 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-800">匯出完整投保名單（CSV）</button>
+                    </div>
+                </div>
+                <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    投保名單包含解密後的證件號碼及出生日期。只可交予獲授權的主辦／保險人員，並須在活動結束後 14 日內完成使用。
+                </div>
+                <div id="art-registration-admin-message" class="mb-4 hidden rounded-lg p-3 text-sm" role="status" aria-live="polite"></div>
+                <div id="art-registration-admin-list" class="space-y-4">
+                    <p class="rounded-lg bg-white p-6 text-center text-sm text-slate-500">選擇此分頁以載入報名資料。</p>
+                </div>
+            </div>
+
             <div id="view-approvals">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-lg font-bold text-gray-800">活動審批列表</h2>
@@ -634,6 +677,7 @@
     <script src="categories.js?v=20261027-life-services"></script>
     <script src="smart-layout.js?v=20261029-page"></script>
     <script src="admin.js?v=20261103-blog-generation-cancellation"></script>
+    <script src="art-registration-admin.js?v=20261122"></script>
     <script src="site-backgrounds.js"></script>
 </body>
 </html>

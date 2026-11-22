@@ -77,12 +77,82 @@ let calendarSpecialDays = [];
 
 function showLogin() {
     document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('password-reset-screen').classList.add('hidden');
     document.getElementById('admin-app').classList.add('hidden');
 }
 
 function showApp() {
     document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('password-reset-screen').classList.add('hidden');
     document.getElementById('admin-app').classList.remove('hidden');
+}
+
+function showPasswordReset() {
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('admin-app').classList.add('hidden');
+    document.getElementById('password-reset-screen').classList.remove('hidden');
+}
+
+function showLoginMessage(text, success = false) {
+    const element = document.getElementById('login-message');
+    element.textContent = text;
+    element.className = `rounded-lg p-3 text-sm ${success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`;
+}
+
+async function sendPasswordReset() {
+    const emailInput = document.getElementById('admin-email');
+    const email = emailInput.value.trim();
+    if (!email) {
+        showLoginMessage('請先輸入管理員電子郵件。');
+        emailInput.focus();
+        return;
+    }
+    if (!emailInput.reportValidity()) return;
+
+    const button = document.getElementById('forgot-password-btn');
+    button.disabled = true;
+    button.textContent = '正在寄送重設連結…';
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://www.spotmocity.fyi/admin.html'
+    });
+    if (error) {
+        showLoginMessage(`無法寄送重設郵件：${error.message}`);
+    } else {
+        showLoginMessage('重設密碼連結已寄出。請檢查收件匣及垃圾郵件，並於連結開啟後設定新密碼。', true);
+    }
+    button.disabled = false;
+    button.textContent = '忘記密碼？寄送重設連結';
+}
+
+async function updateAdminPassword(event) {
+    event.preventDefault();
+    const password = document.getElementById('new-admin-password').value;
+    const confirmation = document.getElementById('confirm-admin-password').value;
+    const message = document.getElementById('password-reset-message');
+    if (password.length < 8) {
+        message.textContent = '新密碼至少需要 8 個字元。';
+        message.className = 'rounded-lg bg-red-50 p-3 text-sm text-red-800';
+        message.classList.remove('hidden');
+        return;
+    }
+    if (password !== confirmation) {
+        message.textContent = '兩次輸入的新密碼不一致。';
+        message.className = 'rounded-lg bg-red-50 p-3 text-sm text-red-800';
+        message.classList.remove('hidden');
+        return;
+    }
+
+    const { error } = await supabaseClient.auth.updateUser({ password });
+    if (error) {
+        message.textContent = `更新密碼失敗：${error.message}`;
+        message.className = 'rounded-lg bg-red-50 p-3 text-sm text-red-800';
+        message.classList.remove('hidden');
+        return;
+    }
+    await supabaseClient.auth.signOut();
+    window.history.replaceState({}, document.title, 'admin.html');
+    showLogin();
+    showLoginMessage('密碼已更新，請使用新密碼登入。', true);
 }
 
 function escapeHtml(value) {
@@ -205,7 +275,10 @@ async function loginAdmin(event) {
     try {
         const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error || !data.user) {
-            alert('登入失敗：' + (error?.message || '無法確認帳號'));
+            const message = error?.code === 'invalid_credentials'
+                ? '電子郵件或密碼不正確。若忘記密碼，請使用下方「忘記密碼」重新設定。'
+                : '登入失敗：' + (error?.message || '無法確認帳號');
+            showLoginMessage(message);
             return;
         }
 
@@ -225,6 +298,7 @@ async function loginAdmin(event) {
         showApp();
         await fetchSettings();
         await fetchSubmissions();
+        if (window.location.hash === '#art-registrations') switchTab('art-registrations');
     } catch (error) {
         alert('登入失敗：' + (error?.message || '無法連線至 Supabase'));
     }
@@ -236,6 +310,11 @@ async function logoutAdmin() {
 }
 
 async function checkLogin() {
+    const recoveryLocation = `${window.location.hash} ${window.location.search}`;
+    if (recoveryLocation.includes('type=recovery') || recoveryLocation.includes('PASSWORD_RECOVERY')) {
+        showPasswordReset();
+        return;
+    }
     const { data, error } = await supabaseClient.auth.getSession();
     if (error || !data.session) {
         showLogin();
@@ -252,10 +331,11 @@ async function checkLogin() {
     showApp();
     await fetchSettings();
     await fetchSubmissions();
+    if (window.location.hash === '#art-registrations') switchTab('art-registrations');
 }
 
 function switchTab(tab) {
-    const tabs = ['approvals', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
+    const tabs = ['approvals', 'art-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
     for (const name of tabs) {
         const active = name === tab;
         document.getElementById(`view-${name}`).classList.toggle('hidden', !active);
@@ -263,6 +343,7 @@ function switchTab(tab) {
         document.getElementById(`tab-${name}`).classList.toggle('text-gray-400', !active);
     }
     if (tab === 'calendar') renderCalendarEditor();
+    if (tab === 'art-registrations') window.loadArtRegistrationsAdmin();
     if (tab === 'feedback') fetchActivityFeedback();
     if (tab === 'activity-curation') fetchCuratedActivityDrafts();
     if (tab === 'blog-review') {
@@ -4213,6 +4294,8 @@ async function saveBackground(key, fileInputId, urlInputId, label) {
 function bindEvents() {
     populateAdminCategories();
     document.getElementById('login-form').addEventListener('submit', loginAdmin);
+    document.getElementById('forgot-password-btn').addEventListener('click', sendPasswordReset);
+    document.getElementById('password-reset-form').addEventListener('submit', updateAdminPassword);
     document.getElementById('logout-btn').addEventListener('click', logoutAdmin);
     document.getElementById('refresh-btn').addEventListener('click', fetchSubmissions);
     document.getElementById('save-purpose-btn').addEventListener('click', () =>
@@ -4284,6 +4367,7 @@ function bindEvents() {
         if (confirm('確定要駁回此申請嗎？')) updateSubmission('rejected');
     });
     document.getElementById('tab-approvals').addEventListener('click', () => switchTab('approvals'));
+    document.getElementById('tab-art-registrations').addEventListener('click', () => switchTab('art-registrations'));
     document.getElementById('tab-calendar').addEventListener('click', () => switchTab('calendar'));
     document.getElementById('tab-feedback').addEventListener('click', () => switchTab('feedback'));
     document.getElementById('tab-home-content').addEventListener('click', () => switchTab('home-content'));
@@ -4860,6 +4944,7 @@ function bindEvents() {
 }
 
 supabaseClient.auth.onAuthStateChange(event => {
+    if (event === 'PASSWORD_RECOVERY') showPasswordReset();
     if (event === 'SIGNED_OUT') showLogin();
 });
 
