@@ -668,7 +668,7 @@ async function insuranceCsvRows(registrations: JsonRecord[]): Promise<unknown[][
         ];
         const contact = registration.contact as JsonRecord;
         const addPerson = (person: JsonRecord, role: string, phone: unknown, email: unknown) => rows.push([
-            registration.id,
+            String(registration.reference_number || registration.id),
             teamName,
             role,
             person.chinese_name,
@@ -1167,7 +1167,10 @@ Deno.serve(async request => {
         }
         if (action === 'export-insurance') {
             const registrations = await getDecryptedRegistrations(serviceClient, encryptionKey);
-            return csvResponse(await insuranceCsvRows(registrations), 'art-insurance-roster.csv', headers);
+            const includedRegistrations = registrations.filter(registration =>
+                (registration.review_status || 'pending') === 'included'
+            );
+            return csvResponse(await insuranceCsvRows(includedRegistrations), 'art-insurance-roster-included.csv', headers);
         }
         throw new HttpError(400, 'Unsupported action.');
     } catch (error) {

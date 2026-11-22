@@ -275,7 +275,7 @@
 
     refreshButton.addEventListener('click', loadRegistrations);
     stageExportButton.addEventListener('click', () => exportCsv('export-stage', 'art-stage-coordination.csv'));
-    insuranceExportButton.addEventListener('click', () => exportCsv('export-insurance', 'art-insurance-roster.csv', true));
+    insuranceExportButton.addEventListener('click', () => exportCsv('export-insurance', 'art-insurance-roster-included.csv', true));
     document.getElementById('art-registration-filter')?.addEventListener('click', event => {
         const button = event.target.closest('[data-art-filter]');
         if (!button) return;
