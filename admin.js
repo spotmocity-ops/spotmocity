@@ -357,18 +357,20 @@ async function checkLogin() {
 }
 
 function applyAdminRoleVisibility() {
-    if (activeAdminRole !== 'registration') return;
     const allowedTabs = ['racm-registrations'];
     const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'settings', 'backgrounds'];
     tabs.forEach(name => {
         const tabButton = document.getElementById(`tab-${name}`);
         const view = document.getElementById(`view-${name}`);
-        if (tabButton) tabButton.classList.toggle('hidden', !allowedTabs.includes(name));
-        if (view) view.classList.toggle('hidden', !allowedTabs.includes(name));
+        const restricted = activeAdminRole === 'registration' && !allowedTabs.includes(name);
+        if (tabButton) tabButton.classList.toggle('hidden', restricted);
+        if (view && restricted) view.classList.add('hidden');
     });
     const headerTitle = document.querySelector('#admin-app header h1');
-    if (headerTitle) headerTitle.textContent = '親善大使文化交流之旅 報名管理後台';
-    switchTab('racm-registrations');
+    if (headerTitle) headerTitle.textContent = activeAdminRole === 'registration'
+        ? '親善大使文化交流之旅 報名管理後台'
+        : '👑 SpotMoCity 超級管理後台';
+    if (activeAdminRole === 'registration') switchTab('racm-registrations');
 }
 
 function switchTab(tab) {
