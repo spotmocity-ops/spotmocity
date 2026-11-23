@@ -4,154 +4,30 @@
     const refresh = document.getElementById('racm-registration-refresh');
     const exportButton = document.getElementById('racm-registration-export');
     const filter = document.getElementById('racm-registration-filter');
-    const reauthDialog = document.getElementById('racm-reauth-dialog');
-    const reauthForm = document.getElementById('racm-reauth-form');
-    const reauthEmail = document.getElementById('racm-reauth-email');
-    const reauthPassword = document.getElementById('racm-reauth-password');
-    const reauthError = document.getElementById('racm-reauth-error');
-    const reauthSubmit = document.getElementById('racm-reauth-submit');
     if (!list || !message || !refresh || !exportButton) return;
 
+    const common = window.registrationAdminCommon;
+    const dashboard = common.createDashboard('racm');
     let registrations = [];
     let registrationsLoaded = false;
     let loadSequence = 0;
     let activeFilter = 'all';
-    let lastKnownEmail = '';
-    const filterLabels = { all: '全部', pending: '待處理', included: '已納入', excluded: '不納入' };
-    const macauDateFormatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Macau', year: 'numeric', month: '2-digit', day: '2-digit'
-    });
-
-    class SessionExpiredError extends Error {
-        constructor() {
-            super('管理員登入已失效。');
-        }
-    }
-
-    function macauDate(value) {
-        const date = new Date(value);
-        if (!value || Number.isNaN(date.getTime())) throw new Error('報名日期格式有誤，無法計算今日新增人數。');
-        const parts = Object.fromEntries(macauDateFormatter.formatToParts(date).map(part => [part.type, part.value]));
-        return `${parts.year}-${parts.month}-${parts.day}`;
-    }
-
-    function updateCounts(items) {
-        const counts = items ? { all: items.length, pending: 0, included: 0, excluded: 0, today: 0 } : null;
-        if (counts) {
-            const today = macauDate(new Date());
-            items.forEach(item => {
-                const status = item.review_status || 'pending';
-                if (!['pending', 'included', 'excluded'].includes(status)) throw new Error('報名狀態格式有誤，請重新整理。');
-                counts[status]++;
-                if (macauDate(item.submitted_at) === today) counts.today++;
-            });
-        }
-        ['all', 'pending', 'included', 'today'].forEach(key => {
-            document.getElementById(`racm-count-${key}`).textContent = counts ? String(counts[key]) : '—';
-        });
-        filter.querySelectorAll('[data-racm-filter]').forEach(button => {
-            const key = button.dataset.racmFilter;
-            button.textContent = `${filterLabels[key]} (${counts ? counts[key] : '—'})`;
-        });
-    }
-
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, character => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         }[character]));
     }
 
-    function showMessage(text, success = false, sessionExpired = false) {
-        const label = document.createElement('span');
-        label.textContent = text;
-        message.replaceChildren(label);
-        if (sessionExpired) {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.textContent = '重新登入';
-            button.className = 'shrink-0 rounded-lg border border-red-300 bg-white px-3 py-2 font-semibold text-red-800 hover:bg-red-100';
-            button.addEventListener('click', openReauthDialog);
-            message.append(button);
-        }
-        message.className = `mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg p-3 text-sm ${success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`;
-        message.classList.remove('hidden');
+    function showMessage(text, success = false) {
+        common.showMessage(message, text, success);
     }
 
     function showError(error, fallback) {
-        showMessage(error instanceof Error ? error.message : fallback, false, error instanceof SessionExpiredError);
+        common.showError(message, error, fallback, loadRegistrations);
     }
 
-    function openReauthDialog() {
-        reauthForm.reset();
-        reauthError.classList.add('hidden');
-        reauthEmail.value = lastKnownEmail || document.getElementById('admin-email').value.trim();
-        reauthDialog.showModal();
-        (reauthEmail.value ? reauthPassword : reauthEmail).focus();
-    }
-
-    async function reauthenticate(event) {
-        event.preventDefault();
-        reauthError.classList.add('hidden');
-        reauthSubmit.disabled = true;
-        try {
-            const { data, error } = await supabaseClient.auth.signInWithPassword({
-                email: reauthEmail.value.trim(), password: reauthPassword.value
-            });
-            if (error || !data.user) {
-                throw new Error(error?.code === 'invalid_credentials' ? '電子郵件或密碼不正確。' : `登入失敗：${error?.message || '無法確認帳號'}`);
-            }
-            const roleCheck = await checkAdminRole();
-            if (roleCheck.error || !roleCheck.isAdmin) {
-                reauthDialog.close();
-                const { error: signOutError } = await supabaseClient.auth.signOut();
-                showLogin();
-                const roleMessage = roleCheck.error ? `權限檢查失敗：${roleCheck.error.message}` : '此帳號尚未獲管理員權限。';
-                showLoginMessage(signOutError ? `${roleMessage} 登出失敗：${signOutError.message}` : roleMessage);
-                return;
-            }
-            lastKnownEmail = data.user.email || reauthEmail.value.trim();
-            activeAdminRole = roleCheck.role;
-            reauthDialog.close();
-            showApp();
-            applyAdminRoleVisibility();
-            if (activeAdminRole !== 'registration') {
-                await loadRegistrations();
-                await fetchSettings();
-                await fetchSubmissions();
-            }
-        } catch (error) {
-            if (reauthDialog.open) {
-                reauthError.textContent = error instanceof Error ? error.message : '登入失敗，請稍後再試。';
-                reauthError.classList.remove('hidden');
-            } else {
-                showError(error, '重新載入後台失敗。');
-            }
-        } finally {
-            reauthPassword.value = '';
-            reauthSubmit.disabled = false;
-        }
-    }
-
-    async function requestApi(action, extra = {}) {
-        const { data, error } = await supabaseClient.auth.getSession();
-        if (error) throw new Error(`取得登入狀態失敗：${error.message}`);
-        if (!data.session?.access_token) throw new SessionExpiredError();
-        lastKnownEmail = data.session.user?.email || lastKnownEmail;
-        const response = await fetch(`${supabaseUrl}/functions/v1/art-registration-api`, {
-            method: 'POST',
-            headers: {
-                apikey: supabaseKey,
-                Authorization: `Bearer ${data.session.access_token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ action, ...extra })
-        });
-        if (!response.ok) {
-            if (response.status === 401) throw new SessionExpiredError();
-            const result = await response.json().catch(() => ({}));
-            throw new Error(result.error || 'RACM 報名操作失敗。');
-        }
-        return response;
+    function requestApi(action, extra = {}) {
+        return common.requestApi(action, extra, 'RACM 報名操作失敗。');
     }
 
     function renderRegistration(registration) {
@@ -189,34 +65,28 @@
         const sequence = ++loadSequence;
         message.classList.add('hidden');
         registrationsLoaded = false;
-        updateCounts(null);
+        dashboard.updateCounts(null);
         list.innerHTML = '<p class="rounded-lg bg-white p-6 text-center text-sm text-slate-500">載入中…</p>';
         try {
             const response = await requestApi('racm-list');
             const result = await response.json();
             if (sequence !== loadSequence) return;
             if (!Array.isArray(result.registrations)) throw new Error('報名資料格式有誤，請重新整理。');
-            updateCounts(result.registrations);
+            dashboard.updateCounts(result.registrations);
             registrations = result.registrations;
             registrationsLoaded = true;
             applyFilter();
         } catch (error) {
             if (sequence !== loadSequence) return;
             registrations = [];
-            updateCounts(null);
+            dashboard.updateCounts(null);
             list.innerHTML = '';
             showError(error, '載入失敗。');
         }
     }
 
     function applyFilter() {
-        filter.querySelectorAll('[data-racm-filter]').forEach(button => {
-            const active = button.dataset.racmFilter === activeFilter;
-            button.setAttribute('aria-pressed', String(active));
-            button.classList.toggle('ring-2', active);
-            button.classList.toggle('ring-slate-500', active);
-            button.classList.toggle('ring-offset-2', active);
-        });
+        dashboard.selectFilter(activeFilter);
         if (!registrationsLoaded) return;
         const filtered = activeFilter === 'all'
             ? registrations
@@ -260,9 +130,6 @@
 
     refresh.addEventListener('click', loadRegistrations);
     exportButton.addEventListener('click', exportCsv);
-    reauthForm.addEventListener('submit', reauthenticate);
-    document.getElementById('racm-reauth-cancel').addEventListener('click', () => reauthDialog.close());
-    reauthDialog.addEventListener('close', () => { reauthPassword.value = ''; });
     filter.addEventListener('click', event => {
         const button = event.target.closest('[data-racm-filter]');
         if (!button) return;

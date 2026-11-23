@@ -6,7 +6,10 @@
     const insuranceExportButton = document.getElementById('art-registration-export-insurance');
     if (!list || !message || !refreshButton || !stageExportButton || !insuranceExportButton) return;
 
-    let loading = false;
+    const common = window.registrationAdminCommon;
+    const dashboard = common.createDashboard('art');
+    let loadSequence = 0;
+    let registrationsLoaded = false;
     let activeFilter = 'all';
     let allRegistrations = [];
 
@@ -21,9 +24,11 @@
     }
 
     function showMessage(text, success = false) {
-        message.textContent = text;
-        message.className = `mb-4 rounded-lg p-3 text-sm ${success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`;
-        message.classList.remove('hidden');
+        common.showMessage(message, text, success);
+    }
+
+    function showError(error, fallback) {
+        common.showError(message, error, fallback, loadRegistrations);
     }
 
     function formatDateTime(value) {
@@ -162,49 +167,46 @@
         </article>`;
     }
 
-    async function requestApi(action, extraBody = {}) {
-        const { data, error } = await supabaseClient.auth.getSession();
-        if (error || !data.session?.access_token) throw new Error('管理員登入已失效，請重新登入。');
-        const response = await fetch(`${supabaseUrl}/functions/v1/art-registration-api`, {
-            method: 'POST',
-            headers: {
-                apikey: supabaseKey,
-                Authorization: `Bearer ${data.session.access_token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ action, ...extraBody })
-        });
-        if (!response.ok) {
-            const result = await response.json().catch(() => ({}));
-            throw new Error(result.error || '管理資料載入失敗。');
-        }
-        return response;
+    function requestApi(action, extraBody = {}) {
+        return common.requestApi(action, extraBody, '管理資料載入失敗。');
     }
 
     async function loadRegistrations() {
-        if (loading) return;
-        loading = true;
+        const sequence = ++loadSequence;
+        registrationsLoaded = false;
+        dashboard.updateCounts(null);
         message.classList.add('hidden');
         list.innerHTML = '<p class="rounded-lg bg-white p-6 text-center text-sm text-slate-500">正在安全載入報名資料…</p>';
         refreshButton.disabled = true;
         try {
             const response = await requestApi('list');
             const result = await response.json();
-            const registrations = Array.isArray(result.registrations) ? result.registrations : [];
-            allRegistrations = registrations;
-            const filtered = activeFilter === 'all'
-                ? allRegistrations
-                : allRegistrations.filter(registration => (registration.review_status || 'pending') === activeFilter);
-            list.innerHTML = filtered.length
-                ? filtered.map(renderRegistration).join('')
-                : '<p class="rounded-lg bg-white p-6 text-center text-sm text-slate-500">目前沒有報名資料。</p>';
+            if (sequence !== loadSequence) return;
+            if (!Array.isArray(result.registrations)) throw new Error('報名資料格式有誤，請重新整理。');
+            dashboard.updateCounts(result.registrations);
+            allRegistrations = result.registrations;
+            registrationsLoaded = true;
+            applyFilter();
         } catch (error) {
+            if (sequence !== loadSequence) return;
+            allRegistrations = [];
+            dashboard.updateCounts(null);
             list.innerHTML = '';
-            showMessage(error instanceof Error ? error.message : '管理資料載入失敗。');
+            showError(error, '管理資料載入失敗。');
         } finally {
-            loading = false;
-            refreshButton.disabled = false;
+            if (sequence === loadSequence) refreshButton.disabled = false;
         }
+    }
+
+    function applyFilter() {
+        dashboard.selectFilter(activeFilter);
+        if (!registrationsLoaded) return;
+        const filtered = activeFilter === 'all'
+            ? allRegistrations
+            : allRegistrations.filter(registration => (registration.review_status || 'pending') === activeFilter);
+        list.innerHTML = filtered.length
+            ? filtered.map(renderRegistration).join('')
+            : '<p class="rounded-lg bg-white p-6 text-center text-sm text-slate-500">目前沒有符合此篩選的報名資料。</p>';
     }
 
     async function exportCsv(action, filename, confirmSensitive = false) {
@@ -224,7 +226,7 @@
             setTimeout(() => URL.revokeObjectURL(url), 1000);
             showMessage('CSV 已匯出。請按個人資料保護要求安全保存及傳送。', true);
         } catch (error) {
-            showMessage(error instanceof Error ? error.message : 'CSV 匯出失敗。');
+            showError(error, 'CSV 匯出失敗。');
         } finally {
             button.disabled = false;
         }
@@ -246,7 +248,7 @@
             setTimeout(() => URL.revokeObjectURL(url), 1000);
             showMessage('檔案已解密並開始下載。請妥善刪除暫存副本。', true);
         } catch (error) {
-            showMessage(error instanceof Error ? error.message : '檔案下載失敗。');
+            showError(error, '檔案下載失敗。');
         }
     }
 
@@ -257,7 +259,7 @@
             showMessage(`資料參考編號 ${referenceNumber} 已刪除。`, true);
             await loadRegistrations();
         } catch (error) {
-            showMessage(error instanceof Error ? error.message : '報名刪除失敗。');
+            showError(error, '報名刪除失敗。');
         }
     }
 
@@ -269,7 +271,7 @@
             showMessage(`資料參考編號 ${referenceNumber} 已設為「${label}」。`, true);
             await loadRegistrations();
         } catch (error) {
-            showMessage(error instanceof Error ? error.message : '報名狀態更新失敗。');
+            showError(error, '報名狀態更新失敗。');
         }
     }
 
@@ -280,17 +282,7 @@
         const button = event.target.closest('[data-art-filter]');
         if (!button) return;
         activeFilter = button.dataset.artFilter;
-        document.querySelectorAll('[data-art-filter]').forEach(filterButton => {
-            const active = filterButton === button;
-            filterButton.classList.toggle('bg-slate-900', activeFilter === 'all' && active);
-            filterButton.classList.toggle('text-white', activeFilter === 'all' && active);
-        });
-        const filtered = activeFilter === 'all'
-            ? allRegistrations
-            : allRegistrations.filter(registration => (registration.review_status || 'pending') === activeFilter);
-        list.innerHTML = filtered.length
-            ? filtered.map(renderRegistration).join('')
-            : '<p class="rounded-lg bg-white p-6 text-center text-sm text-slate-500">目前沒有符合此篩選的報名資料。</p>';
+        applyFilter();
     });
     list.addEventListener('click', event => {
         const reviewButton = event.target.closest('[data-review-status]');
