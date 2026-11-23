@@ -87,7 +87,6 @@
                 <button id="tab-home-content" class="pb-2 text-gray-400 hover:text-white">首頁內容管理</button>
                 <button id="tab-life-services" class="pb-2 text-gray-400 hover:text-white">生活服務與資源對接</button>
                 <button id="tab-activity-curation" class="pb-2 text-gray-400 hover:text-white">每日活動搜集</button>
-                <button id="tab-blog-review" class="pb-2 text-gray-400 hover:text-white">網誌審核</button>
                 <button id="tab-settings" class="pb-2 text-gray-400 hover:text-white">條款內容管理</button>
                 <button id="tab-backgrounds" class="pb-2 text-gray-400 hover:text-white">背景圖片管理</button>
             </div>
@@ -368,103 +367,6 @@
                 </div>
             </div>
 
-            <div id="view-blog-review" class="hidden">
-                <div class="mb-4">
-                    <h2 class="text-lg font-bold text-gray-800">每日網誌草稿審核</h2>
-                    <p class="mt-1 text-sm text-gray-500">每日新增活動會自動整理成一篇待審網誌。確認內容後儲存修改，或核准並正式發布至文章頁及首頁；IG 文案只供複製，不會自動發布。</p>
-                </div>
-                <div class="grid gap-5 lg:grid-cols-[minmax(240px,1fr)_minmax(0,2fr)]">
-                    <section class="rounded-xl bg-white p-4 shadow-sm">
-                        <div class="mb-3 flex items-center justify-between gap-2">
-                            <h3 class="font-semibold text-gray-800">文章草稿</h3>
-                            <button id="refresh-blog-posts-btn" type="button" class="rounded bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700">重新整理</button>
-                        </div>
-                        <nav id="blog-status-filters" class="mb-3 flex gap-2" aria-label="網誌狀態篩選">
-                            <button type="button" data-blog-filter="draft" aria-pressed="true" class="rounded-lg border px-3 py-1.5 text-sm">待審核</button>
-                            <button type="button" data-blog-filter="published" aria-pressed="false" class="rounded-lg border px-3 py-1.5 text-sm">已發布</button>
-                        </nav>
-                        <details id="manual-blog-generator" open class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                            <summary class="cursor-pointer text-sm font-semibold text-blue-900">手動挑選活動生成網誌</summary>
-                            <p class="my-2 text-xs leading-5 text-gray-600">可選每日搜集的 AI 活動（待上架或已上架），以及已核准並顯示的投稿活動；已過期活動不會顯示。選擇 1 至 20 項；若今日已有待審文章，生成後會取代該草稿，已發布文章不會被覆寫。</p>
-                            <div class="grid gap-2 sm:grid-cols-2">
-                                <label class="text-xs font-medium text-gray-700">AI 服務
-                                    <select id="manual-blog-provider" class="mt-1 w-full rounded border bg-white px-2 py-2 text-sm">
-                                        <option value="qwen">Qwen Cloud</option>
-                                        <option value="openai">OpenAI 相容服務</option>
-                                    </select>
-                                </label>
-                                <label class="text-xs font-medium text-gray-700">模型名稱
-                                    <input id="manual-blog-model" type="text" maxlength="100" placeholder="請輸入已開通的視覺模型名稱" class="mt-1 w-full rounded border bg-white px-2 py-2 text-sm">
-                                </label>
-                            </div>
-                            <p id="manual-blog-provider-help" class="mt-1 text-xs text-gray-500">留空模型名稱會沿用伺服器的 QWEN_MODEL／OPENAI_MODEL；未設定 Qwen 時則預設 qwen-plus。</p>
-                            <p class="mt-1 text-xs leading-5 text-gray-500">讀取活動海報需要視覺模型；預設 QWEN_MODEL 或 qwen-plus 可能只支援文字。如未支援圖片，請輸入你所在 API 區域已開通的視覺模型名稱（例如 qwen3.8-max）。海報只作補充核對，活動資料為準。</p>
-                            <div class="my-2 flex items-center justify-between gap-2">
-                                <span id="manual-blog-activity-count" class="text-xs font-semibold text-gray-700">可選活動</span>
-                                <button id="refresh-blog-activities-btn" type="button" class="text-xs text-blue-700 underline">重新整理</button>
-                            </div>
-                            <div id="manual-blog-activity-list" class="max-h-[32rem] space-y-1 overflow-y-auto rounded border bg-white p-2" aria-live="polite">
-                                <p class="py-3 text-center text-xs text-gray-500">載入活動中...</p>
-                            </div>
-                            <button id="load-more-blog-activities-btn" type="button" class="mt-2 hidden w-full rounded border bg-white px-3 py-2 text-xs text-blue-700 hover:bg-blue-50">載入更多活動</button>
-                            <p id="manual-blog-generator-message" class="mt-2 text-xs" aria-live="polite"></p>
-                            <button id="manual-generate-blog-btn" type="button" class="mt-2 w-full rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800">生成所選活動網誌</button>
-                        </details>
-                        <div id="blog-post-list" class="space-y-2" aria-live="polite">
-                            <p class="py-6 text-center text-sm text-gray-500">載入網誌中...</p>
-                        </div>
-                    </section>
-
-                    <section class="rounded-xl bg-white p-4 shadow-sm">
-                        <div id="blog-editor-empty" class="py-12 text-center text-sm text-gray-500">請從左側選擇一篇網誌。</div>
-                        <form id="blog-post-form" class="hidden space-y-4">
-                            <div class="flex flex-wrap items-center justify-between gap-2">
-                                <div>
-                                    <h3 class="font-semibold text-gray-800">網誌審核與編輯</h3>
-                                    <p id="blog-post-meta" class="mt-1 text-xs text-gray-500"></p>
-                                </div>
-                                <span id="blog-post-status" class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800"></span>
-                            </div>
-                            <label class="block text-sm font-medium text-gray-700">網誌標題
-                                <input id="blog-post-title" type="text" maxlength="240" required class="mt-1 w-full rounded-lg border px-3 py-2 font-normal focus:ring-2 focus:ring-blue-500">
-                            </label>
-                            <div>
-                                <label for="blog-post-content" class="block text-sm font-medium text-gray-700">網誌內容（可直接編輯 HTML 版面預覽）</label>
-                                <div id="blog-post-content" contenteditable="true" role="textbox" aria-multiline="true" class="rich-content mt-1 min-h-96 rounded-lg border p-4 text-sm leading-7 outline-none focus:ring-2 focus:ring-blue-500"></div>
-                                <p class="mt-1 text-xs text-gray-500">內容會於儲存時清理不安全標籤及連結。</p>
-                            </div>
-                            <div class="grid gap-4 xl:grid-cols-2">
-                                <div class="space-y-3 rounded-lg border p-3">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <h4 class="font-semibold text-gray-800">Canva 圖卡文字</h4>
-                                        <button id="copy-blog-canva-btn" type="button" class="rounded border px-2.5 py-1 text-xs hover:bg-gray-50">複製</button>
-                                    </div>
-                                    <p class="text-xs text-gray-500">封面標題與短列點，可複製到 Canva 編輯。</p>
-                                    <textarea id="blog-post-canva" rows="8" maxlength="2000" class="w-full rounded-lg border p-3 text-sm"></textarea>
-                                </div>
-                                <div class="space-y-3 rounded-lg border p-3">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <h4 class="font-semibold text-gray-800">Instagram 社群同步</h4>
-                                        <button id="copy-blog-instagram-btn" type="button" class="rounded border px-2.5 py-1 text-xs hover:bg-gray-50">複製文案</button>
-                                    </div>
-                                    <label class="block text-xs font-medium text-gray-600">IG 貼文文案
-                                        <textarea id="blog-post-ig-caption" rows="6" maxlength="3000" class="mt-1 w-full rounded-lg border p-3 text-sm font-normal"></textarea>
-                                    </label>
-                                    <label class="block text-xs font-medium text-gray-600">Hashtags
-                                        <textarea id="blog-post-hashtags" rows="2" maxlength="1000" class="mt-1 w-full rounded-lg border p-3 text-sm font-normal"></textarea>
-                                    </label>
-                                </div>
-                            </div>
-                            <div id="blog-post-message" class="text-sm" aria-live="polite"></div>
-                            <div class="flex flex-wrap justify-end gap-2 border-t pt-4">
-                                <button id="save-blog-post-btn" type="button" class="rounded-lg border border-blue-600 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">儲存修改</button>
-                                <button id="publish-blog-post-btn" type="button" class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">核准並正式發布</button>
-                            </div>
-                        </form>
-                    </section>
-                </div>
-            </div>
-
             <div id="view-backgrounds" class="hidden">
                 <h2 class="text-lg font-bold text-gray-800 mb-4">背景圖片管理</h2>
                 <div class="bg-white p-6 rounded-xl shadow-sm grid gap-6 md:grid-cols-2">
@@ -704,7 +606,7 @@
 
     <script src="categories.js?v=20261027-life-services"></script>
     <script src="smart-layout.js?v=20261029-page"></script>
-    <script src="admin.js?v=20261103-blog-generation-cancellation"></script>
+    <script src="admin.js?v=20261123-remove-blog-review"></script>
     <script src="art-registration-admin.js?v=20261122"></script>
     <script src="racm-registration-admin.js?v=20261123"></script>
     <script src="site-backgrounds.js"></script>

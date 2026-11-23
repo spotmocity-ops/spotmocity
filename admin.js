@@ -359,7 +359,7 @@ async function checkLogin() {
 function applyAdminRoleVisibility() {
     if (activeAdminRole !== 'registration') return;
     const allowedTabs = ['racm-registrations'];
-    const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
+    const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'settings', 'backgrounds'];
     tabs.forEach(name => {
         const tabButton = document.getElementById(`tab-${name}`);
         const view = document.getElementById(`view-${name}`);
@@ -375,7 +375,7 @@ function switchTab(tab) {
     if (activeAdminRole === 'registration' && tab !== 'racm-registrations') {
         tab = 'racm-registrations';
     }
-    const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'blog-review', 'settings', 'backgrounds'];
+    const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'settings', 'backgrounds'];
     for (const name of tabs) {
         const active = name === tab;
         document.getElementById(`view-${name}`).classList.toggle('hidden', !active);
@@ -387,10 +387,6 @@ function switchTab(tab) {
     if (tab === 'racm-registrations') window.loadRacmRegistrationsAdmin();
     if (tab === 'feedback') fetchActivityFeedback();
     if (tab === 'activity-curation') fetchCuratedActivityDrafts();
-    if (tab === 'blog-review') {
-        fetchBlogPosts();
-        fetchManualBlogActivities();
-    }
     if (tab === 'settings' || tab === 'backgrounds' || tab === 'home-content' || tab === 'life-services') fetchSettings();
 }
 
@@ -4415,44 +4411,8 @@ function bindEvents() {
     document.getElementById('tab-home-content').addEventListener('click', () => switchTab('home-content'));
     document.getElementById('tab-life-services').addEventListener('click', () => switchTab('life-services'));
     document.getElementById('tab-activity-curation').addEventListener('click', () => switchTab('activity-curation'));
-    document.getElementById('tab-blog-review').addEventListener('click', () => switchTab('blog-review'));
     document.getElementById('tab-settings').addEventListener('click', () => switchTab('settings'));
     document.getElementById('tab-backgrounds').addEventListener('click', () => switchTab('backgrounds'));
-    document.getElementById('manual-blog-provider').addEventListener('change', updateManualBlogModelDefaults);
-    document.getElementById('refresh-blog-activities-btn').addEventListener('click', fetchManualBlogActivities);
-    document.getElementById('load-more-blog-activities-btn').addEventListener('click', () => loadMoreManualBlogActivities());
-    document.getElementById('manual-blog-activity-list').addEventListener('change', updateManualBlogActivitySelection);
-    document.getElementById('manual-generate-blog-btn').addEventListener('click', generateManualBlogPost);
-    document.getElementById('refresh-blog-posts-btn').addEventListener('click', () => fetchBlogPosts());
-    document.getElementById('blog-status-filters').addEventListener('click', event => {
-        const button = event.target.closest('[data-blog-filter]');
-        if (button) setBlogPostFilter(button.dataset.blogFilter);
-    });
-    document.getElementById('blog-post-list').addEventListener('click', event => {
-        const cancelButton = event.target.closest('[data-cancel-blog-generation]');
-        if (cancelButton) {
-            const post = blogPosts.find(item => String(item.id) === cancelButton.dataset.cancelBlogGeneration);
-            if (post?.generation_id) cancelManualBlogGeneration(post, cancelButton);
-            return;
-        }
-        const button = event.target.closest('[data-blog-post-id]');
-        if (button) showBlogPost(button.dataset.blogPostId);
-    });
-    document.getElementById('save-blog-post-btn').addEventListener('click', () => saveBlogPost());
-    document.getElementById('publish-blog-post-btn').addEventListener('click', () => saveBlogPost(true));
-    document.getElementById('copy-blog-canva-btn').addEventListener('click', () =>
-        copyBlogText(document.getElementById('blog-post-canva').value, 'Canva 圖卡文字')
-    );
-    document.getElementById('copy-blog-instagram-btn').addEventListener('click', () => {
-        const caption = document.getElementById('blog-post-ig-caption').value.trim();
-        const hashtags = document.getElementById('blog-post-hashtags').value.trim();
-        copyBlogText([caption, hashtags].filter(Boolean).join('\n\n'), 'Instagram 文案');
-    });
-    document.getElementById('blog-post-content').addEventListener('paste', event => {
-        event.preventDefault();
-        const text = event.clipboardData?.getData('text/plain') || '';
-        document.execCommand('insertText', false, text);
-    });
     document.getElementById('refresh-feedback-btn').addEventListener('click', fetchActivityFeedback);
     document.getElementById('feedback-list').addEventListener('click', saveActivityFeedbackStatus);
     document.getElementById('refresh-curated-drafts-btn').addEventListener('click', fetchCuratedActivityDrafts);
