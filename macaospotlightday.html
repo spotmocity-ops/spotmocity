@@ -21,7 +21,7 @@
         .icon { width: 23px; height: 23px; color: var(--orange); stroke-width: 2; flex-shrink: 0; }
         .icon-circle { display: inline-flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 50%; background: #fff4d6; }
         .icon-circle.coral { background: #ffeae5; }
-        .hero { min-height: 100vh; min-height: 100svh; --spot-x: 75%; --spot-y: 40%; }
+        .hero { --spot-x: 75%; --spot-y: 40%; }
         .hero::before {
             content: ""; position: absolute; inset: 0; pointer-events: none;
             background: radial-gradient(520px circle at var(--spot-x) var(--spot-y), rgba(255,184,0,.20), transparent 70%),
@@ -73,7 +73,7 @@
                 <a href="index.html" aria-label="返回 SpotMoCity 首頁"><img src="macauspotlightdaylogo.png" alt="2027 全澳聚光日" width="2860" height="768" class="block h-auto w-40 sm:w-56"></a>
                 <a href="index.html" class="flex items-center gap-2 text-sm text-[#5A6275] transition hover:text-[#E04826]"><i data-lucide="arrow-left" class="icon !h-4 !w-4" aria-hidden="true"></i>返回首頁</a>
             </nav>
-            <div class="hero-content mx-auto flex w-full max-w-7xl flex-1 items-center px-5 pb-16 pt-12 md:px-10">
+            <div class="hero-content mx-auto flex w-full max-w-7xl items-center px-5 pb-12 pt-8 md:px-10 md:pb-16 md:pt-12">
                 <div class="grid w-full items-center gap-12 lg:grid-cols-[1.15fr_.85fr]">
                     <div class="max-w-3xl">
                         <p class="latin inline-flex items-center gap-2 rounded-full border border-[#EAE4DC] bg-white/80 px-4 py-2 text-xs font-bold tracking-[.16em] text-[#E04826]"><i data-lucide="sparkles" class="icon !h-4 !w-4" aria-hidden="true"></i> MACAU ART FESTIVAL / 2027</p>
@@ -133,7 +133,7 @@
                         <p class="mt-8 inline-block rounded-full bg-[#FFB800] px-4 py-2 text-xs font-bold text-[#1A2238]">全城焦點項目</p>
                         <h2 id="dance-heading" class="section-title mt-5 text-3xl leading-snug md:text-4xl">特別企劃：<br><span class="text-[#FFB800]">小城百人共舞</span></h2>
                         <p class="serif mt-5 text-xl font-bold text-white">0基礎，由0跳起！</p>
-                        <a href="art-registration.html?plan=crowd-dance" class="cta mt-8 inline-flex items-center gap-3 rounded-full px-6 py-4 text-sm font-bold">搶佔百人舞席位（限額100名）<i data-lucide="arrow-up-right" class="icon !h-4 !w-4 !text-white" aria-hidden="true"></i></a>
+                        <a href="art-registration.html?plan=crowd-dance" class="cta mt-8 inline-flex items-center gap-3 rounded-full px-6 py-4 text-sm font-bold">搶佔百人舞席位<i data-lucide="arrow-up-right" class="icon !h-4 !w-4 !text-white" aria-hidden="true"></i></a>
                     </div>
                     <div>
                         <p class="text-base leading-8 text-white/85">從來沒學過跳舞？手腳不協調？這次我們不找專業舞者，找的就是完全 0 基礎的你！集結 100 位澳門市民，由專業導師手把手帶領，從最簡單的律動開始排練，在聚光日舞台上壓軸共舞，完成人生第一次百人齊舞挑戰！</p>
@@ -190,7 +190,6 @@
             <div><p class="section-label">05 / QUESTIONS &amp; ANSWERS</p><h2 id="faq-heading" class="section-title mt-4 text-3xl md:text-4xl">常見問題</h2><p class="mt-5 text-sm leading-7 text-[#5A6275]">關於舞台，你想知道的事。</p></div>
             <div class="space-y-3">
                 <details class="faq festival-card rounded-2xl px-6"><summary class="flex items-center justify-between gap-5 py-5 font-bold">我完全沒有舞台經驗，可以報名嗎？<span class="icon-circle coral !h-9 !w-9"><i data-lucide="plus" class="icon !h-5 !w-5" aria-hidden="true"></i></span></summary><p class="faq-answer pr-8 text-sm leading-7 text-[#5A6275]">完全可以！「人人開Show」主打全民參與、享受舞台，不設專業門檻與評審打分，只要敢上台，我們就為你鼓掌！</p></details>
-                <details class="faq festival-card rounded-2xl px-6"><summary class="flex items-center justify-between gap-5 py-5 font-bold">試演影片需要拍得很專業嗎？<span class="icon-circle coral !h-9 !w-9"><i data-lucide="plus" class="icon !h-5 !w-5" aria-hidden="true"></i></span></summary><p class="faq-answer pr-8 text-sm leading-7 text-[#5A6275]">不需要！用手機在家裡或排練室隨手拍 1–2 分鐘即可，主要用於確認表演形式、時長及舞台安全。</p></details>
                 <details class="faq festival-card rounded-2xl px-6"><summary class="flex items-center justify-between gap-5 py-5 font-bold">現場會提供哪些音響與設備？<span class="icon-circle coral !h-9 !w-9"><i data-lucide="plus" class="icon !h-5 !w-5" aria-hidden="true"></i></span></summary><p class="faq-answer pr-8 text-sm leading-7 text-[#5A6275]">現場提供專業音響、無線手持麥克風（最多 4 支）、頭戴式麥克風（需提前申請）、譜架及樂器接駁線（DI 盒）。樂器及個人道具需自行攜帶。</p></details>
                 <details class="faq festival-card rounded-2xl px-6"><summary class="flex items-center justify-between gap-5 py-5 font-bold">未滿 18 歲的小朋友可以參加嗎？<span class="icon-circle coral !h-9 !w-9"><i data-lucide="plus" class="icon !h-5 !w-5" aria-hidden="true"></i></span></summary><p class="faq-answer pr-8 text-sm leading-7 text-[#5A6275]">非常歡迎！未滿 18 歲參加者需於確認入選後補交家長或監護人簽署的同意書；12 歲以下建議家長陪同到場。</p></details>
                 <details class="faq festival-card rounded-2xl px-6"><summary class="flex items-center justify-between gap-5 py-5 font-bold">6 人以上團體優惠可以怎樣組隊？<span class="icon-circle coral !h-9 !w-9"><i data-lucide="plus" class="icon !h-5 !w-5" aria-hidden="true"></i></span></summary><p class="faq-answer pr-8 text-sm leading-7 text-[#5A6275]">只要同一節目滿 6 人或以上，例如合唱、舞蹈或親子大家庭，全隊均可享每人 MOP 99 優惠價。</p></details>
