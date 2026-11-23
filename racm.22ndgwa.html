@@ -61,16 +61,14 @@
         .partner-strip img { width: auto; max-height: 58px; max-width: 180px; object-fit: contain; }
         .page-banner {
             width: 100%;
-            max-height: 420px;
-            overflow: hidden;
             background: #fff;
         }
         .page-banner img {
             display: block;
             width: 100%;
-            max-height: 420px;
-            object-fit: cover;
-            object-position: center;
+            max-width: 1120px;
+            height: auto;
+            margin: 0 auto;
         }
         .brand-text { font-weight: 800; line-height: 1.25; max-width: 380px; }
         .nav-actions { display: flex; align-items: center; gap: 18px; }
@@ -192,7 +190,7 @@
         .goal-card:hover { transform: translateY(-6px); box-shadow: 0 18px 36px rgba(70,67,56,.10); }
         .goal-number { color: var(--gold); font-size: 2.2rem; font-weight: 900; line-height: 1; }
         .goal-card h3 { margin: 18px 0 6px; font-size: 1.08rem; }
-        .goal-card .en { color: #80796d; font-size: .86rem; line-height: 1.5; }
+        .goal-card .en { color: #80796d; font-size: 1.05rem; line-height: 1.5; }
 
         .schedule-section { background: linear-gradient(180deg, #f2ede3, #fbfaf7); }
         .timeline { position: relative; max-width: 900px; margin: 0 auto; }
@@ -287,14 +285,6 @@
             .lang-switch button { padding: 6px 8px; }
             .partner-strip { gap: 10px; flex-wrap: wrap; justify-content: center; }
             .partner-strip img { max-height: 46px; max-width: 120px; }
-            .page-banner { max-height: none; height: auto; }
-            .page-banner img {
-                width: 100%;
-                height: auto;
-                max-height: none;
-                object-fit: contain;
-                object-position: center;
-            }
             .hero { min-height: 560px; }
             .hero-inner { padding: 65px 0 58px; }
             .hero h1 { font-size: 2.15rem; }
@@ -497,7 +487,10 @@
                     </aside>
                     <div>
                         <form class="form-card" id="registration-form" novalidate>
-                            <p class="notice-box" data-i18n="privacyNotice">個人資料僅作報名及保險用途 / Personal information is collected for registration and insurance purposes only.</p>
+                            <div class="notice-box">
+                                <strong data-i18n="privacyNoticeTitle">報名平台與資料收集聲明</strong>
+                                <p data-i18n="privacyNotice">本活動透過「澳聚光（SpotMoCity）」網站平台進行線上報名，並由主辦單位「澳門扶青社」透過其專屬帳號接收及管理報名資料。所收集之個人資料（包括澳門居民身分證號碼）僅作本活動報名審核、聯絡及購買保險用途，並嚴格保密。</p>
+                            </div>
                             <div class="field-grid">
                                 <div class="field">
                                     <label for="english-name" data-i18n="englishNameLabel">英文全名（同身分證） / English Full Name (Same as ID card) *</label>
@@ -661,7 +654,8 @@
                 motivationLabel:"報名動機與文化交流想法 *",
                 consentLabel:"本人已閱讀並同意活動條款及個人資料收集聲明。*",
                 submitText:"提交報名",
-                    privacyNotice:"個人資料僅作報名及保險用途。",
+                    privacyNoticeTitle:"報名平台與資料收集聲明",
+                    privacyNotice:"本活動透過「澳聚光（SpotMoCity）」網站平台進行線上報名，並由主辦單位「澳門扶青社」透過其專屬帳號接收及管理報名資料。所收集之個人資料（包括澳門居民身分證號碼）僅作本活動報名審核、聯絡及購買保險用途，並嚴格保密。",
                     genderMale:"男", genderFemale:"女", genderOther:"不願透露",
                     englishNameLabel:"英文全名（同身分證） *",
                     chineseNameLabel:"中文全名（同身分證） *",
@@ -731,7 +725,8 @@
                 motivationLabel:"Motivation & Cultural Exchange Ideas *",
                 consentLabel:"I agree to the terms and privacy notice. *",
                 submitText:"Submit Registration",
-                privacyNotice:"Personal information is collected for registration and insurance purposes only.",
+                privacyNoticeTitle:"Registration Platform &amp; Data Collection Statement",
+                privacyNotice:"Online registration for this programme is conducted via the \"SpotMoCity (澳聚光)\" website platform, with registration data received and managed exclusively by the organizer, the Rotaract Club of Macau, through its dedicated account. All personal information collected (including Macao ID card numbers) will be kept strictly confidential and used solely for registration review, communication, and insurance arrangement purposes for this programme.",
                 genderMale:"Male", genderFemale:"Female", genderOther:"Prefer not to say",
                 englishNameLabel:"English Full Name (Same as ID card) *",
                 chineseNameLabel:"Chinese Full Name (Same as ID card) *",
