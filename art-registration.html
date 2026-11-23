@@ -5,69 +5,163 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>線上報名｜2027全澳聚光日-小城舞台，人人開Show｜SpotMo 澳聚光</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #FAF7F2;
+            color: #1A2238;
+            font-family: "Noto Sans TC", sans-serif;
+        }
+        h1, h2 { font-family: "Noto Serif TC", serif; }
+        .festival-header { background: rgba(255, 255, 255, .92); border-bottom: 1px solid #EAE4DC; }
+        .festival-watermark {
+            position: fixed; right: -4rem; bottom: -4rem; width: 480px;
+            max-width: none; opacity: .04; filter: grayscale(1); transform: rotate(-12deg);
+            pointer-events: none; user-select: none; z-index: 0;
+        }
+        .festival-intro {
+            position: relative; overflow: hidden; border: 1px solid #EAE4DC;
+            background: radial-gradient(circle at 94% 5%, rgba(255,184,0,.18), transparent 35%),
+                        radial-gradient(circle at 70% 100%, rgba(255,90,54,.09), transparent 40%), #fff;
+            box-shadow: 0 10px 30px rgba(26,34,56,.06);
+        }
+        .eyebrow, .step-badge {
+            font-family: Montserrat, "Noto Sans TC", sans-serif;
+            font-size: .75rem; font-weight: 700; letter-spacing: .12em;
+        }
+        .eyebrow { color: #E04826; }
+        .step-badge {
+            display: inline-block; border-radius: 9999px; padding: .45rem .8rem;
+            background: #FF5A36; color: #fff;
+        }
+        .event-info {
+            border: 1px solid #EAE4DC; border-radius: 1rem; background: #fff;
+            padding: 1rem; box-shadow: 0 10px 30px rgba(26,34,56,.04);
+        }
+        .event-info dt { color: #5A6275; font-size: .75rem; }
+        .event-info dd { margin-top: .35rem; font-weight: 700; }
+        .event-rules { border: 1px solid #EAE4DC; border-radius: 1rem; background: #FAF7F2; }
+        #art-registration-form > section {
+            border: 1px solid #EAE4DC; background: #fff;
+            box-shadow: 0 10px 30px rgba(26,34,56,.06);
+            padding: 1.5rem;
+        }
+        #art-registration-form > section[aria-labelledby="impromptu-heading"] {
+            border: 1.5px solid #FFB800;
+            background: linear-gradient(135deg, #FFF9E6, #fff);
+        }
+        #art-registration-form h2 { margin-top: .75rem; font-size: 1.5rem; line-height: 1.4; }
+        #art-registration-form :is(input[type="radio"], input[type="checkbox"]) {
+            accent-color: #FF5A36; flex-shrink: 0;
+        }
+        #art-registration-form :is(input:not([type="radio"]):not([type="checkbox"]):not([type="file"]), select, textarea) {
+            border-color: #DED8D0; background-color: #fff; color: #1A2238;
+        }
+        #art-registration-form :is(input, select, textarea, button):focus-visible,
+        a:focus-visible {
+            outline: 2px solid #E04826; outline-offset: 3px;
+        }
+        #art-registration-form label:has(> input:is([name="registration-plan"], [name="group-type"], [name="age-group"], [name="category"], [name="impromptu-dance"], [name="accompaniment"])) {
+            cursor: pointer; border: 1px solid #EAE4DC; border-radius: .85rem;
+            background: #fff; padding: 1rem; transition: border-color .2s, background-color .2s, box-shadow .2s;
+        }
+        #art-registration-form label:has(> input:is([name="registration-plan"], [name="group-type"], [name="age-group"], [name="category"], [name="impromptu-dance"], [name="accompaniment"])):hover {
+            border-color: #FF5A36; background: #FFF7F4;
+        }
+        #art-registration-form label:has(> input:is([name="registration-plan"], [name="group-type"], [name="age-group"], [name="category"], [name="impromptu-dance"], [name="accompaniment"]):checked) {
+            border-color: #FF5A36; box-shadow: inset 0 0 0 1px #FF5A36; background: #FFF3EF;
+        }
+        #team-fields, #audio-file-row, #video-file-row {
+            border-color: #EAE4DC; background: #FAF7F2;
+        }
+        #team-fields > legend { color: #1A2238; }
+        #add-team-member { border-color: #FF5A36; color: #E04826; }
+        #add-team-member:hover { background: #FFF3EF; }
+        #art-registration-form .text-slate-500,
+        #art-registration-form .text-slate-600 { color: #5A6275; }
+        #submit-registration {
+            width: 100%; border-radius: 1rem; background: #FF5A36;
+            padding: 1rem 1.5rem; font-size: 1.125rem;
+        }
+        #submit-registration:not(:disabled):hover { background: #E04826; }
+        #submit-registration:disabled { background: #D7D1CB; color: #5A6275; }
+        @media (min-width: 768px) {
+            #art-registration-form > section { padding: 2.5rem; }
+            #art-registration-form h2 { font-size: 1.75rem; }
+        }
+        @media (max-width: 639px) { .festival-watermark { width: 320px; } }
+        @media (prefers-reduced-motion: reduce) {
+            #art-registration-form label { transition: none; }
+        }
+    </style>
 </head>
-<body class="min-h-screen bg-slate-50 font-sans text-slate-800">
-    <header class="bg-white shadow-sm">
+<body class="min-h-screen">
+    <img src="./macauspotlightday-watermark.png" alt="" aria-hidden="true" class="festival-watermark">
+    <header class="festival-header relative z-10">
         <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
-            <a href="index.html" class="font-bold text-blue-800">SpotMoCity 澳聚光</a>
-            <a href="index.html" class="text-sm font-semibold text-blue-700 hover:underline">返回首頁</a>
+            <a href="index.html" aria-label="返回 SpotMoCity 首頁"><img src="macauspotlightdaylogo.png" alt="2027 全澳聚光日" width="2860" height="768" class="block h-auto w-40 sm:w-56"></a>
+            <a href="index.html" class="text-sm font-semibold text-[#E04826] hover:underline">返回首頁</a>
         </div>
     </header>
 
-    <main class="mx-auto max-w-5xl space-y-8 px-4 py-8">
-        <div>
-            <p class="text-sm font-semibold text-blue-700">SpotMo 活動報名</p>
-            <h1 class="mt-1 text-3xl font-bold text-slate-900">2027全澳聚光日線上報名</h1>
-            <p class="mt-2 text-slate-600">歡迎個人、團體及百人共舞計劃報名，展示多元藝術表演。</p>
-        </div>
-
-        <section class="grid gap-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:p-7" aria-labelledby="event-details-heading">
-            <div class="flex min-h-64 items-center justify-center rounded-xl border border-dashed border-blue-300 bg-blue-50 p-6 text-center">
+    <main class="relative z-10 mx-auto max-w-5xl space-y-8 px-4 py-8">
+        <section class="festival-intro rounded-2xl p-6 md:p-10" aria-labelledby="event-details-heading">
+            <div class="flex flex-wrap items-start gap-4">
+                <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#FFF4D6] text-[#E04826]" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10s3-3 3-8c4 0 7 3 7 3s3-3 7-3c0 5 3 8 3 8-1 6-5 10-10 12C7 20 3 16 2 10Z"/><path d="M8 9h.01M16 9h.01M9 15c1.5 1 4.5 1 6 0"/></svg>
+                </span>
                 <div>
-                    <span class="text-5xl" aria-hidden="true">🎭</span>
-                    <p class="mt-3 font-semibold text-blue-900">活動海報稍後公布</p>
+                    <p class="eyebrow">SPOTMOCITY · 活動報名</p>
+                    <h1 class="mt-2 text-3xl font-bold leading-tight md:text-4xl">2027全澳聚光日線上報名</h1>
+                    <p class="mt-3 text-sm leading-6 text-[#5A6275] md:text-base">歡迎個人、團體及百人共舞計劃報名，展示多元藝術表演。</p>
+                    <p class="mt-2 text-sm text-[#5A6275]">活動海報稍後公布</p>
                 </div>
             </div>
-            <div>
-                <h2 id="event-details-heading" class="text-xl font-bold">活動詳情及章程</h2>
-                <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                    <div class="rounded-lg bg-slate-50 p-3">
+            <div class="mt-7">
+                <h2 id="event-details-heading" class="text-xl font-bold">活動詳情</h2>
+                <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                    <div class="event-info">
                         <dt class="text-slate-500">活動日期</dt>
                         <dd class="mt-1 font-semibold">2027 年 3 月 14–15 日</dd>
                     </div>
-                    <div class="rounded-lg bg-slate-50 p-3">
+                    <div class="event-info">
                         <dt class="text-slate-500">報名截止</dt>
                         <dd class="mt-1 font-semibold">2027 年 2 月 15 日</dd>
                     </div>
-                    <div class="rounded-lg bg-slate-50 p-3">
+                    <div class="event-info">
                         <dt class="text-slate-500">地點</dt>
                         <dd class="mt-1 font-semibold">澳門戶外表演區</dd>
                     </div>
-                    <div class="rounded-lg bg-slate-50 p-3">
+                    <div class="event-info">
                         <dt class="text-slate-500">活動時段</dt>
                         <dd class="mt-1 font-semibold">稍後公布</dd>
                     </div>
                 </dl>
-                <div class="mt-4 space-y-2 text-sm leading-6">
+            </div>
+            <div class="event-rules mt-5">
+                <h3 class="p-4 font-bold">活動章程與免責聲明</h3>
+                <div class="space-y-2 border-t border-[#EAE4DC] p-4 text-sm leading-6 text-[#5A6275]">
                     <p><strong>主辦：</strong>粵港澳大灣區中老年藝術協會</p>
                     <p><strong>協辦：</strong>澳門扶青社</p>
                     <p><strong>查詢：</strong>聯絡方式待公布</p>
                     <p><strong>錄取方式：</strong>不設甄選；報名資料由主辦方核對，收到確認後方作實。</p>
                     <p><strong>惡劣天氣安排：</strong>如遇惡劣天氣，活動安排將按澳門氣象局指引及主辦方公告為準；具體延期或取消安排待公布。</p>
                     <p><strong>表演規則：</strong>個人組限時 3 分鐘內，團體組限時 5 分鐘內；參加者須確保表演內容及使用素材不侵犯他人權利，並按主辦方通知配合舞台統籌。</p>
+                    <div class="rounded-xl border border-[#FFB800] bg-[#FFF9E6] p-4 text-[#1A2238]" role="note">
+                        <strong>重要免責聲明</strong>
+                        <p class="mt-1">SpotMo 僅提供資訊發佈及代收報名資料服務，非主辦機構；所有活動安排、舞台統籌及團體保險均由主辦社團全權負責。</p>
+                    </div>
                 </div>
-            </div>
-            <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950 md:col-span-2" role="note">
-                <strong>重要免責聲明</strong>
-                <p class="mt-1">SpotMo 僅提供資訊發佈及代收報名資料服務，非主辦機構；所有活動安排、舞台統籌及團體保險均由主辦社團全權負責。</p>
             </div>
         </section>
 
         <form id="art-registration-form" class="space-y-8" novalidate>
             <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7" aria-labelledby="entry-heading">
                 <div>
-                    <p class="text-sm font-semibold text-blue-700">第一部分</p>
+                    <p class="step-badge">STEP 01 · 第一部分</p>
                     <h2 id="entry-heading" class="text-xl font-bold">報名組別、表演形式及節目資料</h2>
                 </div>
 
@@ -149,7 +243,7 @@
 
             <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7" aria-labelledby="contact-heading">
                 <div>
-                    <p class="text-sm font-semibold text-blue-700">第二部分</p>
+                    <p class="step-badge">STEP 02 · 第二部分</p>
                     <h2 id="contact-heading" class="text-xl font-bold">參賽者／主要聯絡人及團體資料</h2>
                     <p class="mt-1 text-sm text-slate-600">個人組請填表演者資料；團體組請填隊長／主要聯絡人資料。未滿 18 歲者請填寫監護人緊急聯絡資料。</p>
                 </div>
@@ -237,7 +331,7 @@
 
             <section class="space-y-5 rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-5 shadow-sm md:p-7" aria-labelledby="impromptu-heading">
                 <div>
-                    <p class="text-sm font-semibold text-orange-700">第三部分</p>
+                    <p class="step-badge">STEP 03 · 第三部分</p>
                     <h2 id="impromptu-heading" class="text-xl font-bold">表演者專屬彩蛋：百人即興大共舞</h2>
                 </div>
                 <fieldset>
@@ -256,7 +350,7 @@
 
             <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7" aria-labelledby="stage-heading">
                 <div>
-                    <p class="text-sm font-semibold text-blue-700">第四部分</p>
+                    <p class="step-badge">STEP 04 · 第四部分</p>
                     <h2 id="stage-heading" class="text-xl font-bold">舞台與技術需求</h2>
                 </div>
                 <fieldset>
@@ -316,17 +410,17 @@
 
             <section class="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-7" aria-labelledby="declaration-heading">
                 <div>
-                    <p class="text-sm font-semibold text-blue-700">第五部分</p>
+                    <p class="step-badge">STEP 05 · 第五部分</p>
                     <h2 id="declaration-heading" class="text-xl font-bold">聲明、個人資料收集及提交</h2>
                 </div>
-                <div class="space-y-3 rounded-xl bg-slate-50 p-4 text-sm leading-6">
+                <div class="space-y-3 rounded-xl border border-[#EAE4DC] bg-[#FAF7F2] p-4 text-sm leading-6 text-[#5A6275]">
                     <p><strong>1. 遵守規則與素材權責：</strong>本人／本團體同意遵守活動章程、舞台安全規範及主辦方之現場安排，並確認表演內容、音樂、影片及其他素材均屬合法取得，不侵犯任何第三方之著作權、肖像權或其他權利；如有侵權或爭議，由本人／本團體自行承擔相關責任。</p>
                     <p><strong>2. 肖像與影像授權：</strong>本人／本團體同意活動主辦單位、協辦單位及獲授權之拍攝／媒體團隊於活動期間進行拍攝及錄影，並同意將相關相片及影片免費使用於本活動之宣傳、推廣、媒體報導及活動紀錄用途。</p>
                     <p><strong>3. 個人資料收集與保護：</strong>依澳門《個人資料保護法》規定，本人明白並同意 SpotMo 為提供代收報名資料服務而收集本表所填寫之資料，並於必要範圍內轉交主辦社團及保險公司，作活動聯絡、報名核實、現場安排及團體保險之用。如未提供必要資料或監護人聯絡資料，可能導致無法完成報名或相關保險安排。</p>
                     <p><strong>4. 資料保存與刪除：</strong>身份證明文件號碼（如適用）及出生日期將於系統中加密儲存；所有可識別個人資料將於<strong>活動最後一日結束後 14 日內</strong>自系統資料表及私有儲存區刪除，僅保留匿名統計數據。雲端服務備份則依服務供應商之備份保留政策到期清除。如需查詢或更正個人資料，可聯絡主辦方或 SpotMo 官方渠道。</p>
                     <p><strong>5. 責任劃分與未成年人條款：</strong>本人／本團體明白 SpotMo 僅提供報名資訊及資料代收技術服務，並非活動主辦機構；實際活動安排、舞台統籌、現場管理及團體保險均由主辦社團負責。未滿 18 歲之參加者須提供家長或法定監護人之緊急聯絡資料，並須按規定提交監護人同意書。</p>
                 </div>
-                <label class="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-semibold leading-6">
+                <label class="flex items-start gap-3 rounded-xl border border-[#EAE4DC] bg-[#FFF7F4] p-4 text-sm font-semibold leading-6">
                     <input id="consent-agreed" type="checkbox" class="mt-1 h-4 w-4 shrink-0 accent-blue-700">
                     <span>本人／本團體已詳細閱讀並完全同意上述所有章程、免責聲明、參賽同意書及個人資料收集聲明。<span class="text-red-600">*</span></span>
                 </label>
@@ -334,7 +428,7 @@
                     <label>請勿填寫此欄<input id="website" name="website" type="text" tabindex="-1" autocomplete="off"></label>
                 </div>
                 <div id="registration-message" class="hidden rounded-lg p-4 text-sm" role="status" aria-live="polite"></div>
-                <div class="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex flex-col gap-3 border-t border-[#EAE4DC] pt-4">
                     <p class="text-xs text-slate-500">提交時間由系統自動記錄。報名尚待主辦方確認。</p>
                     <button id="submit-registration" type="submit" disabled class="rounded-lg bg-blue-700 px-6 py-3 font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300">提交報名</button>
                 </div>
@@ -342,7 +436,7 @@
         </form>
 
         <footer class="pb-6 text-center text-xs text-slate-500">
-            <a href="macaospotlightday.html" class="font-semibold text-blue-700 hover:underline">活動介紹</a>
+            <a href="macaospotlightday.html" class="font-semibold text-[#E04826] hover:underline">活動介紹</a>
             <span class="mx-1">·</span>
             活動內容及安排由主辦單位負責
         </footer>
