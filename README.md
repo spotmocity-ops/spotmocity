@@ -11,3 +11,5 @@
 5. 以兩個不同瀏覽器或裝置測試新增及同步；確認未登入者不能修改或刪除、指定管理員能登入及管理。Firebase 設定中的 API key 是網頁設定，不是管理員密碼；請依 Firebase 建議限制 API key 的使用範圍。
 
 可使用 VS Code 的 Live Server 開啟 `wine-tasting.html` 預覽。部署時需包含此 HTML、`wine-tasting.js` 和 `wine-tasting-poster.jpg`；此頁並非網站的 `index.html`，公開網址需以 `/wine-tasting.html` 結尾（或依主機設定使用 `/wine-tasting`）。
+
+SpotMoCity 完整管理員可在後台「品酒坊報名」分頁即時查看名單及總人數。此分頁為唯讀；編輯及刪除仍須在活動頁使用 Firebase 管理員帳號。部署時亦須包含 `wine-tasting-firebase.js` 和 `wine-registration-admin.js`。

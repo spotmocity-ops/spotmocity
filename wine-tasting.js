@@ -1,20 +1,11 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { app, database } from './wine-tasting-firebase.js';
 import {
     getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
-    getDatabase, onValue, push, ref, remove, runTransaction, set
+    onValue, push, ref, remove, runTransaction, set
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
 
-const firebaseConfig = {
-    apiKey: 'AIzaSyCrkzpcM7BBopIs2EqJllNz6QNqu1299gA',
-    authDomain: 'spotmocity-9aa17.firebaseapp.com',
-    databaseURL: 'https://spotmocity-9aa17-default-rtdb.asia-southeast1.firebasedatabase.app',
-    projectId: 'spotmocity-9aa17',
-    storageBucket: 'spotmocity-9aa17.firebasestorage.app',
-    messagingSenderId: '732588189317',
-    appId: '1:732588189317:web:a2a4a4489b8167ff59abec'
-};
 const ADMIN_UID = '14qFEd82puOI53YeIMhB3wYrWZ23';
 // Enable only after publishing the database rules described in README.md.
 const RULES_DEPLOYED = true;
@@ -137,9 +128,7 @@ function render() {
     updateAvailability();
 }
 
-const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const database = getDatabase(app);
 const registrations = ref(database, 'wine-tasting-2026');
 
 if (RULES_DEPLOYED) {

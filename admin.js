@@ -76,6 +76,7 @@ let selectedCalendarEditDate = '';
 let calendarSpecialDays = [];
 
 function showLogin() {
+    window.stopWineRegistrationsAdmin?.();
     document.getElementById('login-screen').classList.remove('hidden');
     document.getElementById('password-reset-screen').classList.add('hidden');
     document.getElementById('admin-app').classList.add('hidden');
@@ -88,6 +89,7 @@ function showApp() {
 }
 
 function showPasswordReset() {
+    window.stopWineRegistrationsAdmin?.();
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('admin-app').classList.add('hidden');
     document.getElementById('password-reset-screen').classList.remove('hidden');
@@ -358,7 +360,7 @@ async function checkLogin() {
 
 function applyAdminRoleVisibility() {
     const allowedTabs = ['racm-registrations'];
-    const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'settings', 'backgrounds'];
+    const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'wine-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'settings', 'backgrounds'];
     tabs.forEach(name => {
         const tabButton = document.getElementById(`tab-${name}`);
         const view = document.getElementById(`view-${name}`);
@@ -377,7 +379,8 @@ function switchTab(tab) {
     if (activeAdminRole === 'registration' && tab !== 'racm-registrations') {
         tab = 'racm-registrations';
     }
-    const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'settings', 'backgrounds'];
+    if (tab !== 'wine-registrations') window.stopWineRegistrationsAdmin?.();
+    const tabs = ['approvals', 'art-registrations', 'racm-registrations', 'wine-registrations', 'calendar', 'feedback', 'home-content', 'life-services', 'activity-curation', 'settings', 'backgrounds'];
     for (const name of tabs) {
         const active = name === tab;
         document.getElementById(`view-${name}`).classList.toggle('hidden', !active);
@@ -387,6 +390,10 @@ function switchTab(tab) {
     if (tab === 'calendar') renderCalendarEditor();
     if (tab === 'art-registrations') window.loadArtRegistrationsAdmin();
     if (tab === 'racm-registrations') window.loadRacmRegistrationsAdmin();
+    if (tab === 'wine-registrations') {
+        if (typeof window.loadWineRegistrationsAdmin === 'function') window.loadWineRegistrationsAdmin();
+        else document.getElementById('wine-registration-status').textContent = '無法載入品酒坊管理程式，請重新整理頁面。';
+    }
     if (tab === 'feedback') fetchActivityFeedback();
     if (tab === 'activity-curation') fetchCuratedActivityDrafts();
     if (tab === 'settings' || tab === 'backgrounds' || tab === 'home-content' || tab === 'life-services') fetchSettings();
@@ -4408,6 +4415,7 @@ function bindEvents() {
     document.getElementById('tab-approvals').addEventListener('click', () => switchTab('approvals'));
     document.getElementById('tab-art-registrations').addEventListener('click', () => switchTab('art-registrations'));
     document.getElementById('tab-racm-registrations').addEventListener('click', () => switchTab('racm-registrations'));
+    document.getElementById('tab-wine-registrations').addEventListener('click', () => switchTab('wine-registrations'));
     document.getElementById('tab-calendar').addEventListener('click', () => switchTab('calendar'));
     document.getElementById('tab-feedback').addEventListener('click', () => switchTab('feedback'));
     document.getElementById('tab-home-content').addEventListener('click', () => switchTab('home-content'));
