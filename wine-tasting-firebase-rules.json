@@ -1,0 +1,23 @@
+{
+  "rules": {
+    "wine-tasting-2026": {
+      ".read": true,
+      "$registration": {
+        ".write": "(!data.exists() && newData.exists()) || (auth != null && auth.uid === '14qFEd82puOI53YeIMhB3wYrWZ23')",
+        ".validate": "newData.hasChildren(['group', 'name', 'count'])",
+        "group": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+        },
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80"
+        },
+        "count": {
+          ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 1000 && newData.val() % 1 === 0"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

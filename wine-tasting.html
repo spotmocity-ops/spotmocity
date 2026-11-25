@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#280d10">
+    <title>品酒坊 | 澳門扶青社</title>
+    <style>
+        :root { color-scheme: dark; --gold: #e4c185; --muted: #d7c6b6; --line: #806442; }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { margin: 0; background: #180a0b; color: #fbf3e7; font: 16px/1.65 "Microsoft JhengHei", "PingFang TC", sans-serif; }
+        button, input { font: inherit; }
+        button, a { -webkit-tap-highlight-color: transparent; }
+        a { color: var(--gold); }
+        .wrap { width: min(1120px, calc(100% - 32px)); margin: auto; }
+        header { border-bottom: 1px solid #6f5034; background: #220c0e; }
+        .top { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .brand { color: #f9edda; font-weight: 700; text-decoration: none; }
+        .total { color: var(--gold); border: 1px solid var(--line); border-radius: 999px; padding: 6px 16px; white-space: nowrap; }
+        .hero { padding: 54px 0; background: radial-gradient(ellipse at 70% 20%, #5b2524 0, #2a1012 48%, #180a0b 100%); }
+        .hero-grid { display: grid; grid-template-columns: 1fr minmax(240px, 370px); align-items: center; gap: 54px; }
+        .eyebrow { color: var(--gold); letter-spacing: .18em; font-weight: 700; }
+        h1 { font-family: Georgia, "Microsoft JhengHei", serif; font-size: clamp(2.6rem, 7vw, 5rem); font-weight: 500; letter-spacing: .14em; line-height: 1.2; margin: 14px 0; }
+        .tagline { color: #e6d4ba; font-size: 1.15rem; letter-spacing: .2em; }
+        .details { border-top: 1px solid var(--line); margin: 28px 0; padding-top: 20px; display: grid; gap: 10px; }
+        .details div { display: flex; gap: 16px; }
+        .details dt { color: var(--gold); min-width: 3em; }
+        .details dd { margin: 0; }
+        .partners { color: var(--muted); font-size: .9rem; }
+        .poster { width: 100%; display: block; border: 1px solid #977144; box-shadow: 0 20px 60px #0009; }
+        .button { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--gold); border-radius: 5px; background: var(--gold); color: #2a1012; font-weight: 700; padding: 10px 20px; cursor: pointer; text-decoration: none; }
+        .button:hover { background: #f1d7a4; }
+        .button.secondary { background: transparent; color: var(--gold); }
+        .button.small { padding: 5px 12px; font-size: .9rem; }
+        .about-event { padding: 60px 0 0; }
+        .about-event p { max-width: 900px; color: var(--muted); line-height: 1.9; }
+        .purpose-list { display: grid; gap: 12px; padding-left: 1.4em; color: var(--muted); }
+        .purpose-list strong { color: #f3e5d4; }
+        main { padding: 60px 0; }
+        .section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 15px; }
+        h2 { margin: 0; font-size: 1.8rem; color: var(--gold); }
+        .section-head p { margin: 4px 0 0; color: var(--muted); }
+        .notice { margin: 22px 0; padding: 12px 16px; border-left: 3px solid var(--gold); background: #39201b; color: #f1dfca; font-size: .93rem; }
+        .panel { padding: 24px; border: 1px solid var(--line); background: #291315; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr 150px; gap: 16px; }
+        label { display: grid; gap: 6px; color: #f3e5d4; font-weight: 700; }
+        input { width: 100%; min-width: 0; border: 1px solid #866d59; border-radius: 4px; background: #160b0c; color: #fff; padding: 10px 12px; }
+        input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid #f6d79e; outline-offset: 3px; }
+        .form-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+        .message { min-height: 1.5em; margin: 10px 0 0; color: #f7d8a1; }
+        .list-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 36px 0 14px; }
+        h3 { margin: 0; font-size: 1.2rem; }
+        .entries { list-style: none; margin: 0; padding: 0; }
+        .entry { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px; border-bottom: 1px solid #62493b; overflow-wrap: anywhere; }
+        .entry strong { color: #fff3e0; }
+        .entry-meta { color: var(--muted); font-size: .9rem; }
+        .entry-actions { display: flex; gap: 8px; flex-shrink: 0; }
+        .empty { color: var(--muted); padding: 20px 16px; }
+        footer { padding: 28px 0 48px; border-top: 1px solid #604432; color: var(--muted); }
+        .admin-toggle { padding: 0; background: none; border: 0; color: var(--gold); cursor: pointer; text-decoration: underline; }
+        .admin-panel { max-width: 450px; margin-top: 18px; }
+        .admin-panel .button { margin-top: 12px; }
+        .admin-note { font-size: .85rem; }
+        [hidden] { display: none !important; }
+        @media (max-width: 700px) {
+            .hero { padding: 38px 0; }
+            .hero-grid { grid-template-columns: 1fr; gap: 32px; }
+            .poster { max-width: 360px; margin: auto; }
+            .form-grid { grid-template-columns: 1fr; }
+            .entry { align-items: flex-start; flex-direction: column; }
+            .panel { padding: 18px; }
+        }
+    </style>
+    <script src="wine-tasting.js" type="module"></script>
+</head>
+<body>
+    <header>
+        <div class="wrap top">
+            <a class="brand" href="index.html">澳門扶青社 · 品酒坊</a>
+            <div class="total">總計人數 <strong id="total-count">—</strong> 人</div>
+        </div>
+    </header>
+    <section class="hero">
+        <div class="wrap hero-grid">
+            <div>
+                <div class="eyebrow">2026–2027 澳門扶青社</div>
+                <h1>品酒坊</h1>
+                <p class="tagline">品酒 · 放鬆 · 聊天</p>
+                <dl class="details">
+                    <div><dt>時間</dt><dd>2026.12.04（五）8:30 PM</dd></div>
+                    <div><dt>地點</dt><dd>澳門互助會 1 樓</dd></div>
+                    <div><dt>費用</dt><dd>MOP 100 元／人</dd></div>
+                </dl>
+                <p class="partners">主辦：澳門扶青社<br>場地支持：atom美 ATOMY</p>
+                <a class="button" href="#registration">立即加入接龍</a>
+            </div>
+            <img class="poster" src="wine-tasting-poster.jpg" alt="澳門扶青社品酒坊活動海報">
+        </div>
+    </section>
+    <section class="wrap about-event" aria-labelledby="about-event-title">
+        <h2 id="about-event-title">活動介紹</h2>
+        <p>忙碌了一整週，不妨在週五夜晚放慢腳步，給自己一個微醺放鬆的理由。澳門扶青社特別舉辦「品酒坊」，精選多款風味佳釀，在輕鬆無拘束的氛圍中，帶領大家認識基礎品酒禮儀與酒款故事。無論你是品酒新手還是紅酒愛好者，都能在這裡找到屬於自己的那一支酒。</p>
+        <h2>活動目的</h2>
+        <ul class="purpose-list">
+            <li><strong>凝聚情誼，拓展人脈：</strong>打破社團與群組界線，讓澳門扶青社社友與各界友好在舉杯交談間拉近距離。</li>
+            <li><strong>舒緩壓力，享受生活：</strong>實踐「品酒、放鬆、聊天」的理念，為平日繁忙的青年提供一個高品質的週末前夕社交空間。</li>
+            <li><strong>創造影響力（Create Lasting Impact）：</strong>透過輕鬆的聯誼交流激發更多合作靈感，凝聚青年力量，為未來社區服務注入新活力。</li>
+        </ul>
+    </section>
+    <main class="wrap" id="registration">
+        <div class="section-head">
+            <div><h2>活動接龍</h2><p>填寫資料，加入品酒聚會。</p></div>
+            <button type="button" class="button secondary" id="export" hidden>匯出 Excel (CSV)</button>
+        </div>
+        <p class="notice">此接龍的群名、名字和人數會公開給所有訪客，並同步至雲端。請勿填寫敏感資料。舊版本機名單不會自動上傳。</p>
+        <p class="notice" id="connection-status" role="status" aria-live="polite">正在載入雲端接龍；如長時間未完成，請檢查網絡連線及資料庫設定。</p>
+        <div class="panel">
+            <form id="registration-form">
+                <fieldset id="registration-fields" disabled style="border: 0; padding: 0; margin: 0; min-width: 0">
+                <div class="form-grid">
+                    <label>群名<input name="group" maxlength="80" required placeholder="請輸入群名"></label>
+                    <label>名字<input name="name" maxlength="80" required placeholder="請輸入名字"></label>
+                    <label>人數<input name="count" type="number" min="1" max="1000" step="1" value="1" required></label>
+                </div>
+                <div class="form-actions">
+                    <button class="button" type="submit" id="submit-entry">加入接龍</button>
+                    <button class="button secondary" type="button" id="cancel-edit" hidden>取消編輯</button>
+                </div>
+                </fieldset>
+                <p class="message" id="message" role="status" aria-live="polite"></p>
+            </form>
+        </div>
+        <div class="list-head"><h3>接龍名單</h3><span id="entry-count"></span></div>
+        <ul class="entries" id="entries"></ul>
+        <p class="empty" id="empty" hidden>目前尚未有人加入，歡迎成為第一位！</p>
+    </main>
+    <footer>
+        <div class="wrap">
+            <button class="admin-toggle" id="admin-toggle" type="button" aria-expanded="false" aria-controls="admin-panel">🔒 管理員後台登入</button>
+            <div class="admin-panel" id="admin-panel" hidden>
+                <form id="admin-form">
+                    <fieldset id="admin-fields" disabled style="border: 0; padding: 0; margin: 0; min-width: 0">
+                        <label>管理員電郵<input name="email" type="email" autocomplete="username" required></label>
+                        <label>管理員密碼<input name="password" type="password" autocomplete="current-password" required></label>
+                        <button class="button secondary" type="submit">登入</button>
+                    </fieldset>
+                </form>
+                <button class="button secondary" type="button" id="logout" hidden>登出管理模式</button>
+                <p class="message" id="admin-message" role="status" aria-live="polite"></p>
+                <p class="admin-note">使用指定的 Firebase 管理員帳號登入；編輯及刪除權限由資料庫規則保護。</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
