@@ -17,7 +17,7 @@ const firebaseConfig = {
 };
 const ADMIN_UID = '14qFEd82puOI53YeIMhB3wYrWZ23';
 // Enable only after publishing the database rules described in README.md.
-const RULES_DEPLOYED = false;
+const RULES_DEPLOYED = true;
 const PRICE = 100;
 
 const form = document.getElementById('registration-form');
